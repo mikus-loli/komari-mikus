@@ -1,0 +1,183 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.0.0)'
+        required: true
+        default: ''
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            if [ -z "$VERSION" ]; then
+              echo "Error: Version is required for manual dispatch"
+              exit 1
+            fi
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: Validate required files
+        run: |
+          echo "Checking required files..."
+          
+          missing_files=""
+          
+          if [ ! -f "komari-theme.json" ]; then
+            missing_files="$missing_files komari-theme.json"
+          fi
+          
+          if [ ! -d "dist" ]; then
+            missing_files="$missing_files dist/"
+          fi
+          
+          if [ ! -f "dist/index.html" ]; then
+            missing_files="$missing_files dist/index.html"
+          fi
+          
+          if [ ! -f "dist/assets/style.css" ]; then
+            missing_files="$missing_files dist/assets/style.css"
+          fi
+          
+          if [ ! -f "dist/assets/app.js" ]; then
+            missing_files="$missing_files dist/assets/app.js"
+          fi
+          
+          if [ -n "$missing_files" ]; then
+            echo "Error: Missing required files:$missing_files"
+            exit 1
+          fi
+          
+          echo "All required files present"
+
+      - name: Update version in theme config
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if command -v jq &> /dev/null; then
+            jq --arg v "$VERSION" '.version = $v' komari-theme.json > komari-theme.json.tmp
+            mv komari-theme.json.tmp komari-theme.json
+          else
+            sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" komari-theme.json
+          fi
+          echo "Updated version to $VERSION in komari-theme.json"
+
+      - name: Create release package
+        id: package
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          PACKAGE_NAME="komari-mikus-v${VERSION}"
+          
+          mkdir -p release_temp
+          
+          cp -r dist release_temp/
+          cp komari-theme.json release_temp/
+          
+          if [ -f "preview.png" ]; then
+            cp preview.png release_temp/
+          fi
+          
+          cd release_temp
+          zip -r "../${PACKAGE_NAME}.zip" .
+          cd ..
+          
+          rm -rf release_temp
+          
+          echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+          echo "package_path=${PACKAGE_NAME}.zip" >> $GITHUB_OUTPUT
+          
+          echo "Package created: ${PACKAGE_NAME}.zip"
+          ls -la "${PACKAGE_NAME}.zip"
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            PREV_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          else
+            PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          fi
+          
+          echo "## Komari Mikus v${VERSION}" > release_notes.md
+          echo "" >> release_notes.md
+          echo "### 📦 Release Package" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "Download \`${{ steps.package.outputs.package_name }}.zip\` and extract to your Komari themes directory." >> release_notes.md
+          echo "" >> release_notes.md
+          echo "### 📋 Included Files" >> release_notes.md
+          echo "- \`dist/\` - Theme files (HTML, CSS, JS, images, flags)" >> release_notes.md
+          echo "- \`komari-theme.json\` - Theme configuration" >> release_notes.md
+          if [ -f "preview.png" ]; then
+            echo "- \`preview.png\` - Theme preview image" >> release_notes.md
+          fi
+          echo "" >> release_notes.md
+          
+          if [ -n "$PREV_TAG" ]; then
+            echo "### 📝 Changes since ${PREV_TAG}" >> release_notes.md
+            echo "" >> release_notes.md
+            git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges >> release_notes.md 2>/dev/null || echo "- No commits found" >> release_notes.md
+            echo "" >> release_notes.md
+          fi
+          
+          echo "### 🔗 Quick Links" >> release_notes.md
+          echo "- [Komari Monitor](https://github.com/komari-monitor/komari)" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "---" >> release_notes.md
+          echo "*Built automatically with GitHub Actions*" >> release_notes.md
+          
+          echo "release_notes_file=release_notes.md" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Komari Mikus v${{ steps.version.outputs.version }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.version, '-') }}
+          files: |
+            ${{ steps.package.outputs.package_path }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: komari-mikus-v${{ steps.version.outputs.version }}
+          path: ${{ steps.package.outputs.package_path }}
+          retention-days: 30
+
+      - name: Release Summary
+        run: |
+          echo "## ✅ Release Completed Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | v${{ steps.version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Package | ${{ steps.package.outputs.package_name }}.zip |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trigger | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | ${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY

@@ -1904,6 +1904,8 @@ body::before {
     box-shadow: 0 0 4px rgba(var(--accent-rgb), 0.5);
     animation: blink-dot 1.5s ease-in-out infinite;
     flex-shrink: 0;
+    margin-right: 6px;
+    margin-left: 2px;
 }
 
 @keyframes blink-dot {
@@ -2859,9 +2861,9 @@ body::before {
     }
 
     .latency-task-card {
-        padding: 8px;
+        padding: 8px 10px;
         grid-template-columns: 1fr;
-        gap: 4px;
+        gap: 6px;
     }
 
     .latency-task-name {
@@ -2871,16 +2873,20 @@ body::before {
         overflow: visible;
         text-overflow: unset;
         gap: 4px;
+        padding-left: 10px;
     }
 
     .latency-task-name::before {
         width: 4px;
         height: 4px;
+        left: 2px;
+        position: absolute;
     }
 
     .latency-task-info {
         justify-content: space-between;
         gap: 4px;
+        padding-left: 10px;
     }
 
     .latency-task-ping {
