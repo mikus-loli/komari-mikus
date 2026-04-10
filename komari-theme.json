@@ -12,7 +12,7 @@
         "data": [
             { "name": "外观设置", "type": "title" },
             { "key": "default_theme", "name": "默认主题", "type": "select", "options": "浅色,深色,跟随系统", "default": "跟随系统", "help": "首次访问者的默认颜色主题" },
-            { "key": "default_view", "name": "默认视图", "type": "select", "options": "网格,表格", "default": "网格", "help": "默认的节点展示模式" },
+            { "key": "default_view", "name": "默认视图", "type": "select", "options": "网格,表格", "default": "表格", "help": "默认的节点展示模式" },
             { "name": "显示设置", "type": "title" },
             { "key": "show_uptime", "name": "显示运行时间", "type": "switch", "default": true, "help": "在节点卡片上显示服务器运行时间" },
             { "key": "show_network_speed", "name": "显示网络速度", "type": "switch", "default": true, "help": "显示实时网络上传/下载速度" },
