@@ -14,7 +14,8 @@
 ## 安装
 
 1. 从 [Releases](../../releases) 页面下载最新版本的 ZIP 文件
-2. 上传 Komari
+2. 上传到 Komari 主题
+3. 在 Komari 配置中选择 Mikus 主题
 
 ## 项目结构
 
