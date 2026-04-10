@@ -17,7 +17,6 @@
             { "key": "show_uptime", "name": "显示运行时间", "type": "switch", "default": true, "help": "在节点卡片上显示服务器运行时间" },
             { "key": "show_network_speed", "name": "显示网络速度", "type": "switch", "default": true, "help": "显示实时网络上传/下载速度" },
             { "key": "show_ping", "name": "显示网络延迟", "type": "switch", "default": true, "help": "显示节点网络延迟（Ping）" },
-            { "key": "show_connections", "name": "显示连接数", "type": "switch", "default": false, "help": "显示 TCP/UDP 连接数量" },
             { "key": "refresh_interval", "name": "刷新间隔（秒）", "type": "number", "default": 2, "help": "WebSocket 数据刷新间隔" },
             { "name": "页脚设置", "type": "title" },
             { "key": "custom_footer", "name": "自定义页脚文本", "type": "string", "default": "", "help": "在页脚显示的附加文本" }
