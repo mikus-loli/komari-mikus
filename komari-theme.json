@@ -1,25 +1,112 @@
 {
     "name": "Komari Mikus",
     "short": "Mikus",
-    "description": "一个现代化、优雅的 Komari 监控主题，支持明暗主题切换、网格/表格双视图、WebSocket 实时监控和响应式设计",
+    "description": "A modern, elegant Komari monitoring theme with light/dark theme switching, grid/table dual views, WebSocket real-time monitoring, and responsive design",
     "version": "1.0.0",
     "author": "Miku",
     "url": "https://github.com/komari-monitor/komari",
     "preview": "preview.png",
+    "i18n": {
+        "zh-CN": {
+            "name": "Komari Mikus",
+            "description": "一个现代化、优雅的 Komari 监控主题，支持明暗主题切换、网格/表格双视图、WebSocket 实时监控和响应式设计",
+            "config": {
+                "name": "Mikus 设置",
+                "appearance": "外观设置",
+                "display": "显示设置",
+                "footer": "页脚设置",
+                "default_theme": {
+                    "name": "默认主题",
+                    "help": "首次访问者的默认颜色主题",
+                    "options": {
+                        "light": "浅色",
+                        "dark": "深色",
+                        "system": "跟随系统"
+                    }
+                },
+                "default_view": {
+                    "name": "默认视图",
+                    "help": "默认的节点展示模式",
+                    "options": {
+                        "grid": "网格",
+                        "table": "表格"
+                    }
+                },
+                "show_uptime": {
+                    "name": "显示运行时间",
+                    "help": "在节点卡片上显示服务器运行时间"
+                },
+                "show_network_speed": {
+                    "name": "显示网络速度",
+                    "help": "显示实时网络上传/下载速度"
+                },
+                "refresh_interval": {
+                    "name": "刷新间隔（秒）",
+                    "help": "WebSocket 数据刷新间隔"
+                },
+                "custom_footer": {
+                    "name": "自定义页脚文本",
+                    "help": "在页脚显示的附加文本"
+                }
+            }
+        },
+        "en": {
+            "name": "Komari Mikus",
+            "description": "A modern, elegant Komari monitoring theme with light/dark theme switching, grid/table dual views, WebSocket real-time monitoring, and responsive design",
+            "config": {
+                "name": "Mikus Settings",
+                "appearance": "Appearance",
+                "display": "Display",
+                "footer": "Footer",
+                "default_theme": {
+                    "name": "Default Theme",
+                    "help": "Default color theme for first-time visitors",
+                    "options": {
+                        "light": "Light",
+                        "dark": "Dark",
+                        "system": "Follow System"
+                    }
+                },
+                "default_view": {
+                    "name": "Default View",
+                    "help": "Default node display mode",
+                    "options": {
+                        "grid": "Grid",
+                        "table": "Table"
+                    }
+                },
+                "show_uptime": {
+                    "name": "Show Uptime",
+                    "help": "Display server uptime on node cards"
+                },
+                "show_network_speed": {
+                    "name": "Show Network Speed",
+                    "help": "Display real-time network upload/download speed"
+                },
+                "refresh_interval": {
+                    "name": "Refresh Interval (seconds)",
+                    "help": "WebSocket data refresh interval"
+                },
+                "custom_footer": {
+                    "name": "Custom Footer Text",
+                    "help": "Additional text displayed in the footer"
+                }
+            }
+        }
+    },
     "configuration": {
         "type": "managed",
-        "name": "Mikus 设置",
+        "name": "Mikus Settings",
         "data": [
-            { "name": "外观设置", "type": "title" },
-            { "key": "default_theme", "name": "默认主题", "type": "select", "options": "浅色,深色,跟随系统", "default": "跟随系统", "help": "首次访问者的默认颜色主题" },
-            { "key": "default_view", "name": "默认视图", "type": "select", "options": "网格,表格", "default": "表格", "help": "默认的节点展示模式" },
-            { "name": "显示设置", "type": "title" },
-            { "key": "show_uptime", "name": "显示运行时间", "type": "switch", "default": true, "help": "在节点卡片上显示服务器运行时间" },
-            { "key": "show_network_speed", "name": "显示网络速度", "type": "switch", "default": true, "help": "显示实时网络上传/下载速度" },
-            { "key": "show_ping", "name": "显示网络延迟", "type": "switch", "default": true, "help": "显示节点网络延迟（Ping）" },
-            { "key": "refresh_interval", "name": "刷新间隔（秒）", "type": "number", "default": 2, "help": "WebSocket 数据刷新间隔" },
-            { "name": "页脚设置", "type": "title" },
-            { "key": "custom_footer", "name": "自定义页脚文本", "type": "string", "default": "", "help": "在页脚显示的附加文本" }
+            { "name": "Appearance", "type": "title" },
+            { "key": "default_theme", "name": "Default Theme", "type": "select", "options": "light,dark,system", "default": "system", "help": "Default color theme for first-time visitors" },
+            { "key": "default_view", "name": "Default View", "type": "select", "options": "grid,table", "default": "grid", "help": "Default node display mode" },
+            { "name": "Display", "type": "title" },
+            { "key": "show_uptime", "name": "Show Uptime", "type": "switch", "default": true, "help": "Display server uptime on node cards" },
+            { "key": "show_network_speed", "name": "Show Network Speed", "type": "switch", "default": true, "help": "Display real-time network upload/download speed" },
+            { "key": "refresh_interval", "name": "Refresh Interval (seconds)", "type": "number", "default": 2, "help": "WebSocket data refresh interval" },
+            { "name": "Footer", "type": "title" },
+            { "key": "custom_footer", "name": "Custom Footer Text", "type": "string", "default": "", "help": "Additional text displayed in the footer" }
         ]
     }
 }
