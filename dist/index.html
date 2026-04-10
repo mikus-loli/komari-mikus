@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="theme-color" content="#f8f6f9">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="format-detection" content="telephone=no">
+    <title>Komari Monitor</title>
+    <meta name="description" content="A simple server monitor tool.">
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    <div id="preloader">
+        <div class="preloader-inner">
+            <img class="preloader-gif" src="assets/img/loli.gif" alt="Loading">
+            <div class="preloader-brand">
+                <img class="preloader-logo" src="assets/img/miku.png" alt="Logo">
+                <span class="preloader-title">Komari</span>
+            </div>
+            <div class="preloader-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <span class="progress-text" id="progressText">0%</span>
+            </div>
+            <div class="preloader-status" id="preloaderStatus">正在加载资源...</div>
+        </div>
+    </div>
+    <div id="app">
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">
+                    <img class="logo-icon" src="assets/img/miku.png" alt="Logo">
+                    <span class="site-name" id="siteName">Komari</span>
+                </div>
+            </div>
+            <div class="header-center">
+            </div>
+            <div class="header-right">
+                <div class="search-box">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <input type="text" id="searchInput" placeholder="Search nodes..." autocomplete="off">
+                </div>
+                <div class="view-toggle">
+                    <button class="view-btn active" data-view="grid" title="Grid View">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+                        </svg>
+                    </button>
+                    <button class="view-btn" data-view="table" title="Table View">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/>
+                            <line x1="3" y1="18" x2="21" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="lang-toggle" id="langToggle" title="Switch Language">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                    </svg>
+                </div>
+                <div class="header-right-end">
+                    <div class="theme-toggle" id="themeToggle" title="Toggle Theme">
+                        <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/>
+                            <line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/>
+                            <line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                        </svg>
+                        <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                        </svg>
+                    </div>
+                    <a class="login-btn" href="/admin" title="Login">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                            <polyline points="10 17 15 12 10 7"/>
+                            <line x1="15" y1="12" x2="3" y2="12"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="welcome-section">
+                <div class="welcome-decoration">
+                    <div class="deco-circle deco-1"></div>
+                    <div class="deco-circle deco-2"></div>
+                    <div class="deco-circle deco-3"></div>
+                    <div class="sakura-petal"></div>
+                    <div class="sakura-petal"></div>
+                    <div class="sakura-petal"></div>
+                    <div class="sakura-petal"></div>
+                    <div class="sakura-petal"></div>
+                </div>
+                <div class="welcome-content">
+                    <div class="welcome-greeting">
+                        <img class="greeting-icon" src="assets/img/QWQ.webp" alt="icon">
+                        <div class="greeting-info">
+                            <span class="greeting-text" id="greetingText">下午好</span>
+                            <span class="greeting-subtitle">欢迎回来，一切正常运行中</span>
+                        </div>
+                    </div>
+                    <div class="welcome-time">
+                        <span class="time-label" id="currentDate">2024年1月15日</span>
+                        <span class="time-value" id="currentTime">15:30:00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-bar" id="statsBar">
+                <div class="stat-item">
+                    <span class="stat-label" data-i18n="total_nodes">Total Nodes</span>
+                    <span class="stat-value" id="totalNodes">0</span>
+                </div>
+                <div class="stat-item online">
+                    <span class="stat-label" data-i18n="online">Online</span>
+                    <span class="stat-value" id="onlineNodes">0</span>
+                </div>
+                <div class="stat-item offline">
+                    <span class="stat-label" data-i18n="offline">Offline</span>
+                    <span class="stat-value" id="offlineNodes">0</span>
+                </div>
+                <div class="group-filter" id="groupFilter">
+                    <button class="filter-btn active" data-group="all">All</button>
+                </div>
+            </div>
+
+            <div class="nodes-grid" id="nodesGrid"></div>
+            <div class="nodes-table-container" id="nodesTableContainer" style="display:none;">
+                <table class="nodes-table" id="nodesTable">
+                    <thead>
+                        <tr>
+                            <th data-i18n="status">Status</th>
+                            <th data-i18n="name">Name</th>
+                            <th data-i18n="region">Region</th>
+                            <th>CPU</th>
+                            <th>RAM</th>
+                            <th>Disk</th>
+                            <th data-i18n="network">Network</th>
+                            <th data-i18n="ping">Ping</th>
+                            <th data-i18n="uptime">Uptime</th>
+                        </tr>
+                    </thead>
+                    <tbody id="nodesTableBody"></tbody>
+                </table>
+            </div>
+        </main>
+
+        <div class="modal-overlay" id="modalOverlay">
+            <div class="modal" id="nodeModal">
+                <div class="modal-scroll-indicator" id="modalScrollIndicator"></div>
+                <div class="modal-drag-handle" id="modalDragHandle"></div>
+                <div class="modal-header">
+                    <h2 id="modalNodeName"></h2>
+                    <button class="modal-close" id="modalClose">&times;</button>
+                </div>
+                <div class="modal-tabs">
+                    <button class="modal-tab active" data-tab="overview" data-i18n="overview">Overview</button>
+                    <button class="modal-tab" data-tab="latency" data-i18n="latency_detail">Latency Detail</button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <div class="modal-page modal-page-overview active" id="pageOverview">
+                        <div class="modal-info" id="modalInfo"></div>
+                        <div class="modal-charts">
+                            <div class="chart-section">
+                                <h3 data-i18n="cpu_usage">CPU Usage</h3>
+                                <canvas id="cpuChart" width="600" height="200"></canvas>
+                            </div>
+                            <div class="chart-section">
+                                <h3 data-i18n="ram_usage">RAM Usage</h3>
+                                <canvas id="ramChart" width="600" height="200"></canvas>
+                            </div>
+                            <div class="chart-section">
+                                <div class="chart-header">
+                                    <h3 data-i18n="network_traffic">Network Traffic</h3>
+                                    <div class="chart-legend" id="networkLegend">
+                                        <span class="legend-item legend-up"><span class="legend-dot"></span>▲ <span data-i18n="up">Up</span></span>
+                                        <span class="legend-item legend-down"><span class="legend-dot"></span>▼ <span data-i18n="down">Down</span></span>
+                                    </div>
+                                </div>
+                                <canvas id="networkChart" width="600" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-page modal-page-latency" id="pageLatency">
+                        <div class="latency-summary" id="latencySummary"></div>
+                        <div class="latency-tasks" id="latencyTasks"></div>
+                        <div class="latency-chart-container">
+                            <div class="latency-chart-header">
+                                <h3 data-i18n="ping_chart">Latency Trend</h3>
+                                <div class="latency-legend" id="latencyLegend"></div>
+                            </div>
+                            <canvas id="latencyChart" width="800" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <span>Powered by Komari Mikus.</span>
+            <span id="customFooter"></span>
+        </footer>
+    </div>
+
+    <script src="assets/app.js"></script>
+</body>
+</html>
