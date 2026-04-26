@@ -468,7 +468,7 @@
 
     function getCountryFlagUrl(countryCode) {
         if (!countryCode) return null;
-        return 'assets/flags/' + countryCode.toUpperCase() + '.png';
+        return 'assets/flags/' + countryCode.toLowerCase() + '.svg';
     }
 
     function getCountryFlag(region) {
@@ -1905,6 +1905,16 @@
         var footerEl = document.getElementById('customFooter');
         if (footerEl && customFooter) {
             footerEl.textContent = customFooter;
+        }
+
+        var iconBounce = state.themeSettings.icon_bounce !== false;
+        var greetingIcon = document.querySelector('.greeting-icon');
+        if (greetingIcon) {
+            if (!iconBounce) {
+                greetingIcon.classList.add('no-bounce');
+            } else {
+                greetingIcon.classList.remove('no-bounce');
+            }
         }
     }
 

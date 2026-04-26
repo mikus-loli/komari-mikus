@@ -632,6 +632,10 @@ body::before {
     will-change: transform;
 }
 
+.greeting-icon.no-bounce {
+    animation: none;
+}
+
 @media (min-width: 1025px) and (max-width: 1440px) {
     .greeting-icon {
         width: 150px;
@@ -851,6 +855,8 @@ body::before {
     height: 100%;
     object-fit: cover;
     display: block;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
 }
 
 .node-card-flag-placeholder {
@@ -1252,6 +1258,8 @@ body::before {
     border-radius: 2px;
     object-fit: cover;
     vertical-align: middle;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
 }
 
 .table-flag-placeholder {

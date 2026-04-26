@@ -40,6 +40,10 @@
                     "name": "显示网络速度",
                     "help": "显示实时网络上传/下载速度"
                 },
+                "icon_bounce": {
+                    "name": "图标跳动动画",
+                    "help": "欢迎区域的图标跳动动画效果"
+                },
                 "refresh_interval": {
                     "name": "刷新间隔（秒）",
                     "help": "WebSocket 数据刷新间隔"
@@ -83,6 +87,10 @@
                     "name": "Show Network Speed",
                     "help": "Display real-time network upload/download speed"
                 },
+                "icon_bounce": {
+                    "name": "Icon Bounce Animation",
+                    "help": "Bounce animation effect for the greeting icon"
+                },
                 "refresh_interval": {
                     "name": "Refresh Interval (seconds)",
                     "help": "WebSocket data refresh interval"
@@ -104,6 +112,7 @@
             { "name": "Display", "type": "title" },
             { "key": "show_uptime", "name": "Show Uptime", "type": "switch", "default": true, "help": "Display server uptime on node cards" },
             { "key": "show_network_speed", "name": "Show Network Speed", "type": "switch", "default": true, "help": "Display real-time network upload/download speed" },
+            { "key": "icon_bounce", "name": "Icon Bounce Animation", "type": "switch", "default": true, "help": "Bounce animation effect for the greeting icon" },
             { "key": "refresh_interval", "name": "Refresh Interval (seconds)", "type": "number", "default": 2, "help": "WebSocket data refresh interval" },
             { "name": "Footer", "type": "title" },
             { "key": "custom_footer", "name": "Custom Footer Text", "type": "string", "default": "", "help": "Additional text displayed in the footer" }
