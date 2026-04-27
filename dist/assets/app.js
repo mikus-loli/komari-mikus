@@ -123,6 +123,7 @@
             return fetch(this.httpUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify(request)
             })
             .then(function(res) {
@@ -252,7 +253,9 @@
             welcome_back: '欢迎回来，一切正常运行中',
             expired: '已过期',
             long_term: '长期',
-            free: '免费'
+            free: '免费',
+            login_required: '登录后查看历史数据',
+            task: '任务'
         },
         'en': {
             total_nodes: 'Total Nodes',
@@ -313,7 +316,9 @@
             welcome_back: 'Welcome back, everything is running smoothly',
             expired: 'Expired',
             long_term: 'Long Term',
-            free: 'Free'
+            free: 'Free',
+            login_required: 'Login required to view history',
+            task: 'Task'
         }
     };
 
@@ -509,33 +514,118 @@
 
     function loadNodeHistory(uuid, hours) {
         hours = hours || 24;
-        return state.rpc.call('records:load', { uuid: uuid, hours: hours }, true)
+        return state.rpc.call('common:getRecords', { uuid: uuid, type: 'load', hours: hours, maxCount: 4000 })
             .then(function(result) {
+                var records = [];
                 if (result && result.records) {
-                    state.historyData[uuid] = result.records;
+                    if (Array.isArray(result.records)) {
+                        records = result.records;
+                    } else if (typeof result.records === 'object') {
+                        Object.keys(result.records).forEach(function(key) {
+                            if (Array.isArray(result.records[key])) {
+                                records = records.concat(result.records[key]);
+                            }
+                        });
+                    }
                 }
+                if (records.length > 0) {
+                    state.historyData[uuid] = records;
+                    return;
+                }
+                return state.rpc.call('common:getNodeRecentStatus', { uuid: uuid })
+                    .then(function(fallback) {
+                        if (fallback && fallback.records) {
+                            state.historyData[uuid] = fallback.records;
+                        }
+                    }).catch(function() {});
             }).catch(function(err) {
                 if (err && err.code !== 401) {
                     console.warn('Failed to load history for', uuid, err);
                 }
+                return state.rpc.call('common:getNodeRecentStatus', { uuid: uuid })
+                    .then(function(fallback) {
+                        if (fallback && fallback.records) {
+                            state.historyData[uuid] = fallback.records;
+                        }
+                    }).catch(function() {});
             });
     }
 
     function loadPingHistory(uuid, hours) {
         hours = hours || 24;
-        return state.rpc.call('records:loadPing', { uuid: uuid, hours: hours }, true)
+        return state.rpc.call('common:getRecords', { uuid: uuid, type: 'ping', hours: hours })
             .then(function(result) {
                 if (result) {
+                    var records = result.records || [];
+                    var basicInfo = result.basic_info || [];
+                    
+                    var taskMap = {};
+                    records.forEach(function(r) {
+                        if (r.task_id !== undefined && !taskMap[r.task_id]) {
+                            taskMap[r.task_id] = {
+                                id: r.task_id,
+                                name: t('task') + ' #' + r.task_id
+                            };
+                        }
+                    });
+                    
+                    basicInfo.forEach(function(info, idx) {
+                        var taskIds = Object.keys(taskMap);
+                        if (taskIds[idx]) {
+                            taskMap[taskIds[idx]].loss = info.loss;
+                            taskMap[taskIds[idx]].min = info.min;
+                            taskMap[taskIds[idx]].max = info.max;
+                        }
+                    });
+                    
+                    var tasks = Object.keys(taskMap).map(function(k) { return taskMap[k]; });
+                    
                     state.pingData[uuid] = {
-                        records: result.records || [],
-                        tasks: result.tasks || []
+                        records: records,
+                        tasks: tasks
                     };
+                    
+                    fetchPingTaskNames(uuid);
                 }
             }).catch(function(err) {
                 if (err && err.code !== 401) {
                     console.warn('Failed to load ping history for', uuid, err);
                 }
             });
+    }
+    
+    function fetchPingTaskNames(uuid) {
+        fetch(getApiBase() + '/api/records/ping?uuid=' + encodeURIComponent(uuid) + '&hours=1', {
+            credentials: 'include'
+        })
+        .then(function(res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        })
+        .then(function(res) {
+            if (res.status === 'success' && res.data && res.data.tasks) {
+                var pingInfo = state.pingData[uuid];
+                if (!pingInfo) return;
+                
+                var taskNameMap = {};
+                res.data.tasks.forEach(function(task) {
+                    taskNameMap[task.id] = task.name;
+                });
+                
+                pingInfo.tasks.forEach(function(task) {
+                    if (taskNameMap[task.id]) {
+                        task.name = taskNameMap[task.id];
+                    }
+                    var apiTask = res.data.tasks.find(function(t) { return t.id === task.id; });
+                    if (apiTask) {
+                        task.interval = apiTask.interval;
+                        task.loss = apiTask.loss;
+                    }
+                });
+                
+                renderLatencyPage(uuid);
+            }
+        }).catch(function() {});
     }
 
     function getLatestPing(uuid) {
@@ -1514,7 +1604,24 @@
     function drawLatencyChart(canvasId, records, tasks) {
         var els = getModalElements();
         var canvas = canvasId === 'latencyChart' ? els.latencyChart : document.getElementById(canvasId);
-        if (!canvas || !records || records.length === 0) return;
+        if (!canvas) return;
+        
+        if (!records || records.length === 0) {
+            var ctx = canvas.getContext('2d');
+            var dpr = window.devicePixelRatio || 1;
+            var rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            ctx.clearRect(0, 0, rect.width, rect.height);
+            
+            var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            ctx.fillStyle = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)';
+            ctx.font = '12px ' + getComputedStyle(document.body).fontFamily;
+            ctx.textAlign = 'center';
+            ctx.fillText(t('login_required') || 'Login required to view history', rect.width / 2, rect.height / 2);
+            return;
+        }
 
         var ctx = canvas.getContext('2d');
         var dpr = window.devicePixelRatio || 1;
@@ -1687,7 +1794,28 @@
 
     function drawCharts(uuid) {
         var records = state.historyData[uuid] || [];
-        if (records.length === 0) return;
+        var els = getModalElements();
+        
+        if (records.length === 0) {
+            [els.cpuChart, els.ramChart, els.networkChart].forEach(function(canvas) {
+                if (canvas) {
+                    var ctx = canvas.getContext('2d');
+                    var dpr = window.devicePixelRatio || 1;
+                    var rect = canvas.getBoundingClientRect();
+                    canvas.width = rect.width * dpr;
+                    canvas.height = rect.height * dpr;
+                    ctx.scale(dpr, dpr);
+                    ctx.clearRect(0, 0, rect.width, rect.height);
+                    
+                    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                    ctx.fillStyle = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)';
+                    ctx.font = '12px ' + getComputedStyle(document.body).fontFamily;
+                    ctx.textAlign = 'center';
+                    ctx.fillText(t('login_required') || 'Login required to view history', rect.width / 2, rect.height / 2);
+                }
+            });
+            return;
+        }
 
         drawLineChart('cpuChart', records, function (r) { return r.cpu; }, 0, 100, '#e8668a', 'CPU %');
         drawLineChart('ramChart', records, function (r) {

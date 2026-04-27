@@ -1814,6 +1814,14 @@ body.view-table .stat-value {
     display: flex;
     align-items: center;
     gap: 4px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.table-card-metric.table-card-system .table-card-metric-value .os-icon {
+    flex-shrink: 0;
 }
 
 .os-icon {
