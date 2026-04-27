@@ -2,7 +2,7 @@
     "name": "Komari Mikus",
     "short": "Mikus",
     "description": "A modern, elegant Komari monitoring theme with light/dark theme switching, grid/table dual views, WebSocket real-time monitoring, and responsive design",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "author": "Miku",
     "url": "https://github.com/mikus-loli/komari-mikus",
     "preview": "preview.png",
