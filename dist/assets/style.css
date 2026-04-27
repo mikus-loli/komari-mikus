@@ -3303,6 +3303,10 @@ body.view-table .stat-value {
         gap: 6px;
     }
 
+    body.view-table .stats-bar {
+        gap: 4px;
+    }
+
     .stat-item {
         padding: 6px 10px;
         min-width: 70px;
@@ -3331,27 +3335,35 @@ body.view-table .stat-value {
     }
 
     body.view-table .stat-item {
-        padding: 5px 10px;
-        gap: 4px;
+        padding: 4px 8px;
+        gap: 3px;
+        min-width: auto;
     }
 
     body.view-table .stat-label {
-        font-size: 0.65rem;
+        font-size: 0.6rem;
     }
 
     body.view-table .stat-value {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
     }
 
     body.view-table .stats-bar {
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
+        gap: 4px;
     }
 
     body.view-table .stats-bar .group-filter {
-        margin-left: auto;
+        margin-left: 0;
         margin-right: 0;
-        width: auto;
-        margin-top: 0;
+        width: 100%;
+        margin-top: 4px;
+        justify-content: flex-start;
+    }
+
+    body.view-table .filter-btn {
+        padding: 4px 8px;
+        font-size: 0.65rem;
     }
 
     .table-cards {
