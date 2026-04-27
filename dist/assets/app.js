@@ -22,6 +22,9 @@
             memory: '内存',
             swap: '交换分区',
             disk: '磁盘',
+            ram: '内存',
+            upload: '上传',
+            download: '下载',
             load: '负载',
             processes: '进程',
             connections: '连接',
@@ -56,7 +59,8 @@
             good_evening: '晚上好',
             welcome_back: '欢迎回来，一切正常运行中',
             expired: '已过期',
-            long_term: '长期'
+            long_term: '长期',
+            free: '免费'
         },
         'en': {
             total_nodes: 'Total Nodes',
@@ -78,6 +82,9 @@
             memory: 'Memory',
             swap: 'Swap',
             disk: 'Disk',
+            ram: 'RAM',
+            upload: 'Upload',
+            download: 'Download',
             load: 'Load',
             processes: 'Processes',
             connections: 'Connections',
@@ -112,7 +119,8 @@
             good_evening: 'Good Evening',
             welcome_back: 'Welcome back, everything is running smoothly',
             expired: 'Expired',
-            long_term: 'Long Term'
+            long_term: 'Long Term',
+            free: 'Free'
         }
     };
 
@@ -677,9 +685,13 @@
         if (state.currentView === 'grid') {
             if (grid) grid.style.display = '';
             if (table) table.style.display = 'none';
+            document.body.classList.remove('view-table');
+            document.body.classList.add('view-grid');
         } else {
             if (grid) grid.style.display = 'none';
             if (table) table.style.display = '';
+            document.body.classList.remove('view-grid');
+            document.body.classList.add('view-table');
         }
 
         btns.forEach(function (btn) {
@@ -787,6 +799,177 @@
         updateGreetingSubtitle();
     }
 
+    function calculateNodeMetrics(node) {
+        var rt = state.realtimeData[node.uuid] || {};
+        
+        var cpuUsage = rt.cpu ? rt.cpu.usage : null;
+        var ramUsed = rt.ram ? rt.ram.used : null;
+        var ramTotal = rt.ram ? rt.ram.total : node.mem_total || 0;
+        var ramPercent = (ramUsed !== null && ramTotal > 0) ? (ramUsed / ramTotal * 100) : null;
+        var diskUsed = rt.disk ? rt.disk.used : null;
+        var diskTotal = rt.disk ? rt.disk.total : node.disk_total || 0;
+        var diskPercent = (diskUsed !== null && diskTotal > 0) ? (diskUsed / diskTotal * 100) : null;
+        var swapUsed = rt.swap ? rt.swap.used : 0;
+        var swapTotal = rt.swap ? rt.swap.total : node.swap_total || 0;
+        var swapPercent = swapTotal > 0 ? (swapUsed / swapTotal * 100) : 0;
+        var netUp = rt.network ? rt.network.up : 0;
+        var netDown = rt.network ? rt.network.down : 0;
+        var uptime = rt.uptime || 0;
+        var pingMs = getLatestPing(node.uuid);
+        var load1 = rt.load ? rt.load.load1 : null;
+        
+        return {
+            isOnline: state.onlineNodes.indexOf(node.uuid) !== -1,
+            cpuUsage: cpuUsage,
+            cpuLevel: cpuUsage !== null ? getUsageLevel(cpuUsage) : 'normal',
+            ramPercent: ramPercent,
+            ramLevel: ramPercent !== null ? getUsageLevel(ramPercent) : 'normal',
+            diskPercent: diskPercent,
+            diskLevel: diskPercent !== null ? getUsageLevel(diskPercent) : 'normal',
+            swapPercent: swapPercent,
+            swapLevel: swapTotal > 0 ? getUsageLevel(swapPercent) : 'normal',
+            swapTotal: swapTotal,
+            netUp: netUp,
+            netDown: netDown,
+            uptime: uptime,
+            pingMs: pingMs,
+            pingLevel: getPingLevel(pingMs),
+            load1: load1,
+            flagUrl: getCountryFlag(node.region),
+            osShort: getShortOs(node.os)
+        };
+    }
+
+    function renderMetricBar(label, value, level) {
+        var displayValue = value !== null ? formatPercent(value) : '-';
+        var width = value !== null ? Math.min(value, 100) : 0;
+        
+        return '<div class="metric">' +
+               '<div class="metric-label">' + escapeHtml(label) + '</div>' +
+               '<div class="metric-bar"><div class="metric-bar-fill level-' + level + '" style="width:' + width + '%"></div></div>' +
+               '<div class="metric-value level-' + level + '">' + displayValue + '</div>' +
+               '</div>';
+    }
+
+    function parseTagInfo(tag) {
+        var tagText = tag.trim();
+        var tagClass = '';
+        var colorMatch = tagText.match(/<(\w+)>$/);
+        
+        if (colorMatch) {
+            tagText = tagText.replace(/<\w+>$/, '').trim();
+            var color = colorMatch[1].toLowerCase();
+            var validColors = ['green', 'red', 'blue', 'yellow', 'orange', 'purple', 'pink', 'cyan', 'gray', 'success', 'danger', 'warning', 'info'];
+            if (validColors.indexOf(color) !== -1) {
+                tagClass = ' tag-' + color;
+            }
+        }
+        
+        return {
+            text: tagText,
+            className: tagClass
+        };
+    }
+
+    function renderNodeCardHeader(node, metrics) {
+        var html = '<div class="node-card-header">';
+        
+        if (metrics.flagUrl) {
+            html += '<span class="node-card-flag"><img src="' + metrics.flagUrl + '" alt="' + escapeHtml(node.region || '') + '" loading="lazy" onerror="this.style.display=\'none\'"></span>';
+        } else {
+            html += '<span class="node-card-flag node-card-flag-placeholder"><span>?</span></span>';
+        }
+        
+        html += '<div class="node-card-info">';
+        html += '<div class="node-card-name">';
+        html += '<span class="node-status-dot' + (metrics.isOnline ? '' : ' offline') + '"></span>';
+        html += '<span class="node-name-text">' + escapeHtml(node.name) + '</span>';
+        html += '</div>';
+        html += '<div class="node-card-subtitle">';
+        html += '<span class="node-card-os">' + escapeHtml(metrics.osShort) + '</span>';
+        
+        if (node.tags) {
+            var tags = node.tags.split(';').filter(function(t) { return t.trim(); });
+            var maxTags = 2;
+            tags.slice(0, maxTags).forEach(function(tag) {
+                var tagInfo = parseTagInfo(tag);
+                html += '<span class="node-api-tag' + tagInfo.className + '">' + escapeHtml(tagInfo.text) + '</span>';
+            });
+        }
+        
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+        
+        return html;
+    }
+
+    function renderNodeMetrics(metrics) {
+        var html = '';
+        
+        html += renderMetricBar('CPU', metrics.cpuUsage, metrics.cpuLevel);
+        html += renderMetricBar('RAM', metrics.ramPercent, metrics.ramLevel);
+        html += renderMetricBar('Disk', metrics.diskPercent, metrics.diskLevel);
+        
+        if (metrics.swapTotal > 0) {
+            html += renderMetricBar('Swap', metrics.swapPercent, metrics.swapLevel);
+        } else {
+            html += '<div class="metric">';
+            html += '<div class="metric-label">Load</div>';
+            html += '<div class="metric-value">' + (metrics.load1 !== null ? metrics.load1.toFixed(2) : '-') + '</div>';
+            html += '</div>';
+        }
+        
+        return html;
+    }
+
+    function renderNodeCardFooter(node, metrics, showUptime, showNetwork) {
+        var html = '<div class="node-card-footer">';
+        
+        if (showUptime) {
+            html += '<span class="node-uptime">' + formatUptime(metrics.uptime) + '</span>';
+        }
+        
+        var expiry = formatExpiry(node.expired_at);
+        if (expiry) {
+            html += '<span class="node-expiry level-' + expiry.level + '">' + expiry.text + '</span>';
+        }
+        
+        if (showNetwork) {
+            html += '<span class="node-network">';
+            html += '<span class="network-dir"><span class="arrow-up">&#9650;</span>' + formatSpeed(metrics.netUp) + '</span>';
+            html += '<span class="network-dir"><span class="arrow-down">&#9660;</span>' + formatSpeed(metrics.netDown) + '</span>';
+            html += '</span>';
+        }
+        
+        html += '</div>';
+        
+        return html;
+    }
+
+    function renderNodeCard(node, metrics, showUptime, showNetwork, showPing) {
+        var html = '';
+        
+        html += '<div class="node-card' + (metrics.isOnline ? '' : ' offline') + (state.initialRender ? ' animate-in' : '') + '" data-uuid="' + node.uuid + '">';
+        html += renderNodeCardHeader(node, metrics);
+        html += '<div class="node-card-metrics">';
+        html += renderNodeMetrics(metrics);
+        html += '</div>';
+        html += renderNodeCardFooter(node, metrics, showUptime, showNetwork);
+        html += '</div>';
+        
+        return html;
+    }
+
+    function bindNodeCardEvents(container) {
+        container.querySelectorAll('.node-card').forEach(function (card) {
+            card.addEventListener('click', function () {
+                var uuid = this.getAttribute('data-uuid');
+                openNodeModal(uuid);
+            });
+        });
+    }
+
     function renderGrid() {
         var container = document.getElementById('nodesGrid');
         if (!container) return;
@@ -804,144 +987,28 @@
 
         var html = '';
         nodes.forEach(function (node) {
-            var isOnline = state.onlineNodes.indexOf(node.uuid) !== -1;
-            var rt = state.realtimeData[node.uuid] || {};
-            var cpuUsage = rt.cpu ? rt.cpu.usage : null;
-            var ramUsed = rt.ram ? rt.ram.used : null;
-            var ramTotal = rt.ram ? rt.ram.total : node.mem_total || 0;
-            var ramPercent = (ramUsed !== null && ramTotal > 0) ? (ramUsed / ramTotal * 100) : null;
-            var diskUsed = rt.disk ? rt.disk.used : null;
-            var diskTotal = rt.disk ? rt.disk.total : node.disk_total || 0;
-            var diskPercent = (diskUsed !== null && diskTotal > 0) ? (diskUsed / diskTotal * 100) : null;
-            var swapUsed = rt.swap ? rt.swap.used : 0;
-            var swapTotal = rt.swap ? rt.swap.total : node.swap_total || 0;
-            var swapPercent = swapTotal > 0 ? (swapUsed / swapTotal * 100) : 0;
-            var netUp = rt.network ? rt.network.up : 0;
-            var netDown = rt.network ? rt.network.down : 0;
-            var uptime = rt.uptime || 0;
-            var pingMs = getLatestPing(node.uuid);
-            var pingLevel = getPingLevel(pingMs);
-
-            var cpuLevel = cpuUsage !== null ? getUsageLevel(cpuUsage) : 'normal';
-            var ramLevel = ramPercent !== null ? getUsageLevel(ramPercent) : 'normal';
-            var diskLevel = diskPercent !== null ? getUsageLevel(diskPercent) : 'normal';
-
-            var flagUrl = getCountryFlag(node.region);
-            var osShort = getShortOs(node.os);
-
-            html += '<div class="node-card' + (isOnline ? '' : ' offline') + (state.initialRender ? ' animate-in' : '') + '" data-uuid="' + node.uuid + '">';
-            html += '<div class="node-card-header">';
-            if (flagUrl) {
-                html += '<span class="node-card-flag"><img src="' + flagUrl + '" alt="' + escapeHtml(node.region || '') + '" loading="lazy" onerror="this.style.display=\'none\'"></span>';
-            } else {
-                html += '<span class="node-card-flag node-card-flag-placeholder"><span>?</span></span>';
-            }
-            html += '<div class="node-card-info">';
-            html += '<div class="node-card-name">';
-            html += '<span class="node-status-dot' + (isOnline ? '' : ' offline') + '"></span>';
-            html += '<span class="node-name-text">' + escapeHtml(node.name) + '</span>';
-            html += '</div>';
-            html += '<div class="node-card-subtitle">';
-            html += '<span class="node-card-os">' + escapeHtml(osShort) + '</span>';
-            if (node.tags) {
-                var tags = node.tags.split(';').filter(function(t) { return t.trim(); });
-                var maxTags = 2;
-                tags.slice(0, maxTags).forEach(function(tag) {
-                    var tagText = tag.trim();
-                    var tagClass = '';
-                    var colorMatch = tagText.match(/<(\w+)>$/);
-                    if (colorMatch) {
-                        tagText = tagText.replace(/<\w+>$/, '').trim();
-                        var color = colorMatch[1].toLowerCase();
-                        var validColors = ['green', 'red', 'blue', 'yellow', 'orange', 'purple', 'pink', 'cyan', 'gray', 'success', 'danger', 'warning', 'info'];
-                        if (validColors.indexOf(color) !== -1) {
-                            tagClass = ' tag-' + color;
-                        }
-                    }
-                    html += '<span class="node-api-tag' + tagClass + '">' + escapeHtml(tagText) + '</span>';
-                });
-            }
-            html += '</div>';
-            html += '</div>';
-            html += '</div>';
-            html += '<div class="node-card-metrics">';
-
-            html += '<div class="metric">';
-            html += '<div class="metric-label">CPU</div>';
-            html += '<div class="metric-bar"><div class="metric-bar-fill level-' + cpuLevel + '" style="width:' + (cpuUsage !== null ? Math.min(cpuUsage, 100) : 0) + '%"></div></div>';
-            html += '<div class="metric-value level-' + cpuLevel + '">' + (cpuUsage !== null ? formatPercent(cpuUsage) : '-') + '</div>';
-            html += '</div>';
-
-            html += '<div class="metric">';
-            html += '<div class="metric-label">RAM</div>';
-            html += '<div class="metric-bar"><div class="metric-bar-fill level-' + ramLevel + '" style="width:' + (ramPercent !== null ? Math.min(ramPercent, 100) : 0) + '%"></div></div>';
-            html += '<div class="metric-value level-' + ramLevel + '">' + (ramPercent !== null ? formatPercent(ramPercent) : '-') + '</div>';
-            html += '</div>';
-
-            html += '<div class="metric">';
-            html += '<div class="metric-label">Disk</div>';
-            html += '<div class="metric-bar"><div class="metric-bar-fill level-' + diskLevel + '" style="width:' + (diskPercent !== null ? Math.min(diskPercent, 100) : 0) + '%"></div></div>';
-            html += '<div class="metric-value level-' + diskLevel + '">' + (diskPercent !== null ? formatPercent(diskPercent) : '-') + '</div>';
-            html += '</div>';
-
-            if (swapTotal > 0) {
-                var swapLevel = getUsageLevel(swapPercent);
-                html += '<div class="metric">';
-                html += '<div class="metric-label">Swap</div>';
-                html += '<div class="metric-bar"><div class="metric-bar-fill level-' + swapLevel + '" style="width:' + Math.min(swapPercent, 100) + '%"></div></div>';
-                html += '<div class="metric-value level-' + swapLevel + '">' + formatPercent(swapPercent) + '</div>';
-                html += '</div>';
-            } else {
-                var load1 = rt.load ? rt.load.load1 : null;
-                html += '<div class="metric">';
-                html += '<div class="metric-label">Load</div>';
-                html += '<div class="metric-value">' + (load1 !== null ? load1.toFixed(2) : '-') + '</div>';
-                html += '</div>';
-            }
-
-            html += '</div>';
-
-            html += '<div class="node-card-footer">';
-            if (showUptime) {
-                html += '<span class="node-uptime">' + formatUptime(uptime) + '</span>';
-            }
-            var expiry = formatExpiry(node.expired_at);
-            if (expiry) {
-                html += '<span class="node-expiry level-' + expiry.level + '">' + expiry.text + '</span>';
-            }
-            if (showNetwork) {
-                html += '<span class="node-network">';
-                html += '<span class="network-dir"><span class="arrow-up">&#9650;</span>' + formatSpeed(netUp) + '</span>';
-                html += '<span class="network-dir"><span class="arrow-down">&#9660;</span>' + formatSpeed(netDown) + '</span>';
-                html += '</span>';
-            }
-            html += '</div>';
-
-            html += '</div>';
+            var metrics = calculateNodeMetrics(node);
+            html += renderNodeCard(node, metrics, showUptime, showNetwork, showPing);
         });
 
         container.innerHTML = html;
-
-        container.querySelectorAll('.node-card').forEach(function (card) {
-            card.addEventListener('click', function () {
-                var uuid = this.getAttribute('data-uuid');
-                openNodeModal(uuid);
-            });
-        });
+        bindNodeCardEvents(container);
     }
 
     function renderTable() {
-        var tbody = document.getElementById('nodesTableBody');
-        if (!tbody) return;
+        var container = document.getElementById('nodesTableBody');
+        if (!container) return;
 
         var nodes = getFilteredNodes();
 
         if (nodes.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-tertiary)">' + t('no_nodes') + '</td></tr>';
+            container.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 15h8M9 9h.01M15 9h.01"/></svg><p>' + t('no_nodes') + '</p></div>';
             return;
         }
 
-        var html = '';
+        var showNetwork = state.themeSettings.show_network_speed !== false;
+
+        var html = '<div class="table-cards">';
         nodes.forEach(function (node) {
             var isOnline = state.onlineNodes.indexOf(node.uuid) !== -1;
             var rt = state.realtimeData[node.uuid] || {};
@@ -954,33 +1021,75 @@
             var diskPercent = (diskUsed !== null && diskTotal > 0) ? (diskUsed / diskTotal * 100) : null;
             var netUp = rt.network ? rt.network.up : 0;
             var netDown = rt.network ? rt.network.down : 0;
-            var uptime = rt.uptime || 0;
-            var pingMs = getLatestPing(node.uuid);
-            var pingLevel = getPingLevel(pingMs);
 
             var cpuLevel = cpuUsage !== null ? getUsageLevel(cpuUsage) : 'normal';
             var ramLevel = ramPercent !== null ? getUsageLevel(ramPercent) : 'normal';
             var diskLevel = diskPercent !== null ? getUsageLevel(diskPercent) : 'normal';
 
-            var tableFlagUrl = getCountryFlag(node.region);
+            var flagUrl = getCountryFlag(node.region);
 
-            html += '<tr data-uuid="' + node.uuid + '">';
-            html += '<td><span class="table-status"><span class="node-status-dot' + (isOnline ? '' : ' offline') + '"></span>' + (isOnline ? t('online') : t('offline')) + '</span></td>';
-            html += '<td><span class="table-name">' + escapeHtml(node.name) + '</span></td>';
-            html += '<td><span class="table-region">' + (tableFlagUrl ? '<img src="' + tableFlagUrl + '" alt="' + escapeHtml(node.region || '') + '" class="table-flag" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="table-flag-placeholder">?</span>') + '</span></td>';
-            html += '<td><span class="table-metric"><span class="table-metric-bar"><span class="table-metric-bar-fill level-' + cpuLevel + '" style="width:' + (cpuUsage !== null ? Math.min(cpuUsage, 100) : 0) + '%"></span></span><span class="table-metric-value level-' + cpuLevel + '">' + (cpuUsage !== null ? formatPercent(cpuUsage) : '-') + '</span></span></td>';
-            html += '<td><span class="table-metric"><span class="table-metric-bar"><span class="table-metric-bar-fill level-' + ramLevel + '" style="width:' + (ramPercent !== null ? Math.min(ramPercent, 100) : 0) + '%"></span></span><span class="table-metric-value level-' + ramLevel + '">' + (ramPercent !== null ? formatPercent(ramPercent) : '-') + '</span></span></td>';
-            html += '<td><span class="table-metric"><span class="table-metric-bar"><span class="table-metric-bar-fill level-' + diskLevel + '" style="width:' + (diskPercent !== null ? Math.min(diskPercent, 100) : 0) + '%"></span></span><span class="table-metric-value level-' + diskLevel + '">' + (diskPercent !== null ? formatPercent(diskPercent) : '-') + '</span></span></td>';
-            html += '<td><span class="table-network"><span class="arrow-up" style="color:var(--success)">&#9650;</span>' + formatSpeed(netUp) + ' <span class="arrow-down" style="color:var(--info)">&#9660;</span>' + formatSpeed(netDown) + '</span></td>';
-            html += '<td><span class="table-ping level-' + pingLevel + '">' + formatPing(pingMs) + '</span></td>';
-            html += '<td><span class="table-uptime">' + formatUptime(uptime) + '</span></td>';
-            html += '</tr>';
+            html += '<div class="table-card' + (!isOnline ? ' offline' : '') + '" data-uuid="' + node.uuid + '">';
+            
+            html += '<div class="table-card-header">';
+            html += '<span class="table-card-status' + (!isOnline ? ' offline' : '') + '"></span>';
+            html += '<span class="table-card-flag-wrap">';
+            if (flagUrl) {
+                html += '<img src="' + flagUrl + '" alt="' + escapeHtml(node.region || '') + '" class="table-card-flag" loading="lazy" onerror="this.style.display=\'none\'">';
+            }
+            html += '</span>';
+            html += '<div class="table-card-name-wrap">';
+            html += '<span class="table-card-name">' + escapeHtml(node.name) + '</span>';
+            html += '<div class="table-card-info">';
+            var expiry = formatExpiry(node.expired_at);
+            if (expiry) {
+                html += '<span class="table-card-price">' + (node.price == '-1' ? t('free') || '免费' : (node.price || '')) + '</span>';
+                html += '<span class="table-card-expiry">' + expiry.text + '</span>';
+            }
+            html += '</div>';
+            html += '</div>';
+            html += '</div>';
+
+            html += '<div class="table-card-metrics">';
+            
+            html += '<div class="table-card-metric">';
+            html += '<span class="table-card-metric-label">CPU</span>';
+            html += '<span class="table-card-metric-value level-' + cpuLevel + '">' + (cpuUsage !== null ? formatPercent(cpuUsage) : '-') + '</span>';
+            html += '<div class="table-card-metric-bar"><div class="table-card-metric-fill level-' + cpuLevel + '" style="width:' + (cpuUsage !== null ? Math.min(cpuUsage, 100) : 0) + '%"></div></div>';
+            html += '</div>';
+
+            html += '<div class="table-card-metric">';
+            html += '<span class="table-card-metric-label">' + t('ram') + '</span>';
+            html += '<span class="table-card-metric-value level-' + ramLevel + '">' + (ramPercent !== null ? formatPercent(ramPercent) : '-') + '</span>';
+            html += '<div class="table-card-metric-bar"><div class="table-card-metric-fill level-' + ramLevel + '" style="width:' + (ramPercent !== null ? Math.min(ramPercent, 100) : 0) + '%"></div></div>';
+            html += '</div>';
+
+            html += '<div class="table-card-metric">';
+            html += '<span class="table-card-metric-label">' + t('disk') + '</span>';
+            html += '<span class="table-card-metric-value level-' + diskLevel + '">' + (diskPercent !== null ? formatPercent(diskPercent) : '-') + '</span>';
+            html += '<div class="table-card-metric-bar"><div class="table-card-metric-fill level-' + diskLevel + '" style="width:' + (diskPercent !== null ? Math.min(diskPercent, 100) : 0) + '%"></div></div>';
+            html += '</div>';
+
+            if (showNetwork) {
+                html += '<div class="table-card-metric">';
+                html += '<span class="table-card-metric-label">' + t('upload') + '</span>';
+                html += '<span class="table-card-metric-value">' + formatSpeed(netUp) + '</span>';
+                html += '</div>';
+
+                html += '<div class="table-card-metric">';
+                html += '<span class="table-card-metric-label">' + t('download') + '</span>';
+                html += '<span class="table-card-metric-value">' + formatSpeed(netDown) + '</span>';
+                html += '</div>';
+            }
+
+            html += '</div>';
+            html += '</div>';
         });
+        html += '</div>';
 
-        tbody.innerHTML = html;
+        container.innerHTML = html;
 
-        tbody.querySelectorAll('tr[data-uuid]').forEach(function (row) {
-            row.addEventListener('click', function () {
+        container.querySelectorAll('.table-card[data-uuid]').forEach(function (card) {
+            card.addEventListener('click', function () {
                 var uuid = this.getAttribute('data-uuid');
                 openNodeModal(uuid);
             });
@@ -1916,6 +2025,82 @@
                 greetingIcon.classList.remove('no-bounce');
             }
         }
+
+        applyBackgroundSettings();
+    }
+
+    function applyBackgroundSettings() {
+        var bgType = state.themeSettings.background_type || 'none';
+        var bgPreset = state.themeSettings.background_preset || 'miku';
+        var bgUrl = state.themeSettings.background_url || '';
+        var bgOpacity = state.themeSettings.background_opacity;
+        if (bgOpacity === undefined || bgOpacity === null) bgOpacity = 30;
+        var bgBlur = state.themeSettings.background_blur || 0;
+
+        var PRESET_VIDEOS = {
+            miku: 'assets/img/QAQ.mp4'
+        };
+
+        if (bgType !== 'none') {
+            document.body.classList.add('has-custom-background');
+        } else {
+            document.body.classList.remove('has-custom-background');
+        }
+
+        var bgContainer = document.getElementById('customBackground');
+        if (!bgContainer) {
+            bgContainer = document.createElement('div');
+            bgContainer.id = 'customBackground';
+            bgContainer.className = 'custom-background hidden';
+            document.body.insertBefore(bgContainer, document.body.firstChild);
+        }
+
+        var existingVideo = bgContainer.querySelector('video');
+        if (existingVideo) {
+            existingVideo.pause();
+            existingVideo.remove();
+        }
+
+        bgContainer.className = 'custom-background';
+        bgContainer.style.backgroundImage = '';
+
+        if (bgType === 'none') {
+            bgContainer.classList.add('hidden');
+        } else if (bgType === 'preset') {
+            var presetSrc = PRESET_VIDEOS[bgPreset];
+            if (presetSrc) {
+                bgContainer.classList.add('video-crop-top');
+                bgContainer.classList.remove('hidden');
+                var video = document.createElement('video');
+                video.autoplay = true;
+                video.loop = true;
+                video.muted = true;
+                video.playsInline = true;
+                video.src = presetSrc;
+                bgContainer.appendChild(video);
+                video.play().catch(function() {});
+            }
+        } else if (bgType === 'custom' && bgUrl) {
+            var isVideo = /\.(webm|mp4|ogg|mov)(\?.*)?$/i.test(bgUrl);
+            
+            if (isVideo) {
+                bgContainer.classList.remove('hidden');
+                var video = document.createElement('video');
+                video.autoplay = true;
+                video.loop = true;
+                video.muted = true;
+                video.playsInline = true;
+                video.src = bgUrl;
+                bgContainer.appendChild(video);
+                video.play().catch(function() {});
+            } else {
+                bgContainer.classList.remove('hidden');
+                bgContainer.style.backgroundImage = 'url(' + bgUrl + ')';
+            }
+        }
+
+        bgContainer.style.opacity = bgOpacity / 100;
+        bgContainer.style.filter = 'blur(' + bgBlur + 'px)';
     }
 
     function bindEvents() {
