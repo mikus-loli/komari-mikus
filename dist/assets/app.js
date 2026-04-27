@@ -1,6 +1,197 @@
 (function () {
     'use strict';
 
+    var RPC2Client = (function() {
+        function RPC2Client(options) {
+            this.wsUrl = options.wsUrl || '';
+            this.httpUrl = options.httpUrl || '';
+            this.ws = null;
+            this.rpcId = 0;
+            this.pendingCalls = {};
+            this.reconnectAttempts = 0;
+            this.reconnectTimer = null;
+            this.maxReconnectDelay = 30000;
+            this.pollInterval = null;
+            this.pollCallback = null;
+            this.isConnected = false;
+            this.onConnect = null;
+            this.onDisconnect = null;
+        }
+
+        RPC2Client.prototype.connect = function() {
+            var self = this;
+            if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
+                return;
+            }
+
+            try {
+                this.ws = new WebSocket(this.wsUrl);
+            } catch (e) {
+                this.scheduleReconnect();
+                return;
+            }
+
+            this.ws.onopen = function() {
+                self.isConnected = true;
+                self.reconnectAttempts = 0;
+                if (self.onConnect) self.onConnect();
+                self.startPolling();
+            };
+
+            this.ws.onmessage = function(event) {
+                try {
+                    var msg = JSON.parse(event.data);
+                    self.handleMessage(msg);
+                } catch (e) {}
+            };
+
+            this.ws.onclose = function() {
+                self.isConnected = false;
+                self.stopPolling();
+                if (self.onDisconnect) self.onDisconnect();
+                self.scheduleReconnect();
+            };
+
+            this.ws.onerror = function(err) {
+                if (self.ws) {
+                    self.ws.close();
+                }
+            };
+        };
+
+        RPC2Client.prototype.handleMessage = function(msg) {
+            if (msg.id !== undefined && this.pendingCalls[msg.id]) {
+                var callback = this.pendingCalls[msg.id];
+                delete this.pendingCalls[msg.id];
+                
+                if (msg.error) {
+                    callback.reject(msg.error);
+                } else if (msg.result !== undefined) {
+                    callback.resolve(msg.result);
+                }
+            } else if (msg.result !== undefined && this.pollCallback) {
+                this.pollCallback(msg.result);
+            } else if (msg.method && this.pollCallback) {
+                this.pollCallback(msg.result || msg.params);
+            }
+        };
+
+        RPC2Client.prototype.call = function(method, params, useHttp) {
+            var self = this;
+            params = params || {};
+            
+            if (useHttp || !this.isConnected) {
+                return this.httpCall(method, params);
+            }
+
+            return new Promise(function(resolve, reject) {
+                self.rpcId++;
+                var id = self.rpcId;
+                var request = {
+                    jsonrpc: '2.0',
+                    method: method,
+                    params: params,
+                    id: id
+                };
+
+                self.pendingCalls[id] = { resolve: resolve, reject: reject };
+                
+                try {
+                    self.ws.send(JSON.stringify(request));
+                } catch (e) {
+                    delete self.pendingCalls[id];
+                    reject(e);
+                }
+
+                setTimeout(function() {
+                    if (self.pendingCalls[id]) {
+                        delete self.pendingCalls[id];
+                        reject(new Error('RPC call timeout'));
+                    }
+                }, 30000);
+            });
+        };
+
+        RPC2Client.prototype.httpCall = function(method, params) {
+            var request = {
+                jsonrpc: '2.0',
+                method: method,
+                params: params || {},
+                id: Date.now()
+            };
+
+            return fetch(this.httpUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(request)
+            })
+            .then(function(res) {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.json();
+            })
+            .then(function(msg) {
+                if (msg.error) throw msg.error;
+                return msg.result;
+            });
+        };
+
+        RPC2Client.prototype.scheduleReconnect = function() {
+            var self = this;
+            if (this.reconnectTimer) return;
+            
+            var delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), this.maxReconnectDelay);
+            this.reconnectAttempts++;
+            
+            this.reconnectTimer = setTimeout(function() {
+                self.reconnectTimer = null;
+                self.connect();
+            }, delay);
+        };
+
+        RPC2Client.prototype.startPolling = function(callback) {
+            var self = this;
+            if (callback) this.pollCallback = callback;
+            this.stopPolling();
+            
+            this.pollInterval = setInterval(function() {
+                if (self.ws && self.ws.readyState === WebSocket.OPEN) {
+                    self.rpcId++;
+                    var request = {
+                        jsonrpc: '2.0',
+                        method: 'common:getNodesLatestStatus',
+                        params: {},
+                        id: self.rpcId
+                    };
+                    try {
+                        self.ws.send(JSON.stringify(request));
+                    } catch (e) {}
+                }
+            }, 1000);
+        };
+
+        RPC2Client.prototype.stopPolling = function() {
+            if (this.pollInterval) {
+                clearInterval(this.pollInterval);
+                this.pollInterval = null;
+            }
+        };
+
+        RPC2Client.prototype.disconnect = function() {
+            this.stopPolling();
+            if (this.reconnectTimer) {
+                clearTimeout(this.reconnectTimer);
+                this.reconnectTimer = null;
+            }
+            if (this.ws) {
+                this.ws.close();
+                this.ws = null;
+            }
+            this.isConnected = false;
+        };
+
+        return RPC2Client;
+    })();
+
     var i18n = {
         'zh-CN': {
             total_nodes: '节点总数',
@@ -21,6 +212,7 @@
             cpu_model: 'CPU 型号',
             memory: '内存',
             swap: '交换分区',
+            system: '系统',
             disk: '磁盘',
             ram: '内存',
             upload: '上传',
@@ -81,6 +273,7 @@
             cpu_model: 'CPU Model',
             memory: 'Memory',
             swap: 'Swap',
+            system: 'System',
             disk: 'Disk',
             ram: 'RAM',
             upload: 'Upload',
@@ -135,9 +328,7 @@
         searchQuery: '',
         currentTheme: 'light',
         currentLang: 'zh-CN',
-        ws: null,
-        wsReconnectTimer: null,
-        wsReconnectAttempts: 0,
+        rpc: null,
         selectedNodeUuid: null,
         historyData: {},
         pingData: {},
@@ -204,20 +395,60 @@
         if (isNaN(expiry.getTime())) return null;
         var now = new Date();
         var diff = expiry - now;
-        if (diff < 0) return { text: t('expired'), level: 'expired' };
+        if (diff < 0) return { text: t('expired'), level: 'expired', days: -1 };
         var days = Math.floor(diff / (1000 * 60 * 60 * 24));
         var hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        if (days > 365) return { text: t('long_term'), level: 'normal' };
-        if (days > 30) return { text: days + t('days'), level: 'normal' };
-        if (days > 7) return { text: days + t('days'), level: 'warning' };
-        if (days > 0) return { text: days + t('days') + ' ' + hours + t('hours'), level: 'danger' };
-        if (hours > 0) return { text: hours + t('hours'), level: 'danger' };
-        return { text: '<1' + t('hours'), level: 'danger' };
+        if (days > 365) return { text: t('long_term'), level: 'normal', days: days, isLongTerm: true };
+        if (days > 30) return { text: days + t('days'), level: 'normal', days: days };
+        if (days > 7) return { text: days + t('days'), level: 'warning', days: days };
+        if (days > 0) return { text: days + t('days') + ' ' + hours + t('hours'), level: 'danger', days: days };
+        if (hours > 0) return { text: hours + t('hours'), level: 'danger', days: 0 };
+        return { text: '<1' + t('hours'), level: 'danger', days: 0 };
     }
 
     function formatPercent(value) {
         if (value === null || value === undefined) return '-';
         return value.toFixed(1) + '%';
+    }
+
+    function formatOS(os) {
+        if (!os) return { name: '-', icon: 'unknown' };
+        var osLower = os.toLowerCase();
+        if (osLower.indexOf('windows') !== -1) return { name: 'Windows', icon: 'windows' };
+        if (osLower.indexOf('ubuntu') !== -1) return { name: 'Ubuntu', icon: 'ubuntu' };
+        if (osLower.indexOf('debian') !== -1) return { name: 'Debian', icon: 'debian' };
+        if (osLower.indexOf('centos') !== -1) return { name: 'CentOS', icon: 'centos' };
+        if (osLower.indexOf('rocky') !== -1) return { name: 'Rocky', icon: 'rocky' };
+        if (osLower.indexOf('alma') !== -1) return { name: 'Alma', icon: 'alma' };
+        if (osLower.indexOf('red hat') !== -1 || osLower.indexOf('rhel') !== -1) return { name: 'RHEL', icon: 'rhel' };
+        if (osLower.indexOf('fedora') !== -1) return { name: 'Fedora', icon: 'fedora' };
+        if (osLower.indexOf('arch') !== -1) return { name: 'Arch', icon: 'arch' };
+        if (osLower.indexOf('manjaro') !== -1) return { name: 'Manjaro', icon: 'manjaro' };
+        if (osLower.indexOf('mint') !== -1) return { name: 'Mint', icon: 'mint' };
+        if (osLower.indexOf('gentoo') !== -1) return { name: 'Gentoo', icon: 'gentoo' };
+        if (osLower.indexOf('nix') !== -1) return { name: 'Nix', icon: 'nix' };
+        if (osLower.indexOf('opensuse') !== -1 || osLower.indexOf('suse') !== -1) return { name: 'openSUSE', icon: 'suse' };
+        if (osLower.indexOf('alpine') !== -1) return { name: 'Alpine', icon: 'alpine' };
+        if (osLower.indexOf('openwrt') !== -1) return { name: 'OpenWrt', icon: 'openwrt' };
+        if (osLower.indexOf('freebsd') !== -1) return { name: 'FreeBSD', icon: 'freebsd' };
+        if (osLower.indexOf('macos') !== -1 || osLower.indexOf('mac os') !== -1) return { name: 'macOS', icon: 'macos' };
+        if (osLower.indexOf('android') !== -1) return { name: 'Android', icon: 'android' };
+        if (osLower.indexOf('armbian') !== -1) return { name: 'Armbian', icon: 'armbian' };
+        if (osLower.indexOf('kail') !== -1 || osLower.indexOf('kali') !== -1) return { name: 'Kali', icon: 'kail' };
+        if (osLower.indexOf('huawei') !== -1 || osLower.indexOf('openeuler') !== -1) return { name: 'Euler', icon: 'huawei' };
+        if (osLower.indexOf('unraid') !== -1) return { name: 'Unraid', icon: 'unraid' };
+        if (osLower.indexOf('qnap') !== -1) return { name: 'QNAP', icon: 'qnap' };
+        if (osLower.indexOf('orange') !== -1) return { name: 'OrangePi', icon: 'orange-pi' };
+        if (osLower.indexOf('fnos') !== -1) return { name: 'fnOS', icon: 'fnos' };
+        if (osLower.indexOf('opencloudos') !== -1) return { name: 'OpenCloudOS', icon: 'opencloudos' };
+        if (osLower.indexOf('istore') !== -1) return { name: 'iStore', icon: 'istore' };
+        if (osLower.indexOf('proxmox') !== -1) return { name: 'Proxmox', icon: 'proxmox' };
+        if (osLower.indexOf('synology') !== -1) return { name: 'Synology', icon: 'synology' };
+        if (osLower.indexOf('astar') !== -1) return { name: 'Astar', icon: 'astar' };
+        if (osLower.indexOf('alibaba') !== -1 || osLower.indexOf('aliyun') !== -1) return { name: 'Alibaba', icon: 'alibaba' };
+        if (osLower.indexOf('linux') !== -1) return { name: 'Linux', icon: 'linux' };
+        var parts = os.split(/[\s\-_]/);
+        return { name: parts[0] || os, icon: 'unknown' };
     }
 
     function getUsageLevel(percent) {
@@ -235,58 +466,75 @@
         return proto + '//' + window.location.host + '/api/rpc2';
     }
 
-    function fetchJson(url) {
-        return fetch(url).then(function (res) {
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            return res.json();
+    function initRPC2Client() {
+        var proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        var wsUrl = proto + '//' + window.location.host + '/api/rpc2';
+        var httpUrl = window.location.origin + '/api/rpc2';
+        
+        state.rpc = new RPC2Client({
+            wsUrl: wsUrl,
+            httpUrl: httpUrl
         });
+        
+        state.rpc.onConnect = function() {};
+        
+        state.rpc.onDisconnect = function() {};
+        
+        state.rpc.startPolling(function(result) {
+            handleRpcResult(result);
+        });
+        
+        state.rpc.connect();
     }
 
     function loadPublicSettings() {
-        return fetchJson(getApiBase() + '/api/public').then(function (res) {
-            if (res.status === 'success' && res.data) {
-                state.publicSettings = res.data;
-                state.themeSettings = res.data.theme_settings || {};
-            }
-        }).catch(function (err) {
+        return state.rpc.call('common:getPublicInfo', {}, true).then(function(result) {
+            state.publicSettings = result || {};
+            state.themeSettings = result.theme_settings || {};
+        }).catch(function(err) {
             console.warn('Failed to load public settings:', err);
         });
     }
 
     function loadNodes() {
-        return fetchJson(getApiBase() + '/api/nodes').then(function (res) {
-            if (res.status === 'success' && res.data) {
-                state.nodes = res.data.filter(function (n) { return !n.hidden; });
+        return state.rpc.call('common:getNodes', {}, true).then(function(result) {
+            if (result) {
+                var nodes = Array.isArray(result) ? result : Object.values(result);
+                state.nodes = nodes.filter(function(n) { return !n.hidden; });
             }
-        }).catch(function (err) {
+        }).catch(function(err) {
             console.warn('Failed to load nodes:', err);
         });
     }
 
     function loadNodeHistory(uuid, hours) {
         hours = hours || 24;
-        return fetchJson(getApiBase() + '/api/records/load?uuid=' + encodeURIComponent(uuid) + '&hours=' + hours)
-            .then(function (res) {
-                if (res.status === 'success' && res.data && res.data.records) {
-                    state.historyData[uuid] = res.data.records;
+        return state.rpc.call('records:load', { uuid: uuid, hours: hours }, true)
+            .then(function(result) {
+                if (result && result.records) {
+                    state.historyData[uuid] = result.records;
                 }
-            }).catch(function (err) {
-                console.warn('Failed to load history for', uuid, err);
+            }).catch(function(err) {
+                if (err && err.code !== 401) {
+                    console.warn('Failed to load history for', uuid, err);
+                }
             });
     }
 
     function loadPingHistory(uuid, hours) {
         hours = hours || 24;
-        return fetchJson(getApiBase() + '/api/records/ping?uuid=' + encodeURIComponent(uuid) + '&hours=' + hours)
-            .then(function (res) {
-                if (res.status === 'success' && res.data) {
+        return state.rpc.call('records:loadPing', { uuid: uuid, hours: hours }, true)
+            .then(function(result) {
+                if (result) {
                     state.pingData[uuid] = {
-                        records: res.data.records || [],
-                        tasks: res.data.tasks || []
+                        records: result.records || [],
+                        tasks: result.tasks || []
                     };
                 }
-            }).catch(function (err) {
-                console.warn('Failed to load ping history for', uuid, err);
+            }).catch(function(err) {
+                if (err && err.code !== 401) {
+                    console.warn('Failed to load ping history for', uuid, err);
+                }
             });
     }
 
@@ -485,79 +733,6 @@
         return getCountryFlagUrl(code);
     }
 
-    var rpcId = 0;
-    var pollInterval = null;
-
-    function connectWebSocket() {
-        if (state.ws && (state.ws.readyState === WebSocket.CONNECTING || state.ws.readyState === WebSocket.OPEN)) {
-            return;
-        }
-
-        try {
-            state.ws = new WebSocket(getWsUrl());
-        } catch (e) {
-            console.warn('WebSocket creation failed:', e);
-            scheduleReconnect();
-            return;
-        }
-
-        state.ws.onopen = function () {
-            state.wsReconnectAttempts = 0;
-            requestNodesLatestStatus();
-            startPolling();
-        };
-
-        state.ws.onmessage = function (event) {
-            try {
-                var msg = JSON.parse(event.data);
-                if (msg.result) {
-                    handleRpcResult(msg.result);
-                } else if (msg.error) {
-                    console.warn('RPC error:', msg.error);
-                }
-            } catch (e) {
-                console.warn('WebSocket parse error:', e);
-            }
-        };
-
-        state.ws.onclose = function () {
-            stopPolling();
-            scheduleReconnect();
-        };
-
-        state.ws.onerror = function () {
-            if (state.ws) {
-                state.ws.close();
-            }
-        };
-    }
-
-    function startPolling() {
-        stopPolling();
-        pollInterval = setInterval(function () {
-            requestNodesLatestStatus();
-        }, 1000);
-    }
-
-    function stopPolling() {
-        if (pollInterval) {
-            clearInterval(pollInterval);
-            pollInterval = null;
-        }
-    }
-
-    function requestNodesLatestStatus() {
-        if (!state.ws || state.ws.readyState !== WebSocket.OPEN) return;
-        rpcId++;
-        var request = {
-            jsonrpc: '2.0',
-            method: 'common:getNodesLatestStatus',
-            params: {},
-            id: rpcId
-        };
-        state.ws.send(JSON.stringify(request));
-    }
-
     function handleRpcResult(result) {
         if (!result) return;
         
@@ -585,16 +760,6 @@
         state.onlineNodes = onlineNodes;
         state.realtimeData = realtimeData;
         renderAll();
-    }
-
-    function scheduleReconnect() {
-        if (state.wsReconnectTimer) return;
-        var delay = Math.min(1000 * Math.pow(2, state.wsReconnectAttempts), 30000);
-        state.wsReconnectAttempts++;
-        state.wsReconnectTimer = setTimeout(function () {
-            state.wsReconnectTimer = null;
-            connectWebSocket();
-        }, delay);
     }
 
     function initTheme() {
@@ -836,7 +1001,8 @@
             pingLevel: getPingLevel(pingMs),
             load1: load1,
             flagUrl: getCountryFlag(node.region),
-            osShort: getShortOs(node.os)
+            osShort: getShortOs(node.os),
+            osInfo: formatOS(node.os)
         };
     }
 
@@ -886,7 +1052,7 @@
         html += '<span class="node-name-text">' + escapeHtml(node.name) + '</span>';
         html += '</div>';
         html += '<div class="node-card-subtitle">';
-        html += '<span class="node-card-os">' + escapeHtml(metrics.osShort) + '</span>';
+        html += '<span class="node-card-os"><span class="os-icon os-icon-' + metrics.osInfo.icon + '"></span>' + escapeHtml(metrics.osInfo.name) + '</span>';
         
         if (node.tags) {
             var tags = node.tags.split(';').filter(function(t) { return t.trim(); });
@@ -1031,26 +1197,48 @@
             html += '<div class="table-card' + (!isOnline ? ' offline' : '') + '" data-uuid="' + node.uuid + '">';
             
             html += '<div class="table-card-header">';
+            html += '<div class="table-card-name-wrap">';
             html += '<span class="table-card-status' + (!isOnline ? ' offline' : '') + '"></span>';
             html += '<span class="table-card-flag-wrap">';
             if (flagUrl) {
                 html += '<img src="' + flagUrl + '" alt="' + escapeHtml(node.region || '') + '" class="table-card-flag" loading="lazy" onerror="this.style.display=\'none\'">';
             }
             html += '</span>';
-            html += '<div class="table-card-name-wrap">';
             html += '<span class="table-card-name">' + escapeHtml(node.name) + '</span>';
+            html += '</div>';
             html += '<div class="table-card-info">';
             var expiry = formatExpiry(node.expired_at);
-            if (expiry) {
-                html += '<span class="table-card-price">' + (node.price == '-1' ? t('free') || '免费' : (node.price || '')) + '</span>';
-                html += '<span class="table-card-expiry">' + expiry.text + '</span>';
+            if (expiry || node.price) {
+                var priceText = '';
+                if (node.price == '-1') {
+                    priceText = t('free') || '免费';
+                } else if (node.price) {
+                    priceText = '¥' + node.price + '/月';
+                }
+                if (priceText) {
+                    html += '<span class="table-card-price">价格: ' + priceText + '</span>';
+                }
+                if (expiry) {
+                    if (expiry.isLongTerm) {
+                        html += '<span class="table-card-expiry level-' + expiry.level + '">' + t('long_term') + '</span>';
+                    } else if (expiry.days >= 0) {
+                        html += '<span class="table-card-expiry level-' + expiry.level + '">剩余: ' + expiry.days + ' 天</span>';
+                    } else {
+                        html += '<span class="table-card-expiry level-' + expiry.level + '">' + expiry.text + '</span>';
+                    }
+                }
             }
-            html += '</div>';
             html += '</div>';
             html += '</div>';
 
             html += '<div class="table-card-metrics">';
             
+            var osInfo = formatOS(node.os);
+            html += '<div class="table-card-metric table-card-system">';
+            html += '<span class="table-card-metric-label">' + t('system') + '</span>';
+            html += '<span class="table-card-metric-value"><span class="os-icon os-icon-' + osInfo.icon + '"></span>' + escapeHtml(osInfo.name) + '</span>';
+            html += '</div>';
+
             html += '<div class="table-card-metric">';
             html += '<span class="table-card-metric-label">CPU</span>';
             html += '<span class="table-card-metric-value level-' + cpuLevel + '">' + (cpuUsage !== null ? formatPercent(cpuUsage) : '-') + '</span>';
@@ -1078,6 +1266,32 @@
                 html += '<div class="table-card-metric">';
                 html += '<span class="table-card-metric-label">' + t('download') + '</span>';
                 html += '<span class="table-card-metric-value">' + formatSpeed(netDown) + '</span>';
+                html += '</div>';
+            }
+
+            var hasIpTags = node.ipv4 || node.ipv6;
+            var hasTags = node.tags && node.tags.split(';').filter(function(t) { return t.trim(); }).length > 0;
+            
+            if (hasIpTags || hasTags) {
+                html += '<div class="table-card-metric table-card-metric-tags">';
+                html += '<div class="table-card-tags">';
+                
+                if (node.ipv4) {
+                    html += '<span class="table-card-tag tag-ip tag-ipv4">IPv4</span>';
+                }
+                if (node.ipv6) {
+                    html += '<span class="table-card-tag tag-ip tag-ipv6">IPv6</span>';
+                }
+                
+                if (node.tags) {
+                    var tags = node.tags.split(';').filter(function(t) { return t.trim(); });
+                    tags.forEach(function(tag) {
+                        var tagInfo = parseTagInfo(tag);
+                        html += '<span class="table-card-tag' + tagInfo.className + '">' + escapeHtml(tagInfo.text) + '</span>';
+                    });
+                }
+                
+                html += '</div>';
                 html += '</div>';
             }
 
@@ -2467,6 +2681,8 @@
         var groupFilter = document.querySelector('.stats-bar .group-filter');
         if (groupFilter) groupFilter.classList.add('animate-in');
         
+        initRPC2Client();
+        
         loadPublicSettings().then(function () {
             updatePreloader(30, '正在获取配置...');
             initTheme();
@@ -2479,7 +2695,6 @@
             updatePreloader(60, '正在加载节点...');
             renderGroupFilter();
             renderAll();
-            connectWebSocket();
             bindEvents();
             return loadAllPingData();
         }).then(function () {

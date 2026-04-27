@@ -327,18 +327,6 @@ body.has-custom-background .table-card:hover {
     border-color: rgba(var(--accent-rgb), 0.5);
 }
 
-body.has-custom-background .table-card-header {
-    border-bottom-color: rgba(var(--border-color-rgb), 0.3);
-}
-
-body.has-custom-background .table-card-price {
-    background: rgba(76, 175, 125, 0.12);
-}
-
-body.has-custom-background .table-card-expiry {
-    background: rgba(var(--bg-card-rgb), 0.5);
-}
-
 body.has-custom-background .modal {
     background: rgba(var(--bg-card-rgb), 0.92);
     backdrop-filter: blur(24px) saturate(180%);
@@ -1249,12 +1237,21 @@ body::before {
 }
 
 .node-card-os {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     font-size: 0.75rem;
     color: var(--text-tertiary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     font-weight: 500;
+}
+
+.node-card-os .os-icon {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
 }
 
 .node-card-subtitle {
@@ -1555,7 +1552,7 @@ body::before {
 
 .table-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, 500px);
+    grid-template-columns: repeat(auto-fill, 600px);
     gap: 14px;
     width: 100%;
     justify-content: center;
@@ -1564,13 +1561,13 @@ body::before {
 body.view-table .welcome-section,
 body.view-table .stats-bar,
 body.view-table .nodes-table-container {
-    max-width: 1014px;
+    max-width: 1214px;
     margin-left: auto;
     margin-right: auto;
 }
 
 body.view-table .group-filter {
-    max-width: 1014px;
+    max-width: 1214px;
 }
 
 body.view-table .stats-bar {
@@ -1602,7 +1599,7 @@ body.view-table .stat-value {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
-    padding: 16px 20px;
+    padding: 12px 16px;
     cursor: pointer;
     min-height: 120px;
     transition: all var(--transition);
@@ -1610,7 +1607,7 @@ body.view-table .stat-value {
     position: relative;
     overflow: hidden;
     min-width: 0;
-    gap: 12px;
+    gap: 8px;
 }
 
 .table-card:hover {
@@ -1625,11 +1622,10 @@ body.view-table .stat-value {
 
 .table-card-header {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 2px;
     width: 100%;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border-light);
 }
 
 .table-card-status {
@@ -1650,94 +1646,336 @@ body.view-table .stat-value {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 24px;
+    min-width: 17px;
 }
 
 .table-card-flag {
-    width: 22px;
-    height: 15px;
+    width: 17px;
+    height: 12px;
     border-radius: 2px;
     object-fit: cover;
     image-rendering: crisp-edges;
     flex-shrink: 0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .table-card-name-wrap {
     display: flex;
     align-items: center;
-    gap: 10px;
-    flex: 1;
+    justify-content: center;
+    gap: 6px;
     min-width: 0;
 }
 
 .table-card-name {
     font-weight: 700;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     color: var(--text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     letter-spacing: -0.01em;
+    text-align: center;
 }
 
 .table-card-info {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
-    flex-shrink: 0;
-    margin-left: auto;
+    margin-top: 0;
 }
 
 .table-card-price {
-    font-size: 0.68rem;
+    font-size: 0.65rem;
     color: var(--success);
     font-weight: 600;
-    padding: 2px 6px;
-    background: var(--success-light);
-    border-radius: 4px;
 }
 
 .table-card-expiry {
-    font-size: 0.68rem;
+    font-size: 0.65rem;
     color: var(--text-tertiary);
-    font-weight: 500;
-    padding: 2px 6px;
-    background: var(--bg-tertiary);
-    border-radius: 4px;
+}
+
+.table-card-expiry.level-warning {
+    color: var(--warning);
+}
+
+.table-card-expiry.level-danger {
+    color: var(--danger);
+}
+
+.table-card-expiry.level-expired {
+    color: var(--danger);
 }
 
 .table-card-metrics {
     display: grid;
-    grid-template-columns: repeat(3, 1fr) repeat(2, auto);
-    gap: 12px 16px;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
     width: 100%;
+}
+
+.table-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+}
+
+.table-card-metric-tags {
+    grid-column: 1 / -1;
+}
+
+.table-card-metric-tags .table-card-metric-label {
+    margin-bottom: 2px;
+}
+
+.table-card-tag {
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--bg-secondary);
+    color: var(--text-tertiary);
+    white-space: nowrap;
+}
+
+.table-card-tag.tag-green,
+.table-card-tag.tag-success {
+    background: rgba(76, 175, 125, 0.15);
+    color: var(--success);
+}
+
+.table-card-tag.tag-red,
+.table-card-tag.tag-danger {
+    background: rgba(231, 76, 94, 0.15);
+    color: var(--danger);
+}
+
+.table-card-tag.tag-blue,
+.table-card-tag.tag-info {
+    background: rgba(92, 156, 237, 0.15);
+    color: var(--info);
+}
+
+.table-card-tag.tag-yellow,
+.table-card-tag.tag-warning {
+    background: rgba(245, 166, 35, 0.15);
+    color: var(--warning);
+}
+
+.table-card-tag.tag-orange {
+    background: rgba(255, 152, 0, 0.15);
+    color: #ff9800;
+}
+
+.table-card-tag.tag-purple {
+    background: rgba(156, 92, 224, 0.15);
+    color: #9c5ce0;
+}
+
+.table-card-tag.tag-pink {
+    background: rgba(232, 102, 138, 0.15);
+    color: #e8668a;
+}
+
+.table-card-tag.tag-cyan {
+    background: rgba(0, 188, 212, 0.15);
+    color: #00bcd4;
+}
+
+.table-card-tag.tag-gray {
+    background: rgba(128, 128, 128, 0.15);
+    color: #808080;
+}
+
+.table-card-tag.tag-ip {
+    font-weight: 600;
+    font-size: 0.55rem;
+}
+
+.table-card-tag.tag-ipv4 {
+    background: rgba(92, 156, 237, 0.15);
+    color: #5c9ced;
+}
+
+.table-card-tag.tag-ipv6 {
+    background: rgba(156, 92, 224, 0.15);
+    color: #9c5ce0;
 }
 
 .table-card-metric {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
     min-width: 0;
 }
 
+.table-card-metric.table-card-system .table-card-metric-value {
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.os-icon {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.os-icon-windows {
+    background-image: url('logo/os-windows.svg');
+}
+
+.os-icon-ubuntu {
+    background-image: url('logo/os-ubuntu.svg');
+}
+
+.os-icon-debian {
+    background-image: url('logo/os-debian.svg');
+}
+
+.os-icon-centos {
+    background-image: url('logo/os-centos.svg');
+}
+
+.os-icon-rhel {
+    background-image: url('logo/os-redhat.svg');
+}
+
+.os-icon-fedora {
+    background-image: url('logo/os-fedora.svg');
+}
+
+.os-icon-arch {
+    background-image: url('logo/os-arch.svg');
+}
+
+.os-icon-suse {
+    background-image: url('logo/os-openSUSE.svg');
+}
+
+.os-icon-alpine {
+    background-image: url('logo/os-alpine.webp');
+}
+
+.os-icon-openwrt {
+    background-image: url('logo/os-openwrt.svg');
+}
+
+.os-icon-freebsd {
+    background-image: url('logo/os-freebsd.svg');
+}
+
+.os-icon-macos {
+    background-image: url('logo/os-macos.svg');
+}
+
+.os-icon-android {
+    background-image: url('logo/linux.svg');
+}
+
+.os-icon-linux {
+    background-image: url('logo/linux.svg');
+}
+
+.os-icon-rocky {
+    background-image: url('logo/os-rocky.svg');
+}
+
+.os-icon-alma {
+    background-image: url('logo/os-alma.svg');
+}
+
+.os-icon-mint {
+    background-image: url('logo/os-mint.svg');
+}
+
+.os-icon-manjaro {
+    background-image: url('logo/os-manjaro-.svg');
+}
+
+.os-icon-gentoo {
+    background-image: url('logo/os-gentoo.svg');
+}
+
+.os-icon-nix {
+    background-image: url('logo/os-nix.svg');
+}
+
+.os-icon-qnap {
+    background-image: url('logo/os-qnap.svg');
+}
+
+.os-icon-unraid {
+    background-image: url('logo/os-unraid.svg');
+}
+
+.os-icon-armbian {
+    background-image: url('logo/os-armbian.svg');
+}
+
+.os-icon-kail {
+    background-image: url('logo/os-kail.svg');
+}
+
+.os-icon-huawei {
+    background-image: url('logo/os-huawei.svg');
+}
+
+.os-icon-orange-pi {
+    background-image: url('logo/os-orange-pi.svg');
+}
+
+.os-icon-fnos {
+    background-image: url('logo/os-fnos.ico');
+}
+
+.os-icon-opencloudos {
+    background-image: url('logo/os-OpenCloudOS.png');
+}
+
+.os-icon-istore {
+    background-image: url('logo/os-istore.png');
+}
+
+.os-icon-proxmox {
+    background-image: url('logo/os-proxmox.ico');
+}
+
+.os-icon-synology {
+    background-image: url('logo/os-synology.ico');
+}
+
+.os-icon-astar {
+    background-image: url('logo/os-astar.png');
+}
+
+.os-icon-alibaba {
+    background-image: url('logo/alibabacloud-color.svg');
+}
+
+.os-icon-unknown {
+    background-image: url('logo/TablerHelp.svg');
+}
+
 .table-card-metric-label {
-    font-size: 0.68rem;
+    font-size: 0.65rem;
     color: var(--text-tertiary);
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
 }
 
 .table-card-metric-value {
-    font-size: 0.82rem;
-    font-weight: 700;
+    font-size: 0.75rem;
+    font-weight: 600;
     color: var(--text-primary);
-    font-family: var(--font-mono);
 }
 
 .table-card-metric-bar {
-    height: 4px;
+    height: 3px;
     background: var(--bg-tertiary);
     border-radius: 2px;
     overflow: hidden;
@@ -3158,11 +3396,11 @@ body.view-table .stat-value {
     body.view-table .welcome-section,
     body.view-table .stats-bar,
     body.view-table .nodes-table-container {
-        max-width: 850px;
+        max-width: 854px;
     }
 
     body.view-table .group-filter {
-        max-width: 850px;
+        max-width: 854px;
     }
 
     body.view-table .stat-item {
@@ -3184,50 +3422,49 @@ body.view-table .stat-value {
     }
 
     .table-card {
-        padding: 12px 14px;
-        gap: 10px;
+        padding: 10px 14px;
+        gap: 8px;
         min-height: 110px;
     }
 
     .table-card-header {
-        gap: 8px;
-        padding-bottom: 8px;
+        gap: 6px;
     }
 
     .table-card-flag-wrap {
-        min-width: 20px;
+        min-width: 16px;
     }
 
     .table-card-flag {
-        width: 18px;
-        height: 12px;
+        width: 16px;
+        height: 11px;
     }
 
     .table-card-name {
-        font-size: 0.82rem;
+        font-size: 0.72rem;
     }
 
     .table-card-info {
-        gap: 6px;
+        gap: 4px;
+        margin-top: 1px;
     }
 
     .table-card-price,
     .table-card-expiry {
-        font-size: 0.62rem;
-        padding: 1px 5px;
+        font-size: 0.58rem;
     }
 
     .table-card-metrics {
-        grid-template-columns: repeat(3, 1fr) repeat(2, auto);
-        gap: 8px 10px;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 8px;
     }
 
     .table-card-metric-label {
-        font-size: 0.62rem;
+        font-size: 0.6rem;
     }
 
     .table-card-metric-value {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
     }
 
     .table-card-metric-bar {
@@ -3373,53 +3610,57 @@ body.view-table .stat-value {
 
     .table-card {
         padding: 10px 12px;
-        gap: 8px;
+        gap: 6px;
         min-height: 100px;
     }
 
     .table-card-header {
-        gap: 6px;
-        padding-bottom: 8px;
+        gap: 5px;
     }
 
     .table-card-flag-wrap {
-        min-width: 18px;
+        min-width: 15px;
     }
 
     .table-card-flag {
-        width: 16px;
-        height: 11px;
+        width: 15px;
+        height: 10px;
     }
 
     .table-card-name {
-        font-size: 0.8rem;
+        font-size: 0.7rem;
     }
 
     .table-card-info {
-        gap: 4px;
+        gap: 3px;
+        margin-top: 1px;
     }
 
     .table-card-price,
     .table-card-expiry {
-        font-size: 0.6rem;
-        padding: 1px 4px;
+        font-size: 0.55rem;
     }
 
     .table-card-metrics {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(6, 1fr);
         gap: 6px;
     }
 
     .table-card-metric-label {
-        font-size: 0.6rem;
+        font-size: 0.55rem;
     }
 
     .table-card-metric-value {
-        font-size: 0.72rem;
+        font-size: 0.65rem;
+    }
+
+    .os-icon {
+        width: 10px;
+        height: 10px;
     }
 
     .table-card-metric-bar {
-        height: 3px;
+        height: 2px;
     }
 
     .node-card-metrics {
