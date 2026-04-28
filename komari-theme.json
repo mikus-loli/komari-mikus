@@ -109,50 +109,50 @@
             },
             {
                 "name": {
-                    "en": "Background",
-                    "zh-CN": "背景设置",
-                    "ja": "背景設定"
+                    "en": "PC Background",
+                    "zh-CN": "PC端背景",
+                    "ja": "PC背景"
                 },
                 "type": "title"
             },
             {
-                "key": "background_type",
+                "key": "pc_background_type",
                 "name": {
-                    "en": "Background Type",
-                    "zh-CN": "背景类型",
-                    "ja": "背景タイプ"
+                    "en": "PC Background Type",
+                    "zh-CN": "PC端背景类型",
+                    "ja": "PC背景タイプ"
                 },
                 "type": "select",
                 "options": "none,preset,custom",
                 "default": "none",
                 "help": {
-                    "en": "Select background type",
-                    "zh-CN": "选择背景类型",
-                    "ja": "背景タイプを選択"
+                    "en": "Select background type for PC",
+                    "zh-CN": "选择PC端背景类型",
+                    "ja": "PCの背景タイプを選択"
                 }
             },
             {
-                "key": "background_preset",
+                "key": "pc_background_preset",
                 "name": {
-                    "en": "Preset Background",
-                    "zh-CN": "预设动态背景",
-                    "ja": "プリセット動的背景"
+                    "en": "PC Preset Background",
+                    "zh-CN": "PC端预设动态背景",
+                    "ja": "PCプリセット動的背景"
                 },
                 "type": "select",
                 "options": "miku",
                 "default": "miku",
                 "help": {
-                    "en": "Select a preset dynamic background",
-                    "zh-CN": "选择预设动态背景",
-                    "ja": "プリセット動的背景を選択"
+                    "en": "Select a preset dynamic background for PC",
+                    "zh-CN": "选择PC端预设动态背景",
+                    "ja": "PCのプリセット動的背景を選択"
                 }
             },
             {
-                "key": "background_url",
+                "key": "pc_background_url",
                 "name": {
-                    "en": "Custom Background URL",
-                    "zh-CN": "自定义背景URL",
-                    "ja": "カスタム背景URL"
+                    "en": "PC Custom Background URL",
+                    "zh-CN": "PC端自定义背景URL",
+                    "ja": "PCカスタム背景URL"
                 },
                 "type": "string",
                 "default": "",
@@ -163,11 +163,11 @@
                 }
             },
             {
-                "key": "background_opacity",
+                "key": "pc_background_opacity",
                 "name": {
-                    "en": "Background Opacity",
-                    "zh-CN": "背景透明度",
-                    "ja": "背景の不透明度"
+                    "en": "PC Background Opacity",
+                    "zh-CN": "PC端背景透明度",
+                    "ja": "PC背景の不透明度"
                 },
                 "type": "number",
                 "default": 30,
@@ -178,11 +178,96 @@
                 }
             },
             {
-                "key": "background_blur",
+                "key": "pc_background_blur",
                 "name": {
-                    "en": "Background Blur",
-                    "zh-CN": "背景模糊度",
-                    "ja": "背景のぼかし"
+                    "en": "PC Background Blur",
+                    "zh-CN": "PC端背景模糊度",
+                    "ja": "PC背景のぼかし"
+                },
+                "type": "number",
+                "default": 0,
+                "help": {
+                    "en": "Adjust background blur (0-20px)",
+                    "zh-CN": "调整背景模糊度 (0-20px)",
+                    "ja": "背景のぼかしを調整 (0-20px)"
+                }
+            },
+            {
+                "name": {
+                    "en": "Mobile Background",
+                    "zh-CN": "手机端背景",
+                    "ja": "モバイル背景"
+                },
+                "type": "title"
+            },
+            {
+                "key": "mobile_background_type",
+                "name": {
+                    "en": "Mobile Background Type",
+                    "zh-CN": "手机端背景类型",
+                    "ja": "モバイル背景タイプ"
+                },
+                "type": "select",
+                "options": "none,preset,custom",
+                "default": "none",
+                "help": {
+                    "en": "Select background type for mobile",
+                    "zh-CN": "选择手机端背景类型",
+                    "ja": "モバイルの背景タイプを選択"
+                }
+            },
+            {
+                "key": "mobile_background_preset",
+                "name": {
+                    "en": "Mobile Preset Background",
+                    "zh-CN": "手机端预设动态背景",
+                    "ja": "モバイルプリセット動的背景"
+                },
+                "type": "select",
+                "options": "miku",
+                "default": "miku",
+                "help": {
+                    "en": "Select a preset dynamic background for mobile",
+                    "zh-CN": "选择手机端预设动态背景",
+                    "ja": "モバイルのプリセット動的背景を選択"
+                }
+            },
+            {
+                "key": "mobile_background_url",
+                "name": {
+                    "en": "Mobile Custom Background URL",
+                    "zh-CN": "手机端自定义背景URL",
+                    "ja": "モバイルカスタム背景URL"
+                },
+                "type": "string",
+                "default": "",
+                "help": {
+                    "en": "Supports images (jpg/png/gif/webp) and videos (webm/mp4)",
+                    "zh-CN": "支持图片(jpg/png/gif/webp)和视频(webm/mp4)",
+                    "ja": "画像（jpg/png/gif/webp）および動画（webm/mp4）をサポート"
+                }
+            },
+            {
+                "key": "mobile_background_opacity",
+                "name": {
+                    "en": "Mobile Background Opacity",
+                    "zh-CN": "手机端背景透明度",
+                    "ja": "モバイル背景の不透明度"
+                },
+                "type": "number",
+                "default": 30,
+                "help": {
+                    "en": "Adjust background opacity (0-100)",
+                    "zh-CN": "调整背景透明度 (0-100)",
+                    "ja": "背景の不透明度を調整 (0-100)"
+                }
+            },
+            {
+                "key": "mobile_background_blur",
+                "name": {
+                    "en": "Mobile Background Blur",
+                    "zh-CN": "手机端背景模糊度",
+                    "ja": "モバイル背景のぼかし"
                 },
                 "type": "number",
                 "default": 0,

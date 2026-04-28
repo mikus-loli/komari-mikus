@@ -2371,13 +2371,39 @@
         applyBackgroundSettings();
     }
 
+    function isMobileDevice() {
+        return window.innerWidth <= 768;
+    }
+
     function applyBackgroundSettings() {
-        var bgType = state.themeSettings.background_type || 'none';
-        var bgPreset = state.themeSettings.background_preset || 'miku';
-        var bgUrl = state.themeSettings.background_url || '';
-        var bgOpacity = state.themeSettings.background_opacity;
+        var isMobile = isMobileDevice();
+        var prefix = isMobile ? 'mobile_' : 'pc_';
+        
+        var bgType = state.themeSettings[prefix + 'background_type'];
+        if (bgType === undefined || bgType === null) {
+            bgType = state.themeSettings.background_type || 'none';
+        }
+        
+        var bgPreset = state.themeSettings[prefix + 'background_preset'];
+        if (bgPreset === undefined || bgPreset === null) {
+            bgPreset = state.themeSettings.background_preset || 'miku';
+        }
+        
+        var bgUrl = state.themeSettings[prefix + 'background_url'];
+        if (bgUrl === undefined || bgUrl === null) {
+            bgUrl = state.themeSettings.background_url || '';
+        }
+        
+        var bgOpacity = state.themeSettings[prefix + 'background_opacity'];
+        if (bgOpacity === undefined || bgOpacity === null) {
+            bgOpacity = state.themeSettings.background_opacity;
+        }
         if (bgOpacity === undefined || bgOpacity === null) bgOpacity = 30;
-        var bgBlur = state.themeSettings.background_blur || 0;
+        
+        var bgBlur = state.themeSettings[prefix + 'background_blur'];
+        if (bgBlur === undefined || bgBlur === null) {
+            bgBlur = state.themeSettings.background_blur || 0;
+        }
 
         var PRESET_VIDEOS = {
             miku: 'assets/img/QAQ.mp4'
@@ -2501,10 +2527,21 @@
 
         initModalDragScroll();
 
+        var resizeTimer = null;
+        var lastIsMobile = isMobileDevice();
         window.addEventListener('resize', function () {
             if (state.selectedNodeUuid && state.historyData[state.selectedNodeUuid]) {
                 drawCharts(state.selectedNodeUuid);
             }
+            
+            if (resizeTimer) clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function() {
+                var currentIsMobile = isMobileDevice();
+                if (currentIsMobile !== lastIsMobile) {
+                    lastIsMobile = currentIsMobile;
+                    applyBackgroundSettings();
+                }
+            }, 100);
         });
     }
 
