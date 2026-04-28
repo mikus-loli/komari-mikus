@@ -322,8 +322,6 @@
         }
     };
 
-    var flagCache = {};
-
     var state = {
         nodes: [],
         realtimeData: {},
@@ -816,16 +814,7 @@
 
     function getCountryFlagUrl(countryCode) {
         if (!countryCode) return null;
-        var code = countryCode.toLowerCase();
-        var url = 'assets/flags/' + code + '.svg';
-        
-        if (!flagCache[code]) {
-            flagCache[code] = url;
-            var img = new Image();
-            img.src = url;
-        }
-        
-        return url;
+        return 'assets/flags/' + countryCode.toLowerCase() + '.svg';
     }
 
     function getCountryFlag(region) {
@@ -1142,7 +1131,7 @@
         var html = '<div class="node-card-header">';
         
         if (metrics.flagUrl) {
-            html += '<span class="node-card-flag"><img src="' + metrics.flagUrl + '" alt="' + escapeHtml(node.region || '') + '" loading="lazy" onerror="this.style.display=\'none\'"></span>';
+            html += '<span class="node-card-flag" style="background-image: url(\'' + metrics.flagUrl + '\')" title="' + escapeHtml(node.region || '') + '"></span>';
         } else {
             html += '<span class="node-card-flag node-card-flag-placeholder"><span>?</span></span>';
         }
@@ -1302,7 +1291,7 @@
             html += '<span class="table-card-status' + (!isOnline ? ' offline' : '') + '"></span>';
             html += '<span class="table-card-flag-wrap">';
             if (flagUrl) {
-                html += '<img src="' + flagUrl + '" alt="' + escapeHtml(node.region || '') + '" class="table-card-flag" loading="lazy" onerror="this.style.display=\'none\'">';
+                html += '<span class="table-card-flag" style="background-image: url(\'' + flagUrl + '\')" title="' + escapeHtml(node.region || '') + '"></span>';
             }
             html += '</span>';
             html += '<span class="table-card-name">' + escapeHtml(node.name) + '</span>';
