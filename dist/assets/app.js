@@ -322,6 +322,8 @@
         }
     };
 
+    var flagCache = {};
+
     var state = {
         nodes: [],
         realtimeData: {},
@@ -814,7 +816,16 @@
 
     function getCountryFlagUrl(countryCode) {
         if (!countryCode) return null;
-        return 'assets/flags/' + countryCode.toLowerCase() + '.svg';
+        var code = countryCode.toLowerCase();
+        var url = 'assets/flags/' + code + '.svg';
+        
+        if (!flagCache[code]) {
+            flagCache[code] = url;
+            var img = new Image();
+            img.src = url;
+        }
+        
+        return url;
     }
 
     function getCountryFlag(region) {
@@ -2419,6 +2430,7 @@
                 video.muted = true;
                 video.playsInline = true;
                 video.src = presetSrc;
+                video.playbackRate = 0.5;
                 bgContainer.appendChild(video);
                 video.play().catch(function() {});
             }

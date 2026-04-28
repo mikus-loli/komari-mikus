@@ -1740,51 +1740,51 @@ body.view-table .stat-value {
 
 .table-card-tag.tag-green,
 .table-card-tag.tag-success {
-    background: rgba(76, 175, 125, 0.15);
-    color: var(--success);
+    background: rgba(76, 175, 125, 0.25);
+    color: #2e9b6a;
 }
 
 .table-card-tag.tag-red,
 .table-card-tag.tag-danger {
-    background: rgba(231, 76, 94, 0.15);
-    color: var(--danger);
+    background: rgba(231, 76, 94, 0.25);
+    color: #d63041;
 }
 
 .table-card-tag.tag-blue,
 .table-card-tag.tag-info {
-    background: rgba(92, 156, 237, 0.15);
-    color: var(--info);
+    background: rgba(92, 156, 237, 0.25);
+    color: #3d7dd8;
 }
 
 .table-card-tag.tag-yellow,
 .table-card-tag.tag-warning {
-    background: rgba(245, 166, 35, 0.15);
-    color: var(--warning);
+    background: rgba(245, 166, 35, 0.25);
+    color: #d99a0f;
 }
 
 .table-card-tag.tag-orange {
-    background: rgba(255, 152, 0, 0.15);
-    color: #ff9800;
+    background: rgba(255, 152, 0, 0.25);
+    color: #e68a00;
 }
 
 .table-card-tag.tag-purple {
-    background: rgba(156, 92, 224, 0.15);
-    color: #9c5ce0;
+    background: rgba(156, 92, 224, 0.25);
+    color: #8a4ad5;
 }
 
 .table-card-tag.tag-pink {
-    background: rgba(232, 102, 138, 0.15);
-    color: #e8668a;
+    background: rgba(232, 102, 138, 0.25);
+    color: #d64a7a;
 }
 
 .table-card-tag.tag-cyan {
-    background: rgba(0, 188, 212, 0.15);
-    color: #00bcd4;
+    background: rgba(0, 188, 212, 0.25);
+    color: #00a5bb;
 }
 
 .table-card-tag.tag-gray {
-    background: rgba(128, 128, 128, 0.15);
-    color: #808080;
+    background: rgba(128, 128, 128, 0.25);
+    color: #666666;
 }
 
 .table-card-tag.tag-ip {
@@ -1793,13 +1793,13 @@ body.view-table .stat-value {
 }
 
 .table-card-tag.tag-ipv4 {
-    background: rgba(92, 156, 237, 0.15);
-    color: #5c9ced;
+    background: rgba(92, 156, 237, 0.25);
+    color: #3d7dd8;
 }
 
 .table-card-tag.tag-ipv6 {
-    background: rgba(156, 92, 224, 0.15);
-    color: #9c5ce0;
+    background: rgba(156, 92, 224, 0.25);
+    color: #8a4ad5;
 }
 
 .table-card-metric {
