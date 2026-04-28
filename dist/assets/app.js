@@ -2398,7 +2398,9 @@
         if (bgOpacity === undefined || bgOpacity === null) {
             bgOpacity = state.themeSettings.background_opacity;
         }
-        if (bgOpacity === undefined || bgOpacity === null) bgOpacity = 30;
+        if (bgOpacity === undefined || bgOpacity === null) {
+            bgOpacity = isMobile ? 100 : 30;
+        }
         
         var bgBlur = state.themeSettings[prefix + 'background_blur'];
         if (bgBlur === undefined || bgBlur === null) {
@@ -2407,6 +2409,10 @@
 
         var PRESET_VIDEOS = {
             miku: 'assets/img/QAQ.mp4'
+        };
+        
+        var PRESET_IMAGES = {
+            miku: 'https://random.mikus.ink'
         };
 
         if (bgType !== 'none') {
@@ -2435,19 +2441,28 @@
         if (bgType === 'none') {
             bgContainer.classList.add('hidden');
         } else if (bgType === 'preset') {
-            var presetSrc = PRESET_VIDEOS[bgPreset];
-            if (presetSrc) {
-                bgContainer.classList.add('video-crop-top');
-                bgContainer.classList.remove('hidden');
-                var video = document.createElement('video');
-                video.autoplay = true;
-                video.loop = true;
-                video.muted = true;
-                video.playsInline = true;
-                video.src = presetSrc;
-                video.playbackRate = 0.5;
-                bgContainer.appendChild(video);
-                video.play().catch(function() {});
+            if (isMobile) {
+                var presetImg = PRESET_IMAGES[bgPreset];
+                if (presetImg) {
+                    bgContainer.classList.remove('hidden');
+                    bgContainer.classList.remove('video-crop-top');
+                    bgContainer.style.backgroundImage = 'url(' + presetImg + ')';
+                }
+            } else {
+                var presetSrc = PRESET_VIDEOS[bgPreset];
+                if (presetSrc) {
+                    bgContainer.classList.add('video-crop-top');
+                    bgContainer.classList.remove('hidden');
+                    var video = document.createElement('video');
+                    video.autoplay = true;
+                    video.loop = true;
+                    video.muted = true;
+                    video.playsInline = true;
+                    video.src = presetSrc;
+                    video.playbackRate = 0.5;
+                    bgContainer.appendChild(video);
+                    video.play().catch(function() {});
+                }
             }
         } else if (bgType === 'custom' && bgUrl) {
             var isVideo = /\.(webm|mp4|ogg|mov)(\?.*)?$/i.test(bgUrl);

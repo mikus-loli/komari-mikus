@@ -255,7 +255,7 @@
                     "ja": "モバイル背景の不透明度"
                 },
                 "type": "number",
-                "default": 30,
+                "default": 100,
                 "help": {
                     "en": "Adjust background opacity (0-100)",
                     "zh-CN": "调整背景透明度 (0-100)",
