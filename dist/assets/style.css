@@ -75,11 +75,6 @@
     object-fit: cover;
 }
 
-.custom-background.video-crop-top video {
-    top: 25%;
-    transform: translate(-50%, -25%);
-}
-
 .custom-background.hidden {
     opacity: 0;
 }

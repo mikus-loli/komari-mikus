@@ -1266,132 +1266,145 @@
 
         var html = '<div class="table-cards">';
         nodes.forEach(function (node) {
-            var isOnline = state.onlineNodes.indexOf(node.uuid) !== -1;
-            var rt = state.realtimeData[node.uuid] || {};
-            var cpuUsage = rt.cpu ? rt.cpu.usage : null;
-            var ramUsed = rt.ram ? rt.ram.used : null;
-            var ramTotal = rt.ram ? rt.ram.total : node.mem_total || 0;
-            var ramPercent = (ramUsed !== null && ramTotal > 0) ? (ramUsed / ramTotal * 100) : null;
-            var diskUsed = rt.disk ? rt.disk.used : null;
-            var diskTotal = rt.disk ? rt.disk.total : node.disk_total || 0;
-            var diskPercent = (diskUsed !== null && diskTotal > 0) ? (diskUsed / diskTotal * 100) : null;
-            var netUp = rt.network ? rt.network.up : 0;
-            var netDown = rt.network ? rt.network.down : 0;
-
-            var cpuLevel = cpuUsage !== null ? getUsageLevel(cpuUsage) : 'normal';
-            var ramLevel = ramPercent !== null ? getUsageLevel(ramPercent) : 'normal';
-            var diskLevel = diskPercent !== null ? getUsageLevel(diskPercent) : 'normal';
-
-            var flagUrl = getCountryFlag(node.region);
-
-            html += '<div class="table-card' + (!isOnline ? ' offline' : '') + '" data-uuid="' + node.uuid + '">';
-            
-            html += '<div class="table-card-header">';
-            html += '<div class="table-card-name-wrap">';
-            html += '<span class="table-card-status' + (!isOnline ? ' offline' : '') + '"></span>';
-            html += '<span class="table-card-flag-wrap">';
-            if (flagUrl) {
-                html += '<span class="table-card-flag" style="background-image: url(\'' + flagUrl + '\')" title="' + escapeHtml(node.region || '') + '"></span>';
-            }
-            html += '</span>';
-            html += '<span class="table-card-name">' + escapeHtml(node.name) + '</span>';
-            html += '</div>';
-            html += '<div class="table-card-info">';
-            var expiry = formatExpiry(node.expired_at);
-            if (expiry || node.price) {
-                var priceText = '';
-                if (node.price == '-1') {
-                    priceText = t('free') || '免费';
-                } else if (node.price) {
-                    priceText = '¥' + node.price + '/月';
-                }
-                if (priceText) {
-                    html += '<span class="table-card-price">价格: ' + priceText + '</span>';
-                }
-                if (expiry) {
-                    if (expiry.isLongTerm) {
-                        html += '<span class="table-card-expiry level-' + expiry.level + '">' + t('long_term') + '</span>';
-                    } else if (expiry.days >= 0) {
-                        html += '<span class="table-card-expiry level-' + expiry.level + '">剩余: ' + expiry.days + ' 天</span>';
-                    } else {
-                        html += '<span class="table-card-expiry level-' + expiry.level + '">' + expiry.text + '</span>';
-                    }
-                }
-            }
-            html += '</div>';
-            html += '</div>';
-
-            html += '<div class="table-card-metrics">';
-            
-            var osInfo = formatOS(node.os);
-            html += '<div class="table-card-metric table-card-system">';
-            html += '<span class="table-card-metric-label">' + t('system') + '</span>';
-            html += '<span class="table-card-metric-value"><span class="os-icon os-icon-' + osInfo.icon + '"></span>' + escapeHtml(osInfo.name) + '</span>';
-            html += '</div>';
-
-            html += '<div class="table-card-metric">';
-            html += '<span class="table-card-metric-label">CPU</span>';
-            html += '<span class="table-card-metric-value level-' + cpuLevel + '">' + (cpuUsage !== null ? formatPercent(cpuUsage) : '-') + '</span>';
-            html += '<div class="table-card-metric-bar"><div class="table-card-metric-fill level-' + cpuLevel + '" style="width:' + (cpuUsage !== null ? Math.min(cpuUsage, 100) : 0) + '%"></div></div>';
-            html += '</div>';
-
-            html += '<div class="table-card-metric">';
-            html += '<span class="table-card-metric-label">' + t('ram') + '</span>';
-            html += '<span class="table-card-metric-value level-' + ramLevel + '">' + (ramPercent !== null ? formatPercent(ramPercent) : '-') + '</span>';
-            html += '<div class="table-card-metric-bar"><div class="table-card-metric-fill level-' + ramLevel + '" style="width:' + (ramPercent !== null ? Math.min(ramPercent, 100) : 0) + '%"></div></div>';
-            html += '</div>';
-
-            html += '<div class="table-card-metric">';
-            html += '<span class="table-card-metric-label">' + t('disk') + '</span>';
-            html += '<span class="table-card-metric-value level-' + diskLevel + '">' + (diskPercent !== null ? formatPercent(diskPercent) : '-') + '</span>';
-            html += '<div class="table-card-metric-bar"><div class="table-card-metric-fill level-' + diskLevel + '" style="width:' + (diskPercent !== null ? Math.min(diskPercent, 100) : 0) + '%"></div></div>';
-            html += '</div>';
-
-            if (showNetwork) {
-                html += '<div class="table-card-metric">';
-                html += '<span class="table-card-metric-label">' + t('upload') + '</span>';
-                html += '<span class="table-card-metric-value">' + formatSpeed(netUp) + '</span>';
-                html += '</div>';
-
-                html += '<div class="table-card-metric">';
-                html += '<span class="table-card-metric-label">' + t('download') + '</span>';
-                html += '<span class="table-card-metric-value">' + formatSpeed(netDown) + '</span>';
-                html += '</div>';
-            }
-
-            var hasIpTags = node.ipv4 || node.ipv6;
-            var hasTags = node.tags && node.tags.split(';').filter(function(t) { return t.trim(); }).length > 0;
-            
-            if (hasIpTags || hasTags) {
-                html += '<div class="table-card-metric table-card-metric-tags">';
-                html += '<div class="table-card-tags">';
-                
-                if (node.ipv4) {
-                    html += '<span class="table-card-tag tag-ip tag-ipv4">IPv4</span>';
-                }
-                if (node.ipv6) {
-                    html += '<span class="table-card-tag tag-ip tag-ipv6">IPv6</span>';
-                }
-                
-                if (node.tags) {
-                    var tags = node.tags.split(';').filter(function(t) { return t.trim(); });
-                    tags.forEach(function(tag) {
-                        var tagInfo = parseTagInfo(tag);
-                        html += '<span class="table-card-tag' + tagInfo.className + '">' + escapeHtml(tagInfo.text) + '</span>';
-                    });
-                }
-                
-                html += '</div>';
-                html += '</div>';
-            }
-
-            html += '</div>';
-            html += '</div>';
+            var metrics = calculateNodeMetrics(node);
+            html += renderTableCard(node, metrics, showNetwork);
         });
         html += '</div>';
 
         container.innerHTML = html;
+        bindTableCardEvents(container);
+    }
 
+    function renderTableCard(node, metrics, showNetwork) {
+        var html = '';
+        
+        html += '<div class="table-card' + (metrics.isOnline ? '' : ' offline') + '" data-uuid="' + node.uuid + '">';
+        html += renderTableCardHeader(node, metrics);
+        html += '<div class="table-card-metrics">';
+        html += renderTableCardMetrics(node, metrics, showNetwork);
+        html += renderTableCardTags(node);
+        html += '</div>';
+        html += '</div>';
+        
+        return html;
+    }
+
+    function renderTableCardHeader(node, metrics) {
+        var html = '<div class="table-card-header">';
+        html += '<div class="table-card-name-wrap">';
+        html += '<span class="table-card-status' + (metrics.isOnline ? '' : ' offline') + '"></span>';
+        html += '<span class="table-card-flag-wrap">';
+        if (metrics.flagUrl) {
+            html += '<span class="table-card-flag" style="background-image: url(\'' + metrics.flagUrl + '\')" title="' + escapeHtml(node.region || '') + '"></span>';
+        }
+        html += '</span>';
+        html += '<span class="table-card-name">' + escapeHtml(node.name) + '</span>';
+        html += '</div>';
+        html += '<div class="table-card-info">';
+        
+        var expiry = formatExpiry(node.expired_at);
+        if (expiry || node.price) {
+            var priceText = '';
+            if (node.price == '-1') {
+                priceText = t('free') || '免费';
+            } else if (node.price) {
+                priceText = '¥' + node.price + '/月';
+            }
+            if (priceText) {
+                html += '<span class="table-card-price">价格: ' + priceText + '</span>';
+            }
+            if (expiry) {
+                if (expiry.isLongTerm) {
+                    html += '<span class="table-card-expiry level-' + expiry.level + '">' + t('long_term') + '</span>';
+                } else if (expiry.days >= 0) {
+                    html += '<span class="table-card-expiry level-' + expiry.level + '">剩余: ' + expiry.days + ' 天</span>';
+                } else {
+                    html += '<span class="table-card-expiry level-' + expiry.level + '">' + expiry.text + '</span>';
+                }
+            }
+        }
+        
+        html += '</div>';
+        html += '</div>';
+        
+        return html;
+    }
+
+    function renderTableCardMetrics(node, metrics, showNetwork) {
+        var html = '';
+        
+        var osInfo = metrics.osInfo;
+        html += '<div class="table-card-metric table-card-system">';
+        html += '<span class="table-card-metric-label">' + t('system') + '</span>';
+        html += '<span class="table-card-metric-value"><span class="os-icon os-icon-' + osInfo.icon + '"></span>' + escapeHtml(osInfo.name) + '</span>';
+        html += '</div>';
+
+        html += '<div class="table-card-metric">';
+        html += '<span class="table-card-metric-label">CPU</span>';
+        html += '<span class="table-card-metric-value level-' + metrics.cpuLevel + '">' + (metrics.cpuUsage !== null ? formatPercent(metrics.cpuUsage) : '-') + '</span>';
+        html += '<div class="table-card-metric-bar"><div class="table-card-metric-fill level-' + metrics.cpuLevel + '" style="width:' + (metrics.cpuUsage !== null ? Math.min(metrics.cpuUsage, 100) : 0) + '%"></div></div>';
+        html += '</div>';
+
+        html += '<div class="table-card-metric">';
+        html += '<span class="table-card-metric-label">' + t('ram') + '</span>';
+        html += '<span class="table-card-metric-value level-' + metrics.ramLevel + '">' + (metrics.ramPercent !== null ? formatPercent(metrics.ramPercent) : '-') + '</span>';
+        html += '<div class="table-card-metric-bar"><div class="table-card-metric-fill level-' + metrics.ramLevel + '" style="width:' + (metrics.ramPercent !== null ? Math.min(metrics.ramPercent, 100) : 0) + '%"></div></div>';
+        html += '</div>';
+
+        html += '<div class="table-card-metric">';
+        html += '<span class="table-card-metric-label">' + t('disk') + '</span>';
+        html += '<span class="table-card-metric-value level-' + metrics.diskLevel + '">' + (metrics.diskPercent !== null ? formatPercent(metrics.diskPercent) : '-') + '</span>';
+        html += '<div class="table-card-metric-bar"><div class="table-card-metric-fill level-' + metrics.diskLevel + '" style="width:' + (metrics.diskPercent !== null ? Math.min(metrics.diskPercent, 100) : 0) + '%"></div></div>';
+        html += '</div>';
+
+        if (showNetwork) {
+            html += '<div class="table-card-metric">';
+            html += '<span class="table-card-metric-label">' + t('upload') + '</span>';
+            html += '<span class="table-card-metric-value">' + formatSpeed(metrics.netUp) + '</span>';
+            html += '</div>';
+
+            html += '<div class="table-card-metric">';
+            html += '<span class="table-card-metric-label">' + t('download') + '</span>';
+            html += '<span class="table-card-metric-value">' + formatSpeed(metrics.netDown) + '</span>';
+            html += '</div>';
+        }
+        
+        return html;
+    }
+
+    function renderTableCardTags(node) {
+        var hasIpTags = node.ipv4 || node.ipv6;
+        var hasTags = node.tags && node.tags.split(';').filter(function(t) { return t.trim(); }).length > 0;
+        
+        if (!hasIpTags && !hasTags) {
+            return '';
+        }
+        
+        var html = '<div class="table-card-metric table-card-metric-tags">';
+        html += '<div class="table-card-tags">';
+        
+        if (node.ipv4) {
+            html += '<span class="table-card-tag tag-ip tag-ipv4">IPv4</span>';
+        }
+        if (node.ipv6) {
+            html += '<span class="table-card-tag tag-ip tag-ipv6">IPv6</span>';
+        }
+        
+        if (node.tags) {
+            var tags = node.tags.split(';').filter(function(t) { return t.trim(); });
+            tags.forEach(function(tag) {
+                var tagInfo = parseTagInfo(tag);
+                html += '<span class="table-card-tag' + tagInfo.className + '">' + escapeHtml(tagInfo.text) + '</span>';
+            });
+        }
+        
+        html += '</div>';
+        html += '</div>';
+        
+        return html;
+    }
+
+    function bindTableCardEvents(container) {
         container.querySelectorAll('.table-card[data-uuid]').forEach(function (card) {
             card.addEventListener('click', function () {
                 var uuid = this.getAttribute('data-uuid');
@@ -2384,11 +2397,6 @@
             bgType = state.themeSettings.background_type || 'none';
         }
         
-        var bgPreset = state.themeSettings[prefix + 'background_preset'];
-        if (bgPreset === undefined || bgPreset === null) {
-            bgPreset = state.themeSettings.background_preset || 'miku';
-        }
-        
         var bgUrl = state.themeSettings[prefix + 'background_url'];
         if (bgUrl === undefined || bgUrl === null) {
             bgUrl = state.themeSettings.background_url || '';
@@ -2406,14 +2414,6 @@
         if (bgBlur === undefined || bgBlur === null) {
             bgBlur = state.themeSettings.background_blur || 0;
         }
-
-        var PRESET_VIDEOS = {
-            miku: 'assets/img/QAQ.mp4'
-        };
-        
-        var PRESET_IMAGES = {
-            miku: 'https://random.mikus.ink'
-        };
 
         if (bgType !== 'none') {
             document.body.classList.add('has-custom-background');
@@ -2440,30 +2440,6 @@
 
         if (bgType === 'none') {
             bgContainer.classList.add('hidden');
-        } else if (bgType === 'preset') {
-            if (isMobile) {
-                var presetImg = PRESET_IMAGES[bgPreset];
-                if (presetImg) {
-                    bgContainer.classList.remove('hidden');
-                    bgContainer.classList.remove('video-crop-top');
-                    bgContainer.style.backgroundImage = 'url(' + presetImg + ')';
-                }
-            } else {
-                var presetSrc = PRESET_VIDEOS[bgPreset];
-                if (presetSrc) {
-                    bgContainer.classList.add('video-crop-top');
-                    bgContainer.classList.remove('hidden');
-                    var video = document.createElement('video');
-                    video.autoplay = true;
-                    video.loop = true;
-                    video.muted = true;
-                    video.playsInline = true;
-                    video.src = presetSrc;
-                    video.playbackRate = 0.5;
-                    bgContainer.appendChild(video);
-                    video.play().catch(function() {});
-                }
-            }
         } else if (bgType === 'custom' && bgUrl) {
             var isVideo = /\.(webm|mp4|ogg|mov)(\?.*)?$/i.test(bgUrl);
             

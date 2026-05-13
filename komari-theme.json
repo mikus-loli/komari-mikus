@@ -123,28 +123,12 @@
                     "ja": "PC背景タイプ"
                 },
                 "type": "select",
-                "options": "none,preset,custom",
+                "options": "none,custom",
                 "default": "none",
                 "help": {
                     "en": "Select background type for PC",
                     "zh-CN": "选择PC端背景类型",
                     "ja": "PCの背景タイプを選択"
-                }
-            },
-            {
-                "key": "pc_background_preset",
-                "name": {
-                    "en": "PC Preset Background",
-                    "zh-CN": "PC端预设动态背景",
-                    "ja": "PCプリセット動的背景"
-                },
-                "type": "select",
-                "options": "miku",
-                "default": "miku",
-                "help": {
-                    "en": "Select a preset dynamic background for PC",
-                    "zh-CN": "选择PC端预设动态背景",
-                    "ja": "PCのプリセット動的背景を選択"
                 }
             },
             {
@@ -208,28 +192,12 @@
                     "ja": "モバイル背景タイプ"
                 },
                 "type": "select",
-                "options": "none,preset,custom",
+                "options": "none,custom",
                 "default": "none",
                 "help": {
                     "en": "Select background type for mobile",
                     "zh-CN": "选择手机端背景类型",
                     "ja": "モバイルの背景タイプを選択"
-                }
-            },
-            {
-                "key": "mobile_background_preset",
-                "name": {
-                    "en": "Mobile Preset Background",
-                    "zh-CN": "手机端预设动态背景",
-                    "ja": "モバイルプリセット動的背景"
-                },
-                "type": "select",
-                "options": "miku",
-                "default": "miku",
-                "help": {
-                    "en": "Select a preset dynamic background for mobile",
-                    "zh-CN": "选择手机端预设动态背景",
-                    "ja": "モバイルのプリセット動的背景を選択"
                 }
             },
             {
