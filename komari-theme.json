@@ -108,28 +108,27 @@
                 }
             },
             {
+                "key": "sakura_enabled",
+                "name": {
+                    "en": "Sakura Petals Effect",
+                    "zh-CN": "樱花飘落效果",
+                    "ja": "桜吹雪エフェクト"
+                },
+                "type": "switch",
+                "default": true,
+                "help": {
+                    "en": "Display animated cherry blossom petals falling across the page",
+                    "zh-CN": "在页面上显示樱花飘落动画效果",
+                    "ja": "ページに桜の花びらが舞い落ちるアニメーションを表示"
+                }
+            },
+            {
                 "name": {
                     "en": "PC Background",
                     "zh-CN": "PC端背景",
                     "ja": "PC背景"
                 },
                 "type": "title"
-            },
-            {
-                "key": "pc_background_type",
-                "name": {
-                    "en": "PC Background Type",
-                    "zh-CN": "PC端背景类型",
-                    "ja": "PC背景タイプ"
-                },
-                "type": "select",
-                "options": "none,custom",
-                "default": "none",
-                "help": {
-                    "en": "Select background type for PC",
-                    "zh-CN": "选择PC端背景类型",
-                    "ja": "PCの背景タイプを選択"
-                }
             },
             {
                 "key": "pc_background_url",
@@ -183,22 +182,6 @@
                     "ja": "モバイル背景"
                 },
                 "type": "title"
-            },
-            {
-                "key": "mobile_background_type",
-                "name": {
-                    "en": "Mobile Background Type",
-                    "zh-CN": "手机端背景类型",
-                    "ja": "モバイル背景タイプ"
-                },
-                "type": "select",
-                "options": "none,custom",
-                "default": "none",
-                "help": {
-                    "en": "Select background type for mobile",
-                    "zh-CN": "选择手机端背景类型",
-                    "ja": "モバイルの背景タイプを選択"
-                }
             },
             {
                 "key": "mobile_background_url",

@@ -2382,6 +2382,7 @@
         }
 
         applyBackgroundSettings();
+        applySakura();
     }
 
     function isMobileDevice() {
@@ -2392,16 +2393,13 @@
         var isMobile = isMobileDevice();
         var prefix = isMobile ? 'mobile_' : 'pc_';
         
-        var bgType = state.themeSettings[prefix + 'background_type'];
-        if (bgType === undefined || bgType === null) {
-            bgType = state.themeSettings.background_type || 'none';
-        }
-        
         var bgUrl = state.themeSettings[prefix + 'background_url'];
         if (bgUrl === undefined || bgUrl === null) {
             bgUrl = state.themeSettings.background_url || '';
         }
-        
+
+        var bgType = bgUrl ? 'custom' : 'none';
+
         var bgOpacity = state.themeSettings[prefix + 'background_opacity'];
         if (bgOpacity === undefined || bgOpacity === null) {
             bgOpacity = state.themeSettings.background_opacity;
@@ -2461,6 +2459,39 @@
 
         bgContainer.style.opacity = bgOpacity / 100;
         bgContainer.style.filter = 'blur(' + bgBlur + 'px)';
+    }
+
+    function applySakura() {
+        var sakuraEnabled = state.themeSettings.sakura_enabled !== false;
+        var sakuraScript = document.getElementById('sakura-script');
+
+        if (sakuraEnabled && !sakuraScript) {
+            var style = document.createElement('style');
+            style.id = 'sakura-style';
+            style.textContent = '#sakura-canvas, canvas[id*="sakura"] { z-index: 99999 !important; pointer-events: none !important; position: fixed !important; top: 0 !important; left: 0 !important; }';
+            document.head.appendChild(style);
+
+            var script = document.createElement('script');
+            script.id = 'sakura-script';
+            script.type = 'text/javascript';
+            script.src = 'https://static.mikus.ink/%E6%A8%B1%E8%8A%B1/sakura.js';
+            script.onload = function() {
+                var canvas = document.querySelector('canvas[style*="fixed"]');
+                if (canvas) {
+                    canvas.id = canvas.id || 'sakura-canvas';
+                    canvas.style.zIndex = '99999';
+                    canvas.style.pointerEvents = 'none';
+                }
+            };
+            document.body.appendChild(script);
+        } else if (!sakuraEnabled && sakuraScript) {
+            sakuraScript.remove();
+            var sakuraStyle = document.getElementById('sakura-style');
+            if (sakuraStyle) sakuraStyle.remove();
+            var sakuraCanvas = document.getElementById('sakura-canvas');
+            if (!sakuraCanvas) sakuraCanvas = document.querySelector('canvas[style*="fixed"]');
+            if (sakuraCanvas) sakuraCanvas.remove();
+        }
     }
 
     function bindEvents() {
