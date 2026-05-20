@@ -123,6 +123,51 @@
                 }
             },
             {
+                "key": "preloader_enabled",
+                "name": {
+                    "en": "Show Preloader",
+                    "zh-CN": "显示加载页面",
+                    "ja": "プリローダーを表示"
+                },
+                "type": "switch",
+                "default": true,
+                "help": {
+                    "en": "Display the loading animation page on startup",
+                    "zh-CN": "启动时显示加载动画页面",
+                    "ja": "起動時にローディングアニメーションページを表示"
+                }
+            },
+            {
+                "key": "mascot_enabled",
+                "name": {
+                    "en": "Show Mascot",
+                    "zh-CN": "显示欢迎小人",
+                    "ja": "マスコットを表示"
+                },
+                "type": "switch",
+                "default": true,
+                "help": {
+                    "en": "Display the mascot character in the greeting area",
+                    "zh-CN": "在欢迎区域显示小人角色",
+                    "ja": "挨拶エリアにマスコットキャラクターを表示"
+                }
+            },
+            {
+                "key": "mascot_url",
+                "name": {
+                    "en": "Mascot Image URL",
+                    "zh-CN": "小人自定义图片",
+                    "ja": "マスコット画像URL"
+                },
+                "type": "string",
+                "default": "",
+                "help": {
+                    "en": "Custom mascot image URL (leave empty for default)",
+                    "zh-CN": "自定义小人图片URL（留空使用默认图片）",
+                    "ja": "カスタムマスコット画像URL（空欄でデフォルト画像）"
+                }
+            },
+            {
                 "name": {
                     "en": "PC Background",
                     "zh-CN": "PC端背景",

@@ -1618,7 +1618,7 @@
         var els = getModalElements();
         var canvas = canvasId === 'latencyChart' ? els.latencyChart : document.getElementById(canvasId);
         if (!canvas) return;
-        
+
         if (!records || records.length === 0) {
             var ctx = canvas.getContext('2d');
             var dpr = window.devicePixelRatio || 1;
@@ -1627,7 +1627,7 @@
             canvas.height = rect.height * dpr;
             ctx.scale(dpr, dpr);
             ctx.clearRect(0, 0, rect.width, rect.height);
-            
+
             var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
             ctx.fillStyle = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)';
             ctx.font = '12px ' + getComputedStyle(document.body).fontFamily;
@@ -1636,110 +1636,11 @@
             return;
         }
 
-        var ctx = canvas.getContext('2d');
-        var dpr = window.devicePixelRatio || 1;
-        var rect = canvas.getBoundingClientRect();
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
-        ctx.scale(dpr, dpr);
-
-        var w = rect.width;
-        var h = rect.height;
-        var padding = { top: 10, right: 20, bottom: 30, left: 50 };
-        var chartW = w - padding.left - padding.right;
-        var chartH = h - padding.top - padding.bottom;
-
-        ctx.clearRect(0, 0, w, h);
-
-        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        var gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
-        var textColor = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)';
-
-        var validValues = records.filter(function (r) { return r.value !== null && r.value !== undefined && !isNaN(r.value) && r.value >= 0; }).map(function (r) { return r.value; });
-        var maxVal = validValues.length > 0 ? Math.max(Math.max.apply(null, validValues), 100) : 100;
-        maxVal = Math.ceil(maxVal / 50) * 50;
-
-        ctx.strokeStyle = gridColor;
-        ctx.lineWidth = 1;
-        ctx.font = '10px ' + getComputedStyle(document.body).fontFamily;
-        ctx.fillStyle = textColor;
-        ctx.textAlign = 'right';
-
-        for (var i = 0; i <= 4; i++) {
-            var y = padding.top + (chartH / 4) * i;
-            ctx.beginPath();
-            ctx.moveTo(padding.left, y);
-            ctx.lineTo(w - padding.right, y);
-            ctx.stroke();
-            ctx.fillText((maxVal * (1 - i / 4)).toFixed(0) + t('ping_ms'), padding.left - 6, y + 3);
-        }
-
-        var taskMap = {};
-        tasks.forEach(function (task) { taskMap[task.id] = task; });
-
-        var taskRecords = {};
-        records.forEach(function (r) {
-            if (!taskRecords[r.task_id]) taskRecords[r.task_id] = [];
-            taskRecords[r.task_id].push(r);
+        drawMultiTaskPingChart(canvas, records, tasks, {
+            padding: { top: 10, right: 20, bottom: 30, left: 50 },
+            timeLabels: 6,
+            timeLabelBottomOffset: 10
         });
-
-        var taskIds = Object.keys(taskRecords);
-        var colorIdx = 0;
-
-        taskIds.forEach(function (taskId) {
-            var taskRecs = taskRecords[taskId];
-            var values = taskRecs.map(function (r) { return r.value; });
-            var color = PING_COLORS[colorIdx % PING_COLORS.length];
-            colorIdx++;
-
-            var points = [];
-            for (var j = 0; j < values.length; j++) {
-                if (values[j] === null || values[j] === undefined || isNaN(values[j]) || values[j] < 0) continue;
-                var x = padding.left + (j / Math.max(values.length - 1, 1)) * chartW;
-                var normalized = values[j] / maxVal;
-                normalized = Math.max(0, Math.min(1, normalized));
-                var y = padding.top + chartH - normalized * chartH;
-                points.push({ x: x, y: y });
-            }
-
-            if (points.length > 1) {
-                ctx.beginPath();
-                ctx.moveTo(points[0].x, points[0].y);
-                for (var k = 1; k < points.length; k++) {
-                    ctx.lineTo(points[k].x, points[k].y);
-                }
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 2;
-                ctx.lineJoin = 'round';
-                ctx.stroke();
-            }
-        });
-
-        ctx.fillStyle = textColor;
-        ctx.textAlign = 'center';
-        var firstTaskRecs = taskRecords[taskIds[0]] || records;
-        var timeLabels = 6;
-        for (var ti = 0; ti <= timeLabels; ti++) {
-            var idx = Math.floor((firstTaskRecs.length - 1) * ti / timeLabels);
-            var x = padding.left + (ti / timeLabels) * chartW;
-            var time = new Date(firstTaskRecs[idx].time);
-            ctx.fillText(time.getHours().toString().padStart(2, '0') + ':' + time.getMinutes().toString().padStart(2, '0'), x, h - 10);
-        }
-
-        canvas._chartData = {
-            type: 'ping',
-            records: records,
-            tasks: tasks,
-            taskRecords: taskRecords,
-            taskMap: taskMap,
-            maxVal: maxVal,
-            padding: padding
-        };
-
-        canvas.onmousemove = function(e) {
-            showChartTooltip(e, canvas, canvas._chartData);
-        };
-        canvas.onmouseleave = createHideHandler(canvas);
     }
 
     function switchModalPage(pageName) {
@@ -1844,9 +1745,16 @@
 
     var PING_COLORS = ['#e8668a', '#5c9ced', '#4caf7d', '#f5a623', '#9c5ce0', '#00bcd4', '#ff5722', '#795548'];
 
-    function drawPingChart(canvasId, records, tasks) {
-        var canvas = document.getElementById(canvasId);
+    function drawMultiTaskPingChart(canvas, records, tasks, options) {
         if (!canvas) return;
+
+        options = options || {};
+        var padding = options.padding || { top: 10, right: 20, bottom: 30, left: 50 };
+        var timeLabels = options.timeLabels || 6;
+        var timeLabelBottomOffset = options.timeLabelBottomOffset || 10;
+        var colors = options.colors || PING_COLORS;
+        var filterFn = options.filterFn || function (v) { return v !== null && v !== undefined && !isNaN(v) && v >= 0; };
+        var yAxisSuffix = options.yAxisSuffix || t('ping_ms');
 
         var ctx = canvas.getContext('2d');
         var dpr = window.devicePixelRatio || 1;
@@ -1857,7 +1765,6 @@
 
         var w = rect.width;
         var h = rect.height;
-        var padding = { top: 20, right: 16, bottom: 30, left: 50 };
         var chartW = w - padding.left - padding.right;
         var chartH = h - padding.top - padding.bottom;
 
@@ -1867,7 +1774,7 @@
         var gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
         var textColor = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)';
 
-        var validValues = records.filter(function (r) { return r.value !== null && r.value !== undefined && r.value >= 0; }).map(function (r) { return r.value; });
+        var validValues = records.filter(filterFn).map(function (r) { return r.value; });
         var maxVal = validValues.length > 0 ? Math.max(Math.max.apply(null, validValues), 100) : 100;
         maxVal = Math.ceil(maxVal / 50) * 50;
 
@@ -1883,7 +1790,7 @@
             ctx.moveTo(padding.left, y);
             ctx.lineTo(w - padding.right, y);
             ctx.stroke();
-            ctx.fillText((maxVal * (1 - i / 4)).toFixed(0) + t('ping_ms'), padding.left - 6, y + 3);
+            ctx.fillText((maxVal * (1 - i / 4)).toFixed(0) + yAxisSuffix, padding.left - 6, y + 3);
         }
 
         var taskMap = {};
@@ -1901,7 +1808,7 @@
         taskIds.forEach(function (taskId) {
             var taskRecs = taskRecords[taskId];
             var values = taskRecs.map(function (r) { return r.value; });
-            var color = PING_COLORS[colorIdx % PING_COLORS.length];
+            var color = colors[colorIdx % colors.length];
             colorIdx++;
 
             var points = [];
@@ -1930,26 +1837,15 @@
         ctx.fillStyle = textColor;
         ctx.textAlign = 'center';
         var firstTaskRecs = taskRecords[taskIds[0]] || records;
-        var timeLabels = 5;
         for (var ti = 0; ti <= timeLabels; ti++) {
             var idx = Math.floor((firstTaskRecs.length - 1) * ti / timeLabels);
             var x = padding.left + (ti / timeLabels) * chartW;
             var time = new Date(firstTaskRecs[idx].time);
-            ctx.fillText(time.getHours().toString().padStart(2, '0') + ':' + time.getMinutes().toString().padStart(2, '0'), x, h - 8);
+            ctx.fillText(time.getHours().toString().padStart(2, '0') + ':' + time.getMinutes().toString().padStart(2, '0'), x, h - timeLabelBottomOffset);
         }
 
-        if (tasks.length > 0) {
-            ctx.font = '11px ' + getComputedStyle(document.body).fontFamily;
-            ctx.textAlign = 'left';
-            var legendX = padding.left + 10;
-            tasks.forEach(function (task, idx) {
-                var color = PING_COLORS[idx % PING_COLORS.length];
-                ctx.fillStyle = color;
-                ctx.fillRect(legendX, padding.top + 4, 12, 3);
-                ctx.fillStyle = textColor;
-                ctx.fillText(task.name, legendX + 16, padding.top + 10);
-                legendX += ctx.measureText(task.name).width + 30;
-            });
+        if (options.drawLegend) {
+            options.drawLegend(ctx, padding, tasks, colors, textColor);
         }
 
         canvas._chartData = {
@@ -1966,6 +1862,31 @@
             showChartTooltip(e, canvas, canvas._chartData);
         };
         canvas.onmouseleave = createHideHandler(canvas);
+    }
+
+    function drawPingChart(canvasId, records, tasks) {
+        var canvas = document.getElementById(canvasId);
+        drawMultiTaskPingChart(canvas, records, tasks, {
+            padding: { top: 20, right: 16, bottom: 30, left: 50 },
+            timeLabels: 5,
+            timeLabelBottomOffset: 8,
+            filterFn: function (v) { return v !== null && v !== undefined && v >= 0; },
+            drawLegend: function (ctx, padding, tasks, colors, textColor) {
+                if (tasks.length > 0) {
+                    ctx.font = '11px ' + getComputedStyle(document.body).fontFamily;
+                    ctx.textAlign = 'left';
+                    var legendX = padding.left + 10;
+                    tasks.forEach(function (task, idx) {
+                        var color = colors[idx % colors.length];
+                        ctx.fillStyle = color;
+                        ctx.fillRect(legendX, padding.top + 4, 12, 3);
+                        ctx.fillStyle = textColor;
+                        ctx.fillText(task.name, legendX + 16, padding.top + 10);
+                        legendX += ctx.measureText(task.name).width + 30;
+                    });
+                }
+            }
+        });
     }
 
     var chartTooltip = null;
@@ -2378,6 +2299,29 @@
                 greetingIcon.classList.add('no-bounce');
             } else {
                 greetingIcon.classList.remove('no-bounce');
+            }
+
+            var mascotEnabled = state.themeSettings.mascot_enabled !== false;
+            var mascotUrl = state.themeSettings.mascot_url || '';
+            var welcomeGreeting = document.querySelector('.welcome-greeting');
+            if (!mascotEnabled) {
+                greetingIcon.style.display = 'none';
+                if (welcomeGreeting) welcomeGreeting.classList.add('no-mascot');
+            } else {
+                greetingIcon.style.display = '';
+                if (welcomeGreeting) welcomeGreeting.classList.remove('no-mascot');
+                if (mascotUrl) {
+                    greetingIcon.src = mascotUrl;
+                }
+            }
+        }
+
+        var preloaderEnabled = state.themeSettings.preloader_enabled !== false;
+        if (!preloaderEnabled) {
+            var preloader = document.getElementById('preloader');
+            if (preloader) {
+                preloader.classList.add('hidden');
+                if (preloaderTimer) clearInterval(preloaderTimer);
             }
         }
 

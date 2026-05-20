@@ -973,6 +973,10 @@ body::before {
     animation: none;
 }
 
+.welcome-greeting.no-mascot {
+    padding-left: 0 !important;
+}
+
 @media (min-width: 1025px) and (max-width: 1440px) {
     .greeting-icon {
         width: 150px;
@@ -1543,7 +1547,7 @@ body::before {
 
 .table-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, 600px);
+    grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
     gap: 14px;
     width: 100%;
     justify-content: center;
@@ -3923,6 +3927,60 @@ body.view-table .stat-value {
     .search-box {
         max-width: 200px;
         min-width: 100px;
+    }
+
+    .table-cards {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    body.view-table .welcome-section,
+    body.view-table .stats-bar,
+    body.view-table .nodes-table-container {
+        max-width: 1000px;
+    }
+
+    body.view-table .group-filter {
+        max-width: 1000px;
+    }
+
+    .table-card {
+        padding: 10px 14px;
+        gap: 6px;
+        min-height: 110px;
+    }
+
+    .table-card-name {
+        font-size: 0.72rem;
+    }
+
+    .table-card-price,
+    .table-card-expiry {
+        font-size: 0.62rem;
+    }
+
+    .table-card-metrics {
+        gap: 8px;
+    }
+
+    .table-card-metric-label {
+        font-size: 0.62rem;
+    }
+
+    .table-card-metric-value {
+        font-size: 0.72rem;
+    }
+
+    body.view-table .stat-item {
+        padding: 7px 12px;
+    }
+
+    body.view-table .stat-label {
+        font-size: 0.7rem;
+    }
+
+    body.view-table .stat-value {
+        font-size: 1rem;
     }
 }
 
