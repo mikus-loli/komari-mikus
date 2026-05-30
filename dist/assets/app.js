@@ -1308,7 +1308,23 @@
             if (node.price == '-1') {
                 priceText = t('free') || '免费';
             } else if (node.price) {
-                priceText = '¥' + node.price + '/月';
+                var currency = node.currency || '¥';
+                var cycle = node.billing_cycle;
+                var cycleText = '';
+                if (cycle) {
+                    if (cycle === 30 || cycle === 31) {
+                        cycleText = '/月';
+                    } else if (cycle === 365 || cycle === 366) {
+                        cycleText = '/年';
+                    } else if (cycle === 7) {
+                        cycleText = '/周';
+                    } else if (cycle === 1) {
+                        cycleText = '/天';
+                    } else {
+                        cycleText = '/' + cycle + '天';
+                    }
+                }
+                priceText = currency + node.price + cycleText;
             }
             if (priceText) {
                 html += '<span class="table-card-price">价格: ' + priceText + '</span>';
