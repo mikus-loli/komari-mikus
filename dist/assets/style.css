@@ -260,15 +260,11 @@ body.has-custom-background::before {
 
 body.has-custom-background .header {
     background: rgba(var(--bg-card-rgb), var(--custom-card-alpha, 0.7));
-    backdrop-filter: blur(var(--custom-blur, 0px));
-    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
     border-color: rgba(var(--border-color-rgb), 0.4);
 }
 
 body.has-custom-background .welcome-section {
     background: rgba(var(--bg-card-rgb), var(--custom-card-alpha, 0.75));
-    backdrop-filter: blur(var(--custom-blur, 0px));
-    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
     border-color: rgba(var(--border-color-rgb), 0.45);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08),
                 0 2px 8px rgba(0, 0, 0, 0.04);
@@ -277,8 +273,6 @@ body.has-custom-background .welcome-section {
 
 body.has-custom-background .stat-item {
     background: rgba(var(--bg-card-rgb), var(--custom-card-alpha, 0.7));
-    backdrop-filter: blur(var(--custom-blur, 0px));
-    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
     border-color: rgba(var(--border-color-rgb), 0.4);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
@@ -290,8 +284,6 @@ body.has-custom-background .stat-item:hover {
 
 body.has-custom-background .node-card {
     background: rgba(var(--bg-card-rgb), var(--custom-card-alpha, 0.75));
-    backdrop-filter: blur(var(--custom-blur, 0px));
-    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
     border-color: rgba(var(--border-color-rgb), 0.4);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06),
                 0 1px 4px rgba(0, 0, 0, 0.04);
@@ -310,8 +302,6 @@ body.has-custom-background .node-card::after {
 
 body.has-custom-background .table-card {
     background: rgba(var(--bg-card-rgb), var(--custom-card-alpha, 0.7));
-    backdrop-filter: blur(var(--custom-blur, 0px));
-    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
     border-color: rgba(var(--border-color-rgb), 0.4);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
@@ -324,27 +314,19 @@ body.has-custom-background .table-card:hover {
 
 body.has-custom-background .modal {
     background: rgba(var(--bg-card-rgb), 0.92);
-    backdrop-filter: blur(var(--custom-blur, 0px));
-    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
     border-color: rgba(var(--border-color-rgb), 0.5);
 }
 
 body.has-custom-background .modal-header {
     background: rgba(var(--bg-card-rgb), 0.95);
-    backdrop-filter: blur(calc(var(--custom-blur, 0px) * 0.5));
-    -webkit-backdrop-filter: blur(calc(var(--custom-blur, 0px) * 0.5));
 }
 
 body.has-custom-background .modal-tabs {
     background: rgba(var(--bg-card-rgb), 0.85);
-    backdrop-filter: blur(calc(var(--custom-blur, 0px) * 0.4));
-    -webkit-backdrop-filter: blur(calc(var(--custom-blur, 0px) * 0.4));
 }
 
 body.has-custom-background .modal-info-item {
     background: rgba(var(--bg-card-rgb), 0.6);
-    backdrop-filter: blur(calc(var(--custom-blur, 0px) * 0.3));
-    -webkit-backdrop-filter: blur(calc(var(--custom-blur, 0px) * 0.3));
 }
 
 body.has-custom-background .metric-bar {
@@ -368,20 +350,14 @@ body.has-custom-background .footer {
 
 body.has-custom-background .latency-task-card {
     background: rgba(var(--bg-card-rgb), 0.7);
-    backdrop-filter: blur(var(--custom-blur, 0px));
-    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
 }
 
 body.has-custom-background .latency-stat {
     background: rgba(var(--bg-card-rgb), 0.65);
-    backdrop-filter: blur(var(--custom-blur, 0px));
-    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
 }
 
 body.has-custom-background .latency-chart-container {
     background: rgba(var(--bg-card-rgb), 0.65);
-    backdrop-filter: blur(var(--custom-blur, 0px));
-    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
 }
 
 body.has-custom-background .chart-section canvas {
@@ -399,8 +375,6 @@ body.has-custom-background .search-box input:focus {
 
 body.has-custom-background .group-filter {
     background: rgba(var(--bg-card-rgb), 0.65);
-    backdrop-filter: blur(var(--custom-blur, 0px));
-    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
 }
 
 body.has-custom-background .filter-btn:hover {
@@ -409,8 +383,6 @@ body.has-custom-background .filter-btn:hover {
 
 body.has-custom-background .view-toggle {
     background: rgba(var(--bg-card-rgb), 0.65);
-    backdrop-filter: blur(var(--custom-blur, 0px));
-    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
 }
 
 body.has-custom-background .view-btn:hover,
@@ -434,8 +406,6 @@ body.has-custom-background .modal-tab::before {
 
 body.has-custom-background .node-api-tag {
     background: rgba(var(--bg-card-rgb), 0.55);
-    backdrop-filter: blur(var(--custom-blur, 0px));
-    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
 }
 
 body.has-custom-background .node-api-tag.tag-green,

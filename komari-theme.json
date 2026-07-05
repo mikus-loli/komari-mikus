@@ -2,10 +2,10 @@
     "name": "Komari Mikus",
     "short": "Mikus",
     "description": "A modern, elegant Komari monitoring theme with light/dark theme switching, grid/table dual views, WebSocket real-time monitoring, and responsive design",
-    "version": "1.1.3",
+    "version": "1.1.5",
     "author": "Miku",
     "url": "https://github.com/mikus-loli/komari-mikus",
-    "preview": "preview.png",
+    "preview": "mikus.jpg",
     "configuration": {
         "type": "managed",
         "name": {
@@ -206,36 +206,6 @@
                 }
             },
             {
-                "key": "pc_background_opacity",
-                "name": {
-                    "en": "PC Background Opacity",
-                    "zh-CN": "PC端背景透明度",
-                    "ja": "PC背景の不透明度"
-                },
-                "type": "number",
-                "default": 30,
-                "help": {
-                    "en": "Adjust background opacity (0-100)",
-                    "zh-CN": "调整背景透明度 (0-100)",
-                    "ja": "背景の不透明度を調整 (0-100)"
-                }
-            },
-            {
-                "key": "pc_background_blur",
-                "name": {
-                    "en": "PC Background Blur",
-                    "zh-CN": "PC端背景模糊度",
-                    "ja": "PC背景のぼかし"
-                },
-                "type": "number",
-                "default": 0,
-                "help": {
-                    "en": "Adjust background blur (0-20px)",
-                    "zh-CN": "调整背景模糊度 (0-20px)",
-                    "ja": "背景のぼかしを調整 (0-20px)"
-                }
-            },
-            {
                 "name": {
                     "en": "Mobile Background",
                     "zh-CN": "手机端背景",
@@ -256,36 +226,6 @@
                     "en": "Supports images (jpg/png/gif/webp) and videos (webm/mp4)",
                     "zh-CN": "支持图片(jpg/png/gif/webp)和视频(webm/mp4)",
                     "ja": "画像（jpg/png/gif/webp）および動画（webm/mp4）をサポート"
-                }
-            },
-            {
-                "key": "mobile_background_opacity",
-                "name": {
-                    "en": "Mobile Background Opacity",
-                    "zh-CN": "手机端背景透明度",
-                    "ja": "モバイル背景の不透明度"
-                },
-                "type": "number",
-                "default": 100,
-                "help": {
-                    "en": "Adjust background opacity (0-100)",
-                    "zh-CN": "调整背景透明度 (0-100)",
-                    "ja": "背景の不透明度を調整 (0-100)"
-                }
-            },
-            {
-                "key": "mobile_background_blur",
-                "name": {
-                    "en": "Mobile Background Blur",
-                    "zh-CN": "手机端背景模糊度",
-                    "ja": "モバイル背景のぼかし"
-                },
-                "type": "number",
-                "default": 0,
-                "help": {
-                    "en": "Adjust background blur (0-20px)",
-                    "zh-CN": "调整背景模糊度 (0-20px)",
-                    "ja": "背景のぼかしを調整 (0-20px)"
                 }
             },
             {

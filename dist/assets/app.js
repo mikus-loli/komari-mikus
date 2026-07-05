@@ -3674,23 +3674,8 @@
 
         var bgType = bgUrl ? 'custom' : 'none';
 
-        var bgOpacity = state.themeSettings[prefix + 'background_opacity'];
-        if (bgOpacity === undefined || bgOpacity === null) {
-            bgOpacity = state.themeSettings.background_opacity;
-        }
-        if (bgOpacity === undefined || bgOpacity === null) {
-            bgOpacity = isMobile ? 100 : 30;
-        }
-
-        var bgBlur = state.themeSettings[prefix + 'background_blur'];
-        if (bgBlur === undefined || bgBlur === null) {
-            bgBlur = state.themeSettings.background_blur || 0;
-        }
-
-        // 注入 CSS 变量：卡片磨砂效果（参考 PurCarte 实现）
+        // 注入 CSS 变量：卡片磨砂效果
         var root = document.documentElement;
-        root.style.setProperty('--custom-blur', bgBlur + 'px');
-        // 卡片半透明背景：固定 0.85 不透明度（轻微透明，保证可读性）
         root.style.setProperty('--custom-card-alpha', '0.85');
 
         if (bgType !== 'none') {
@@ -3737,9 +3722,8 @@
             }
         }
 
-        // 背景模糊/透明度：背景本身模糊 + 透明度由 background_blur 和 background_opacity 控制
-        bgContainer.style.opacity = bgOpacity / 100;
-        bgContainer.style.filter = 'blur(' + bgBlur + 'px)';
+        // 背景图层不透明度固定为 100%
+        bgContainer.style.opacity = '1';
     }
 
     function applySakura() {
