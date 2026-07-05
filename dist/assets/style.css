@@ -259,16 +259,16 @@ body.has-custom-background::before {
 }
 
 body.has-custom-background .header {
-    background: rgba(var(--bg-card-rgb), 0.72);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    background: rgba(var(--bg-card-rgb), var(--custom-card-alpha, 0.7));
+    backdrop-filter: blur(var(--custom-blur, 0px));
+    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
     border-color: rgba(var(--border-color-rgb), 0.4);
 }
 
 body.has-custom-background .welcome-section {
-    background: rgba(var(--bg-card-rgb), 0.78);
-    backdrop-filter: blur(16px) saturate(160%);
-    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    background: rgba(var(--bg-card-rgb), var(--custom-card-alpha, 0.75));
+    backdrop-filter: blur(var(--custom-blur, 0px));
+    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
     border-color: rgba(var(--border-color-rgb), 0.45);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08),
                 0 2px 8px rgba(0, 0, 0, 0.04);
@@ -276,29 +276,29 @@ body.has-custom-background .welcome-section {
 }
 
 body.has-custom-background .stat-item {
-    background: rgba(var(--bg-card-rgb), 0.75);
-    backdrop-filter: blur(12px) saturate(150%);
-    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    background: rgba(var(--bg-card-rgb), var(--custom-card-alpha, 0.7));
+    backdrop-filter: blur(var(--custom-blur, 0px));
+    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
     border-color: rgba(var(--border-color-rgb), 0.4);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 body.has-custom-background .stat-item:hover {
-    background: rgba(var(--bg-card-rgb), 0.88);
+    background: rgba(var(--bg-card-rgb), 0.85);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
 body.has-custom-background .node-card {
-    background: rgba(var(--bg-card-rgb), 0.78);
-    backdrop-filter: blur(14px) saturate(160%);
-    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    background: rgba(var(--bg-card-rgb), var(--custom-card-alpha, 0.75));
+    backdrop-filter: blur(var(--custom-blur, 0px));
+    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
     border-color: rgba(var(--border-color-rgb), 0.4);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06),
                 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 body.has-custom-background .node-card:hover {
-    background: rgba(var(--bg-card-rgb), 0.9);
+    background: rgba(var(--bg-card-rgb), 0.88);
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1),
                 0 4px 8px rgba(0, 0, 0, 0.06);
     border-color: rgba(var(--accent-rgb), 0.5);
@@ -309,42 +309,42 @@ body.has-custom-background .node-card::after {
 }
 
 body.has-custom-background .table-card {
-    background: rgba(var(--bg-card-rgb), 0.75);
-    backdrop-filter: blur(12px) saturate(150%);
-    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    background: rgba(var(--bg-card-rgb), var(--custom-card-alpha, 0.7));
+    backdrop-filter: blur(var(--custom-blur, 0px));
+    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
     border-color: rgba(var(--border-color-rgb), 0.4);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 body.has-custom-background .table-card:hover {
-    background: rgba(var(--bg-card-rgb), 0.9);
+    background: rgba(var(--bg-card-rgb), 0.85);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
     border-color: rgba(var(--accent-rgb), 0.5);
 }
 
 body.has-custom-background .modal {
     background: rgba(var(--bg-card-rgb), 0.92);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(var(--custom-blur, 0px));
+    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
     border-color: rgba(var(--border-color-rgb), 0.5);
 }
 
 body.has-custom-background .modal-header {
     background: rgba(var(--bg-card-rgb), 0.95);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(calc(var(--custom-blur, 0px) * 0.5));
+    -webkit-backdrop-filter: blur(calc(var(--custom-blur, 0px) * 0.5));
 }
 
 body.has-custom-background .modal-tabs {
     background: rgba(var(--bg-card-rgb), 0.85);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(calc(var(--custom-blur, 0px) * 0.4));
+    -webkit-backdrop-filter: blur(calc(var(--custom-blur, 0px) * 0.4));
 }
 
 body.has-custom-background .modal-info-item {
     background: rgba(var(--bg-card-rgb), 0.6);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(calc(var(--custom-blur, 0px) * 0.3));
+    -webkit-backdrop-filter: blur(calc(var(--custom-blur, 0px) * 0.3));
 }
 
 body.has-custom-background .metric-bar {
@@ -368,20 +368,20 @@ body.has-custom-background .footer {
 
 body.has-custom-background .latency-task-card {
     background: rgba(var(--bg-card-rgb), 0.7);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(var(--custom-blur, 0px));
+    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
 }
 
 body.has-custom-background .latency-stat {
     background: rgba(var(--bg-card-rgb), 0.65);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(var(--custom-blur, 0px));
+    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
 }
 
 body.has-custom-background .latency-chart-container {
     background: rgba(var(--bg-card-rgb), 0.65);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(var(--custom-blur, 0px));
+    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
 }
 
 body.has-custom-background .chart-section canvas {
@@ -399,8 +399,8 @@ body.has-custom-background .search-box input:focus {
 
 body.has-custom-background .group-filter {
     background: rgba(var(--bg-card-rgb), 0.65);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(var(--custom-blur, 0px));
+    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
 }
 
 body.has-custom-background .filter-btn:hover {
@@ -409,8 +409,8 @@ body.has-custom-background .filter-btn:hover {
 
 body.has-custom-background .view-toggle {
     background: rgba(var(--bg-card-rgb), 0.65);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(var(--custom-blur, 0px));
+    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
 }
 
 body.has-custom-background .view-btn:hover,
@@ -434,8 +434,8 @@ body.has-custom-background .modal-tab::before {
 
 body.has-custom-background .node-api-tag {
     background: rgba(var(--bg-card-rgb), 0.55);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(var(--custom-blur, 0px));
+    -webkit-backdrop-filter: blur(var(--custom-blur, 0px));
 }
 
 body.has-custom-background .node-api-tag.tag-green,
@@ -1053,6 +1053,12 @@ body::before {
     text-shadow: 0 2px 10px rgba(232, 102, 138, 0.2);
 }
 
+.traffic-text {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
 .stats-bar {
     display: flex;
     gap: 16px;
@@ -1428,29 +1434,62 @@ body::before {
     padding-top: 12px;
     border-top: 1px solid var(--border-light);
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px 14px;
-    align-items: center;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
     font-size: 0.72rem;
     color: var(--text-tertiary);
+    overflow: hidden;
+}
+
+.node-info-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .node-uptime {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 2px;
     font-weight: 500;
+    font-size: 0.68rem;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: rgba(var(--border-color-rgb), 0.25);
+    color: var(--text-secondary);
+    flex-shrink: 1;
+    min-width: 0;
 }
 
 .node-expiry {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    font-size: 0.7rem;
+    gap: 2px;
+    font-size: 0.68rem;
     font-weight: 600;
-    padding: 3px 8px;
+    padding: 2px 6px;
     border-radius: 6px;
     transition: transform 0.2s ease;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+.node-price {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: rgba(232, 102, 138, 0.15);
+    color: var(--accent);
+    flex-shrink: 1;
+    min-width: 0;
 }
 
 .node-card:hover .node-expiry {
@@ -1483,6 +1522,57 @@ body::before {
     gap: 8px;
     margin-left: auto;
     font-weight: 500;
+}
+
+.node-network-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+    max-width: 100%;
+    flex-wrap: nowrap;
+    overflow: hidden;
+}
+
+.node-network-speed {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+.node-traffic-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 6px;
+    transition: transform 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+.node-card:hover .node-traffic-tag {
+    transform: translateY(-1px);
+}
+
+.node-traffic-tag.traffic-tag-up {
+    background: rgba(76, 175, 125, 0.25);
+    color: #2e9b6a;
+}
+
+.node-traffic-tag.traffic-tag-down {
+    background: rgba(92, 156, 237, 0.25);
+    color: #3d7dd8;
+}
+
+.node-traffic-tag.traffic-tag-remaining {
+    background: rgba(232, 102, 138, 0.25);
+    color: var(--accent);
 }
 
 .node-ping {
@@ -1736,7 +1826,8 @@ body.view-table .stat-value {
 }
 
 .table-card-tag.tag-green,
-.table-card-tag.tag-success {
+.table-card-tag.tag-success,
+.table-card-tag.tag-upload {
     background: rgba(76, 175, 125, 0.25);
     color: #2e9b6a;
 }
@@ -1748,7 +1839,8 @@ body.view-table .stat-value {
 }
 
 .table-card-tag.tag-blue,
-.table-card-tag.tag-info {
+.table-card-tag.tag-info,
+.table-card-tag.tag-download {
     background: rgba(92, 156, 237, 0.25);
     color: #3d7dd8;
 }
@@ -1772,6 +1864,11 @@ body.view-table .stat-value {
 .table-card-tag.tag-pink {
     background: rgba(232, 102, 138, 0.25);
     color: #d64a7a;
+}
+
+.table-card-tag.tag-remaining {
+    background: rgba(156, 92, 224, 0.25);
+    color: #8a4ad5;
 }
 
 .table-card-tag.tag-cyan {
@@ -2388,6 +2485,51 @@ body.view-table .stat-value {
     margin-bottom: 24px;
 }
 
+.time-range-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+}
+
+.time-range-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-right: 8px;
+}
+
+.time-range-btn {
+    padding: 6px 12px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.time-range-btn:hover {
+    background: rgba(var(--accent-rgb), 0.1);
+    color: var(--text-primary);
+}
+
+.time-range-btn.active {
+    background: var(--accent);
+    color: white;
+    box-shadow: 0 2px 8px rgba(var(--accent-rgb), 0.3);
+}
+
+.time-range-btn.active:hover {
+    background: var(--accent);
+    color: white;
+}
+
 .modal-info-item {
     padding: 12px;
     background: var(--bg-tertiary);
@@ -2530,37 +2672,140 @@ body.view-table .stat-value {
     animation: pulse 1.5s ease-in-out infinite;
 }
 
+/* ==================== 改进的图表 Tooltip 样式 ==================== */
+/* 参考 PurCarte 的毛玻璃效果和结构化设计 */
+
 .chart-tooltip {
     position: fixed;
-    padding: 10px 14px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
+    padding: 0;
+    background: rgba(var(--bg-card-rgb), 0.92);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(var(--border-color-rgb), 0.6);
     border-radius: var(--radius-md);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-    font-size: 0.8rem;
-    font-family: var(--font-mono);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18),
+                0 2px 8px rgba(0, 0, 0, 0.12);
+    font-size: 0.85rem;
+    font-family: var(--font-sans);
     pointer-events: none;
     z-index: 1000;
     opacity: 0;
-    transform: translateY(4px);
-    transition: opacity 0.15s ease, transform 0.15s ease;
-    max-width: 280px;
+    transform: translateY(4px) scale(0.96);
+    transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    max-width: 320px;
+    min-width: 140px;
+    overflow: hidden;
 }
 
 .chart-tooltip.visible {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
 }
 
+/* 毛玻璃容器 */
+.chart-tooltip-glass {
+    padding: 12px 14px;
+}
+
+/* 时间显示 - 参考 PurCarte 的 labelFormatter */
 .chart-tooltip-time {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(var(--border-color-rgb), 0.35);
+    letter-spacing: 0.02em;
+}
+
+/* 内容区域 */
+.chart-tooltip-content {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* 数据行 */
+.chart-tooltip-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 0;
+}
+
+/* 指示点 - 参考 PurCarte 的 dot indicator */
+.chart-tooltip-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* 标签 */
+.chart-tooltip-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    flex: 1;
+    min-width: 60px;
+}
+
+/* 值 */
+.chart-tooltip-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    text-align: right;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.chart-tooltip-value strong {
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+/* 原始值显示（EWMA 平滑时） */
+.chart-tooltip-original {
     font-size: 0.7rem;
     color: var(--text-tertiary);
-    margin-bottom: 4px;
+    font-weight: 400;
 }
 
+/* EWMA 提示 */
+.chart-tooltip-hint {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    margin-bottom: 6px;
+    padding: 4px 8px;
+    background: rgba(var(--border-color-rgb), 0.25);
+    border-radius: var(--radius-sm);
+    text-align: center;
+}
+
+/* 旧的兼容样式（保持向后兼容） */
 .chart-tooltip-value {
     font-weight: 600;
     color: var(--text-primary);
+}
+
+/* 深色模式优化 */
+[data-theme="dark"] .chart-tooltip {
+    background: rgba(30, 21, 48, 0.95);
+    border-color: rgba(45, 32, 64, 0.7);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35),
+                0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+[data-theme="dark"] .chart-tooltip-time {
+    border-bottom-color: rgba(45, 32, 64, 0.5);
+}
+
+[data-theme="dark"] .chart-tooltip-indicator {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .latency-summary {
@@ -2824,6 +3069,46 @@ body.view-table .stat-value {
     gap: 10px;
     flex-wrap: wrap;
     max-width: 100%;
+}
+
+.latency-chart-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.chart-smooth-btn {
+    padding: 6px 10px;
+    border: none;
+    background: rgba(var(--accent-rgb), 0.1);
+    color: var(--text-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+}
+
+.chart-smooth-btn:hover {
+    background: rgba(var(--accent-rgb), 0.2);
+    color: var(--text-primary);
+}
+
+.chart-smooth-btn.active {
+    background: rgba(var(--accent-rgb), 0.2);
+    color: var(--accent);
+    box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.3);
+}
+
+.chart-smooth-btn svg {
+    transition: transform 0.2s ease;
+}
+
+.chart-smooth-btn:hover svg {
+    transform: scale(1.1);
 }
 
 .latency-legend-item {

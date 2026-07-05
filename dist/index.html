@@ -114,6 +114,7 @@
                     <div class="welcome-time">
                         <span class="time-label" id="currentDate">2024年1月15日</span>
                         <span class="time-value" id="currentTime">15:30:00</span>
+                        <span class="traffic-text" id="trafficText">总上传: 0 B / 总下载: 0 B</span>
                     </div>
                 </div>
             </div>
@@ -157,6 +158,13 @@
                 <div class="modal-body" id="modalBody">
                     <div class="modal-page modal-page-overview active" id="pageOverview">
                         <div class="modal-info" id="modalInfo"></div>
+                        <div class="time-range-controls" id="overviewTimeRange">
+                            <div class="time-range-label" data-i18n="time_range">时间范围：</div>
+                            <button class="time-range-btn" data-range="realtime">实时</button>
+                            <button class="time-range-btn" data-range="1h">1h</button>
+                            <button class="time-range-btn" data-range="4h">4h</button>
+                            <button class="time-range-btn active" data-range="1d">1d</button>
+                        </div>
                         <div class="modal-charts">
                             <div class="chart-section">
                                 <h3 data-i18n="cpu_usage">CPU Usage</h3>
@@ -179,12 +187,25 @@
                         </div>
                     </div>
                     <div class="modal-page modal-page-latency" id="pageLatency">
+                        <div class="time-range-controls" id="pingTimeRange">
+                            <div class="time-range-label" data-i18n="time_range">时间范围：</div>
+                            <button class="time-range-btn" data-range="1h">1h</button>
+                            <button class="time-range-btn" data-range="4h">4h</button>
+                            <button class="time-range-btn active" data-range="1d">1d</button>
+                        </div>
                         <div class="latency-summary" id="latencySummary"></div>
                         <div class="latency-tasks" id="latencyTasks"></div>
                         <div class="latency-chart-container">
                             <div class="latency-chart-header">
                                 <h3 data-i18n="ping_chart">Latency Trend</h3>
-                                <div class="latency-legend" id="latencyLegend"></div>
+                                <div class="latency-chart-controls">
+                                    <button class="chart-smooth-btn active" id="latencySmoothBtn" title="Smooth Line">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M2 12c2-4 4-6 6-6s4 4 6 6 4 4 6 6"/>
+                                        </svg>
+                                    </button>
+                                    <div class="latency-legend" id="latencyLegend"></div>
+                                </div>
                             </div>
                             <canvas id="latencyChart" width="800" height="300"></canvas>
                         </div>

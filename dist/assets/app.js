@@ -203,6 +203,7 @@
             region: '地区',
             network: '网络',
             uptime: '运行时间',
+            uptime_prefix: '已运行',
             cpu_usage: 'CPU 使用率',
             ram_usage: '内存使用率',
             network_traffic: '网络流量',
@@ -247,6 +248,7 @@
             max_ping: '最高延迟',
             avg_latency: '平均延迟',
             tasks: '监测任务',
+            time_range: '时间范围：',
             good_morning: '早上好',
             good_afternoon: '下午好',
             good_evening: '晚上好',
@@ -255,7 +257,20 @@
             long_term: '长期',
             free: '免费',
             login_required: '登录后查看历史数据',
-            task: '任务'
+            task: '任务',
+            total_upload: '总上传',
+            total_download: '总下载',
+            traffic_overview: '流量概览',
+            traffic_limit: '流量限制',
+            remaining_traffic: '剩余',
+            remaining: '剩余',
+            month: '月',
+            quarter: '季',
+            half_year: '半年',
+            year: '年',
+            two_years: '两年',
+            three_years: '三年',
+            five_years: '五年'
         },
         'en': {
             total_nodes: 'Total Nodes',
@@ -266,6 +281,7 @@
             region: 'Region',
             network: 'Network',
             uptime: 'Uptime',
+            uptime_prefix: 'Running',
             cpu_usage: 'CPU Usage',
             ram_usage: 'RAM Usage',
             network_traffic: 'Network Traffic',
@@ -310,6 +326,7 @@
             max_ping: 'Max Ping',
             avg_latency: 'Avg Latency',
             tasks: 'Monitor Tasks',
+            time_range: 'Time Range:',
             good_morning: 'Good Morning',
             good_afternoon: 'Good Afternoon',
             good_evening: 'Good Evening',
@@ -318,9 +335,47 @@
             long_term: 'Long Term',
             free: 'Free',
             login_required: 'Login required to view history',
-            task: 'Task'
+            task: 'Task',
+            total_upload: 'Total Upload',
+            total_download: 'Total Download',
+            traffic_overview: 'Traffic Overview',
+            traffic_limit: 'Traffic Limit',
+            remaining_traffic: 'Remaining',
+            remaining: 'Remaining',
+            month: 'Month',
+            quarter: 'Quarter',
+            half_year: 'Half Year',
+            year: 'Year',
+            two_years: '2 Years',
+            three_years: '3 Years',
+            five_years: '5 Years'
         }
     };
+
+    // 模块级缓存：避免重复请求相同的历史数据（参考 PurCarte 实现）
+    var historyCache = new Map();
+    var pingCache = new Map();
+    var CACHE_EXPIRY_MS = 60000; // 缓存有效期：60秒
+
+    function getCachedData(cache, key) {
+        if (cache.has(key)) {
+            var cached = cache.get(key);
+            // 检查缓存是否过期
+            if (Date.now() - cached.timestamp < CACHE_EXPIRY_MS) {
+                return cached.data;
+            }
+            // 过期则删除
+            cache.delete(key);
+        }
+        return null;
+    }
+
+    function setCachedData(cache, key, data) {
+        cache.set(key, {
+            data: data,
+            timestamp: Date.now()
+        });
+    }
 
     var state = {
         nodes: [],
@@ -336,12 +391,454 @@
         rpc: null,
         selectedNodeUuid: null,
         historyData: {},
+        realtimeHistory: {}, // 实时历史数据（用于实时模式）
         pingData: {},
         initialRender: true,
         modalElements: null,
         chartsDrawn: {},
-        chartObserver: null
+        chartObserver: null,
+        latencyChartSmooth: true, // 默认启用平滑曲线
+        ewmaAlpha: 0.3, // EWMA 平滑因子（0.1-0.5，越小越平滑）
+        historyTimeRange: '1d', // 概要图表时间范围：realtime, 1h, 4h, 1d, 7d, 30d
+        pingTimeRange: '1d' // 延迟图表时间范围：1h, 4h, 1d, 7d, 30d
     };
+
+    // ==================== PurCarte 核心算法实现 ====================
+
+    /**
+     * EWMA（指数加权移动平均）算法 - 基础版本
+     * 使用指数加权移动平均算法平滑数据
+     */
+    function applyEWMA(values, alpha) {
+        if (!values || values.length === 0) return [];
+
+        var smoothed = [];
+        var prevSmoothed = values[0]; // 初始值为第一个数据点
+
+        for (var i = 0; i < values.length; i++) {
+            if (values[i] === null || values[i] === undefined || isNaN(values[i])) {
+                smoothed.push(null);
+                continue;
+            }
+
+            // EWMA 公式：smoothed = α * current + (1 - α) * previous_smoothed
+            var currentSmoothed = alpha * values[i] + (1 - alpha) * prevSmoothed;
+            smoothed.push(currentSmoothed);
+            prevSmoothed = currentSmoothed;
+        }
+
+        return smoothed;
+    }
+
+    /**
+     * 创建 Null 模板对象 - 用于时间填充
+     * 递归地将所有数值属性设置为 null
+     */
+    function createNullTemplate(obj) {
+        if (obj === null || obj === undefined) return null;
+        if (typeof obj === 'number') return null;
+        if (typeof obj === 'string' || typeof obj === 'boolean') return obj;
+        if (Array.isArray(obj)) return obj.map(createNullTemplate);
+        if (typeof obj === 'object') {
+            var res = {};
+            for (var k in obj) {
+                if (k === 'updated_at' || k === 'time') continue;
+                res[k] = createNullTemplate(obj[k]);
+            }
+            return res;
+        }
+        return null;
+    }
+
+    /**
+     * 时间填充算法 - fillMissingTimePoints（PurCarte 核心算法）
+     * 在缺失的时间点填充 null 值，确保数据时间间隔一致
+     *
+     * @param data 输入数据数组，每个元素应有 time 或 updated_at 属性
+     * @param intervalSec 时间间隔（秒）
+     * @param totalSeconds 总时长（秒），设为 null 则使用变量长度模式
+     * @param matchToleranceSec 匹配容差（秒）
+     * @returns 填充后的数据数组
+     */
+    function fillMissingTimePoints(data, intervalSec, totalSeconds, matchToleranceSec) {
+        if (!data || data.length === 0) return [];
+
+        intervalSec = intervalSec || 60;
+        totalSeconds = totalSeconds !== undefined ? totalSeconds : 3600;
+        matchToleranceSec = matchToleranceSec || intervalSec;
+
+        var getTime = function(item) {
+            return new Date(item.time || item.updated_at || '').getTime();
+        };
+
+        // 预计算时间戳以优化排序和搜索性能
+        var timedData = data.map(function(item) {
+            return { item: item, timeMs: getTime(item) };
+        });
+        timedData.sort(function(a, b) { return a.timeMs - b.timeMs; });
+
+        var firstItem = timedData[0];
+        var lastItem = timedData[timedData.length - 1];
+        var end = lastItem.timeMs;
+        var interval = intervalSec * 1000;
+
+        // 根据是否设置 totalSeconds 决定起始时间
+        var start;
+        if (totalSeconds !== null && totalSeconds > 0) {
+            // 固定长度模式：从末尾往前推算
+            start = end - totalSeconds * 1000 + interval;
+        } else {
+            // 变量长度模式：从第一个数据点开始
+            start = firstItem.timeMs;
+        }
+
+        // 生成理想的时间点网格
+        var timePoints = [];
+        for (var t = start; t <= end; t += interval) {
+            timePoints.push(t);
+        }
+
+        // 创建 null 模板用于填充缺失点
+        var nullTemplate = createNullTemplate(lastItem.item);
+
+        var dataIdx = 0;
+        var matchToleranceMs = matchToleranceSec * 1000;
+
+        var filled = timePoints.map(function(t) {
+            var found = undefined;
+
+            // 跳过太旧的数据点
+            while (dataIdx < timedData.length && timedData[dataIdx].timeMs < t - matchToleranceMs) {
+                dataIdx++;
+            }
+
+            // 检查当前数据点是否在容差范围内
+            if (dataIdx < timedData.length && Math.abs(timedData[dataIdx].timeMs - t) <= matchToleranceMs) {
+                found = timedData[dataIdx].item;
+            }
+
+            if (found) {
+                // 找到数据点，对齐时间到网格
+                return Object.assign({}, found, { time: new Date(t).toISOString() });
+            }
+
+            // 未找到，使用 null 模板填充
+            return Object.assign({}, nullTemplate, { time: new Date(t).toISOString() });
+        });
+
+        return filled;
+    }
+
+    /**
+     * 线性插值算法 - interpolateNullsLinear（PurCarte 核心算法）
+     * 在相邻两个有效点之间，用线性插值填充中间的 null 值
+     *
+     * @param rows 数据数组
+     * @param keys 需要插值的属性名数组
+     * @param options 配置选项（maxGapMs 或 maxGapMultiplier）
+     * @returns 插值后的数据数组
+     */
+    function interpolateNullsLinear(rows, keys, options) {
+        if (!rows || rows.length === 0 || !keys || keys.length === 0) return rows;
+
+        var times = rows.map(function(r) {
+            return new Date(r.time || r.updated_at || '').getTime();
+        });
+        var out = rows.map(function(r) { return Object.assign({}, r); });
+
+        // 解析配置
+        var opts = typeof options === 'number' ? { maxGapMs: options } : (options || {});
+        var maxGapMsUnified = opts.maxGapMs;
+        var multiplier = opts.maxGapMultiplier || 6;
+        var minCap = opts.minCapMs || 2 * 60000; // 2分钟
+        var maxCap = opts.maxCapMs || 30 * 60000; // 30分钟
+
+        var clamp = function(v, lo, hi) {
+            return Math.max(lo, Math.min(hi, v));
+        };
+
+        for (var ki = 0; ki < keys.length; ki++) {
+            var key = keys[ki];
+
+            // 收集该列的有效点索引
+            var validIdx = [];
+            for (var i = 0; i < rows.length; i++) {
+                var v = rows[i][key];
+                if (typeof v === 'number' && !isNaN(v) && isFinite(v)) {
+                    validIdx.push(i);
+                }
+            }
+
+            if (validIdx.length < 2) continue;
+
+            // 计算该列的"典型间隔"（使用中位数）
+            var perKeyMaxGap = maxGapMsUnified;
+            if (perKeyMaxGap === undefined) {
+                var gaps = [];
+                for (var s = 0; s < validIdx.length - 1; s++) {
+                    var i0 = validIdx[s];
+                    var i1 = validIdx[s + 1];
+                    var t0 = times[i0];
+                    var t1 = times[i1];
+                    if (isFinite(t0) && isFinite(t1) && t1 > t0) {
+                        gaps.push(t1 - t0);
+                    }
+                }
+                if (gaps.length === 0) continue;
+                gaps.sort(function(a, b) { return a - b; });
+                var median = gaps[Math.floor(gaps.length / 2)];
+                perKeyMaxGap = clamp(median * multiplier, minCap, maxCap);
+            }
+
+            // 相邻有效点之间做线性插值
+            for (var s = 0; s < validIdx.length - 1; s++) {
+                var i0 = validIdx[s];
+                var i1 = validIdx[s + 1];
+                var t0 = times[i0];
+                var t1 = times[i1];
+                var v0 = rows[i0][key];
+                var v1 = rows[i1][key];
+
+                if (!isFinite(t0) || !isFinite(t1) || t1 <= t0) continue;
+                if (typeof v0 !== 'number' || typeof v1 !== 'number') continue;
+                if (perKeyMaxGap && t1 - t0 > perKeyMaxGap) continue; // 间隔太大，保持空洞
+
+                for (var j = i0 + 1; j < i1; j++) {
+                    var tj = times[j];
+                    var ratio = (tj - t0) / (t1 - t0);
+                    out[j][key] = v0 + (v1 - v0) * ratio;
+                }
+            }
+        }
+
+        return out;
+    }
+
+    /**
+     * EWMA 平滑 + 突变检测算法 - cutPeakValues（PurCarte 核心算法）
+     * 使用 EWMA 平滑数据，同时检测并过滤突变值
+     *
+     * @param data 输入数据数组
+     * @param keys 需要处理的属性名数组
+     * @param alpha 平滑因子（0-1，越小越平滑）
+     * @param windowSize 突变检测窗口大小
+     * @param spikeThreshold 突变阈值（相对变化比例）
+     * @returns 处理后的数据数组
+     */
+    function cutPeakValues(data, keys, alpha, windowSize, spikeThreshold) {
+        if (!data || data.length === 0) return data;
+
+        alpha = alpha || 0.1;
+        windowSize = windowSize || 15;
+        spikeThreshold = spikeThreshold || 0.3;
+
+        var result = data.map(function(d) { return Object.assign({}, d); });
+        var halfWindow = Math.floor(windowSize / 2);
+
+        for (var ki = 0; ki < keys.length; ki++) {
+            var key = keys[ki];
+
+            // 第一步：检测并移除突变值
+            for (var i = 0; i < result.length; i++) {
+                var currentValue = result[i][key];
+
+                if (currentValue != null && typeof currentValue === 'number') {
+                    var neighborValues = [];
+
+                    // 收集窗口范围内的邻近有效值
+                    for (var j = Math.max(0, i - halfWindow); j <= Math.min(result.length - 1, i + halfWindow); j++) {
+                        if (j === i) continue;
+                        var neighbor = result[j][key];
+                        if (neighbor != null && typeof neighbor === 'number') {
+                            neighborValues.push(neighbor);
+                        }
+                    }
+
+                    // 如果有足够的邻近值进行突变检测
+                    if (neighborValues.length >= 2) {
+                        var neighborSum = neighborValues.reduce(function(sum, val) { return sum + val; }, 0);
+                        var neighborMean = neighborValues.length > 0 ? neighborSum / neighborValues.length : 0;
+
+                        // 检测突变
+                        if (neighborMean > 0) {
+                            var relativeChange = Math.abs(currentValue - neighborMean) / neighborMean;
+                            if (relativeChange > spikeThreshold) {
+                                result[i][key] = null;
+                            }
+                        } else if (Math.abs(currentValue) > 10) {
+                            result[i][key] = null;
+                        }
+                    }
+                }
+            }
+
+            // 第二步：使用 EWMA 平滑和填充
+            var ewma = null;
+
+            for (var i = 0; i < result.length; i++) {
+                var currentValue = result[i][key];
+
+                if (currentValue != null && typeof currentValue === 'number') {
+                    if (ewma === null) {
+                        ewma = Math.round(currentValue * 100) / 100;
+                    } else {
+                        ewma = Math.round((alpha * currentValue + (1 - alpha) * ewma) * 100) / 100;
+                    }
+                    result[i][key] = ewma;
+                } else if (ewma !== null) {
+                    result[i][key] = ewma;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * 智能数据处理管道 - 整合所有算法
+     * 对历史数据进行完整的处理流程
+     *
+     * @param data 原始数据
+     * @param hours 时间范围（小时）
+     * @param keys 需要处理的属性名数组
+     * @param enableSmooth 是否启用平滑
+     * @returns 处理后的数据
+     */
+    function processDataPipeline(data, hours, keys, enableSmooth) {
+        if (!data || data.length === 0) return [];
+
+        // 1. 时间填充（仅历史模式）
+        var filledData = data;
+        if (hours > 0) {
+            var minute = 60;
+            var hour = minute * 60;
+
+            // 将时间字符串转换为 ISO 格式
+            var stringifiedData = data.map(function(d) {
+                return Object.assign({}, d, {
+                    time: typeof d.time === 'number' ? new Date(d.time).toISOString() : d.time
+                });
+            });
+
+            // 确定采样间隔
+            var intervalSeconds;
+            if (hours === 1 || hours === 4) {
+                intervalSeconds = minute;
+            } else if (hours > 120) {
+                intervalSeconds = hour;
+            } else {
+                intervalSeconds = minute * 15;
+            }
+
+            // 检查是否需要在末尾添加当前时间的空点
+            var now = new Date();
+            if (stringifiedData.length > 0) {
+                var lastDataTime = new Date(stringifiedData[stringifiedData.length - 1].time).getTime();
+                if (now.getTime() - lastDataTime > intervalSeconds * 1000) {
+                    stringifiedData.push({ time: now.toISOString() });
+                }
+            }
+
+            // 执行时间填充
+            var maxGap = intervalSeconds * 2;
+            filledData = fillMissingTimePoints(
+                stringifiedData,
+                intervalSeconds,
+                hour * hours,
+                maxGap
+            );
+
+            // 将时间转回时间戳
+            filledData = filledData.map(function(d) {
+                return Object.assign({}, d, { time: new Date(d.time).getTime() });
+            });
+        }
+
+        // 2. 线性插值
+        if (hours > 0 && keys && keys.length > 0) {
+            filledData = interpolateNullsLinear(filledData, keys, {
+                maxGapMultiplier: 6,
+                minCapMs: 2 * 60000,
+                maxCapMs: 30 * 60000
+            });
+        }
+
+        // 3. EWMA 平滑 + 突变检测（可选）
+        if (enableSmooth && keys && keys.length > 0) {
+            filledData = cutPeakValues(filledData, keys, state.ewmaAlpha, 15, 0.3);
+        }
+
+        // 4. 数据裁剪（上限保护）
+        var maxPoints = getMaxDataPoints(hours);
+        filledData = trimRecords(filledData, maxPoints);
+
+        return filledData;
+    }
+
+    // 时间范围转换为小时数
+    function timeRangeToHours(range) {
+        switch (range) {
+            case 'realtime': return 0;  // 实时模式
+            case '1h': return 1;
+            case '4h': return 4;
+            case '1d': return 24;
+            default: return 24;
+        }
+    }
+
+    // 根据时间范围智能选择时间格式
+    function formatTimeLabel(time, hours) {
+        if (hours <= 4) {
+            // 1h、4h：显示"小时:分钟"
+            return time.getHours().toString().padStart(2, '0') + ':' + time.getMinutes().toString().padStart(2, '0');
+        } else if (hours <= 24) {
+            // 1d：显示"小时:分钟"
+            return time.getHours().toString().padStart(2, '0') + ':' + time.getMinutes().toString().padStart(2, '0');
+        } else if (hours <= 168) {
+            // 7d：显示"月-日 小时"
+            return (time.getMonth() + 1).toString().padStart(2, '0') + '-' + time.getDate().toString().padStart(2, '0') + ' ' + time.getHours().toString().padStart(2, '0');
+        } else {
+            // 30d及以上：显示"月-日"
+            return (time.getMonth() + 1).toString().padStart(2, '0') + '-' + time.getDate().toString().padStart(2, '0');
+        }
+    }
+
+    // 数据裁剪：限制数据点数量，防止性能问题
+    function trimRecords(records, maxCount) {
+        if (!records || records.length <= maxCount) return records;
+
+        // 只保留最新的 maxCount 个数据点
+        return records.slice(-maxCount);
+    }
+
+    // 根据时间范围智能计算最大数据点数
+    function getMaxDataPoints(hours) {
+        // 参考 PurCarte 的经验，600 点是一个合理的上限
+        if (hours <= 4) return 600;      // 1h、4h：600点
+        return 600;                     // 1d：600点
+    }
+
+    // OKLCH 颜色生成（参考 PurCarte 实现）
+    function generateOKLCHColor(index, total) {
+        // 计算色相：均匀分布在色相环上
+        var hue = (index * (360 / total)) % 360;
+
+        // OKLCH 色彩空间（更高色彩区分度）
+        // L: 亮度（0.7 = 中等亮度）
+        // C: 色度（0.2 = 中等饱和度）
+        // H: 色相
+        var oklchColor = 'oklch(0.7 0.2 ' + hue + ' / 0.8)';
+
+        // HSL 降级方案（为不支持 OKLCH 的浏览器提供）
+        var hslFallback = 'hsl(' + hue + ', 50%, 60%)';
+
+        // 检查浏览器是否支持 OKLCH
+        if (typeof window !== 'undefined' && window.CSS && CSS.supports('color', oklchColor)) {
+            return oklchColor;
+        } else {
+            return hslFallback;
+        }
+    }
 
     function t(key) {
         var lang = state.currentLang;
@@ -365,13 +862,40 @@
         'table': 'table'
     };
 
-    function formatBytes(bytes) {
+    function formatBytes(bytes, decimals) {
         if (bytes === null || bytes === undefined) return '-';
         if (bytes === 0) return '0 B';
-        var units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        var i = Math.floor(Math.log(bytes) / Math.log(1024));
+
+        var units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'];
+        var k = 1024;
+        var i = Math.floor(Math.log(bytes) / Math.log(k));
         i = Math.min(i, units.length - 1);
-        return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
+
+        var value = bytes / Math.pow(k, i);
+
+        // 如果值大于等于1000，则进位到下一个单位（参考 PurCarte 实现）
+        if (value >= 1000 && i < units.length - 1) {
+            i++;
+            value = bytes / Math.pow(k, i);
+        }
+
+        // 自动确定小数位数：GB及以上保留1位小数，MB及以下不保留小数
+        if (decimals === undefined) {
+            decimals = (i >= 3) ? 1 : 0;
+        }
+
+        var dm = decimals < 0 ? 0 : decimals;
+
+        // 使用截断而不是四舍五入（避免 1.998 显示成 2.0）
+        if (dm > 0 && value !== Math.floor(value)) {
+            var multiplier = Math.pow(10, dm);
+            // 截断小数位，而不是四舍五入
+            value = Math.floor(value * multiplier) / multiplier;
+        }
+
+        // 格式化并移除末尾多余的零
+        var result = value.toFixed(dm).replace(/\.?0+$/, '') + ' ' + units[i];
+        return result;
     }
 
     function formatSpeed(bytesPerSec) {
@@ -388,10 +912,13 @@
         var d = Math.floor(seconds / 86400);
         var h = Math.floor((seconds % 86400) / 3600);
         var m = Math.floor((seconds % 3600) / 60);
-        if (d > 0) return d + t('days') + ' ' + h + t('hours');
-        if (h > 0) return h + t('hours') + ' ' + m + t('minutes');
+        
+        if (d > 0 && h > 0) return d + t('days') + ' ' + h + t('hours');
+        if (d > 0) return d + t('days');
+        if (h > 0 && m > 0) return h + t('hours') + ' ' + m + t('minutes');
+        if (h > 0) return h + t('hours');
         if (m > 0) return m + t('minutes');
-        return Math.floor(seconds) + t('seconds');
+        return '<1' + t('minutes');
     }
 
     function formatExpiry(expiredAt) {
@@ -401,14 +928,43 @@
         var now = new Date();
         var diff = expiry - now;
         if (diff < 0) return { text: t('expired'), level: 'expired', days: -1 };
+        
         var days = Math.floor(diff / (1000 * 60 * 60 * 24));
         var hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        
         if (days > 365) return { text: t('long_term'), level: 'normal', days: days, isLongTerm: true };
         if (days > 30) return { text: days + t('days'), level: 'normal', days: days };
-        if (days > 7) return { text: days + t('days'), level: 'warning', days: days };
+        if (days > 7) return { text: days + t('days') + ' ' + hours + t('hours'), level: 'warning', days: days };
         if (days > 0) return { text: days + t('days') + ' ' + hours + t('hours'), level: 'danger', days: days };
         if (hours > 0) return { text: hours + t('hours'), level: 'danger', days: 0 };
         return { text: '<1' + t('hours'), level: 'danger', days: 0 };
+    }
+
+    function formatPrice(price, currency, billingCycle) {
+        if (price === -1) return t('free');
+        if (price === 0) return '';
+        if (!currency || !billingCycle) return 'N/A';
+
+        var cycleStr = billingCycle + t('days');
+        if (billingCycle < 0) {
+            return currency + price.toFixed(2);
+        } else if (billingCycle === 30 || billingCycle === 31) {
+            cycleStr = t('month');
+        } else if (billingCycle >= 89 && billingCycle <= 92) {
+            cycleStr = t('quarter');
+        } else if (billingCycle >= 180 && billingCycle <= 183) {
+            cycleStr = t('half_year');
+        } else if (billingCycle >= 364 && billingCycle <= 366) {
+            cycleStr = t('year');
+        } else if (billingCycle >= 730 && billingCycle <= 732) {
+            cycleStr = t('two_years');
+        } else if (billingCycle >= 1095 && billingCycle <= 1097) {
+            cycleStr = t('three_years');
+        } else if (billingCycle >= 1825 && billingCycle <= 1827) {
+            cycleStr = t('five_years');
+        }
+
+        return currency + price.toFixed(2) + '/' + cycleStr;
     }
 
     function formatPercent(value) {
@@ -514,6 +1070,31 @@
 
     function loadNodeHistory(uuid, hours) {
         hours = hours || 24;
+
+        // 实时模式（hours=0）：使用实时历史数据，不从 API 加载
+        if (hours === 0) {
+            // 实时历史数据已经在 handleRpcResult 中实时更新
+            // 如果没有实时历史数据，加载最近的历史数据作为初始数据
+            if (!state.realtimeHistory[uuid] || state.realtimeHistory[uuid].length === 0) {
+                return state.rpc.call('common:getNodeRecentStatus', { uuid: uuid })
+                    .then(function(fallback) {
+                        if (fallback && fallback.records) {
+                            var trimmedRecords = trimRecords(fallback.records, 600);
+                            state.realtimeHistory[uuid] = trimmedRecords;
+                        }
+                    }).catch(function() {});
+            }
+            return Promise.resolve();
+        }
+
+        // 检查缓存
+        var cacheKey = uuid + '-' + hours;
+        var cachedData = getCachedData(historyCache, cacheKey);
+        if (cachedData) {
+            state.historyData[uuid] = cachedData;
+            return Promise.resolve();
+        }
+
         return state.rpc.call('common:getRecords', { uuid: uuid, type: 'load', hours: hours, maxCount: 4000 })
             .then(function(result) {
                 var records = [];
@@ -529,13 +1110,21 @@
                     }
                 }
                 if (records.length > 0) {
-                    state.historyData[uuid] = records;
+                    // 数据裁剪：限制数据点数量，防止性能问题
+                    var maxPoints = getMaxDataPoints(hours);
+                    var trimmedRecords = trimRecords(records, maxPoints);
+                    state.historyData[uuid] = trimmedRecords;
+
+                    // 缓存数据
+                    setCachedData(historyCache, cacheKey, trimmedRecords);
                     return;
                 }
                 return state.rpc.call('common:getNodeRecentStatus', { uuid: uuid })
                     .then(function(fallback) {
                         if (fallback && fallback.records) {
-                            state.historyData[uuid] = fallback.records;
+                            var trimmedRecords = trimRecords(fallback.records, 600);
+                            state.historyData[uuid] = trimmedRecords;
+                            setCachedData(historyCache, cacheKey, trimmedRecords);
                         }
                     }).catch(function() {});
             }).catch(function(err) {
@@ -545,7 +1134,9 @@
                 return state.rpc.call('common:getNodeRecentStatus', { uuid: uuid })
                     .then(function(fallback) {
                         if (fallback && fallback.records) {
-                            state.historyData[uuid] = fallback.records;
+                            var trimmedRecords = trimRecords(fallback.records, 600);
+                            state.historyData[uuid] = trimmedRecords;
+                            setCachedData(historyCache, cacheKey, trimmedRecords);
                         }
                     }).catch(function() {});
             });
@@ -553,12 +1144,26 @@
 
     function loadPingHistory(uuid, hours) {
         hours = hours || 24;
+
+        // 检查缓存
+        var cacheKey = uuid + '-' + hours;
+        var cachedData = getCachedData(pingCache, cacheKey);
+        if (cachedData) {
+            state.pingData[uuid] = cachedData;
+            return Promise.resolve();
+        }
+
         return state.rpc.call('common:getRecords', { uuid: uuid, type: 'ping', hours: hours })
             .then(function(result) {
                 if (result) {
                     var records = result.records || [];
+
+                    // 数据裁剪：限制数据点数量，防止性能问题
+                    var maxPoints = getMaxDataPoints(hours);
+                    records = trimRecords(records, maxPoints);
+
                     var basicInfo = result.basic_info || [];
-                    
+
                     var taskMap = {};
                     records.forEach(function(r) {
                         if (r.task_id !== undefined && !taskMap[r.task_id]) {
@@ -568,7 +1173,7 @@
                             };
                         }
                     });
-                    
+
                     basicInfo.forEach(function(info, idx) {
                         var taskIds = Object.keys(taskMap);
                         if (taskIds[idx]) {
@@ -577,14 +1182,19 @@
                             taskMap[taskIds[idx]].max = info.max;
                         }
                     });
-                    
+
                     var tasks = Object.keys(taskMap).map(function(k) { return taskMap[k]; });
-                    
-                    state.pingData[uuid] = {
+
+                    var pingData = {
                         records: records,
                         tasks: tasks
                     };
-                    
+
+                    state.pingData[uuid] = pingData;
+
+                    // 缓存数据
+                    setCachedData(pingCache, cacheKey, pingData);
+
                     fetchPingTaskNames(uuid);
                 }
             }).catch(function(err) {
@@ -825,10 +1435,10 @@
 
     function handleRpcResult(result) {
         if (!result) return;
-        
+
         var onlineNodes = [];
         var realtimeData = {};
-        
+
         Object.keys(result).forEach(function (uuid) {
             var status = result[uuid];
             if (status.online) {
@@ -845,8 +1455,59 @@
                 uptime: status.uptime || 0,
                 process: status.process || 0
             };
+
+            // 实时历史数据追加（参考 PurCarte 实现）
+            if (status.online && status.time) {
+                // 初始化实时历史数组
+                if (!state.realtimeHistory[uuid]) {
+                    state.realtimeHistory[uuid] = [];
+                }
+
+                // 检查是否有重复的时间点
+                var history = state.realtimeHistory[uuid];
+                var lastTime = history.length > 0 ? new Date(history[history.length - 1].time).getTime() : 0;
+                var currentTime = new Date(status.time).getTime();
+
+                if (currentTime !== lastTime) {
+                    // 将实时状态转换为历史记录格式
+                    var record = {
+                        time: status.time,
+                        cpu: status.cpu,
+                        ram: status.ram,
+                        ram_total: status.ram_total,
+                        swap: status.swap,
+                        swap_total: status.swap_total,
+                        disk: status.disk,
+                        disk_total: status.disk_total,
+                        load: status.load,
+                        load5: status.load5,
+                        load15: status.load15,
+                        net_in: status.net_in,
+                        net_out: status.net_out,
+                        net_total_up: status.net_total_up,
+                        net_total_down: status.net_total_down,
+                        process: status.process,
+                        connections: status.connections,
+                        connections_udp: status.connections_udp,
+                        gpu: status.gpu
+                    };
+
+                    // 追加到实时历史数组
+                    history.push(record);
+
+                    // 限制最多 600 个数据点（参考 PurCarte）
+                    if (history.length > 600) {
+                        state.realtimeHistory[uuid] = history.slice(history.length - 600);
+                    }
+
+                    // 如果当前正在查看该节点，且时间范围是实时模式，则重新绘制图表
+                    if (state.selectedNodeUuid === uuid && state.historyTimeRange === 'realtime') {
+                        drawCharts(uuid);
+                    }
+                }
+            }
         });
-        
+
         state.onlineNodes = onlineNodes;
         state.realtimeData = realtimeData;
         renderAll();
@@ -1039,24 +1700,40 @@
     function renderStatsBar() {
         var filtered = getFilteredNodes();
         var online = 0;
+        var totalTrafficUp = 0;
+        var totalTrafficDown = 0;
+
         filtered.forEach(function (n) {
-            if (state.onlineNodes.indexOf(n.uuid) !== -1) online++;
+            if (state.onlineNodes.indexOf(n.uuid) !== -1) {
+                online++;
+                var rt = state.realtimeData[n.uuid] || {};
+                if (rt.network) {
+                    totalTrafficUp += rt.network.totalUp || 0;
+                    totalTrafficDown += rt.network.totalDown || 0;
+                }
+            }
         });
 
         var totalEl = document.getElementById('totalNodes');
         var onlineEl = document.getElementById('onlineNodes');
         var offlineEl = document.getElementById('offlineNodes');
+        var trafficTextEl = document.getElementById('trafficText');
 
         if (totalEl) totalEl.textContent = filtered.length;
         if (onlineEl) onlineEl.textContent = online;
         if (offlineEl) offlineEl.textContent = filtered.length - online;
-        
+
+        // 更新流量文本显示
+        if (trafficTextEl) {
+            trafficTextEl.textContent = t('total_upload') + ': ' + formatBytes(totalTrafficUp) + ' / ' + t('total_download') + ': ' + formatBytes(totalTrafficDown);
+        }
+
         updateGreetingSubtitle();
     }
 
     function calculateNodeMetrics(node) {
         var rt = state.realtimeData[node.uuid] || {};
-        
+
         var cpuUsage = rt.cpu ? rt.cpu.usage : null;
         var ramUsed = rt.ram ? rt.ram.used : null;
         var ramTotal = rt.ram ? rt.ram.total : node.mem_total || 0;
@@ -1069,10 +1746,41 @@
         var swapPercent = swapTotal > 0 ? (swapUsed / swapTotal * 100) : 0;
         var netUp = rt.network ? rt.network.up : 0;
         var netDown = rt.network ? rt.network.down : 0;
+        var netTotalUp = rt.network ? rt.network.totalUp : 0;
+        var netTotalDown = rt.network ? rt.network.totalDown : 0;
         var uptime = rt.uptime || 0;
         var pingMs = getLatestPing(node.uuid);
         var load1 = rt.load ? rt.load.load1 : null;
-        
+
+        // 流量限制相关
+        var trafficLimit = node.traffic_limit || 0;
+        var trafficLimitType = node.traffic_limit_type || 'max';
+
+        // 根据流量限制类型计算已使用流量
+        var usedTraffic = 0;
+        if (trafficLimit > 0) {
+            switch (trafficLimitType) {
+                case 'up':
+                    usedTraffic = netTotalUp;
+                    break;
+                case 'down':
+                    usedTraffic = netTotalDown;
+                    break;
+                case 'sum':
+                    usedTraffic = netTotalUp + netTotalDown;
+                    break;
+                case 'min':
+                    usedTraffic = Math.min(netTotalUp, netTotalDown);
+                    break;
+                default: // 'max' 或未设置
+                    usedTraffic = Math.max(netTotalUp, netTotalDown);
+                    break;
+            }
+        }
+
+        // 计算剩余流量
+        var remainingTraffic = trafficLimit > 0 ? Math.max(0, trafficLimit - usedTraffic) : 0;
+
         return {
             isOnline: state.onlineNodes.indexOf(node.uuid) !== -1,
             cpuUsage: cpuUsage,
@@ -1086,13 +1794,19 @@
             swapTotal: swapTotal,
             netUp: netUp,
             netDown: netDown,
+            netTotalUp: netTotalUp,
+            netTotalDown: netTotalDown,
             uptime: uptime,
             pingMs: pingMs,
             pingLevel: getPingLevel(pingMs),
             load1: load1,
             flagUrl: getCountryFlag(node.region),
             osShort: getShortOs(node.os),
-            osInfo: formatOS(node.os)
+            osInfo: formatOS(node.os),
+            trafficLimit: trafficLimit,
+            trafficLimitType: trafficLimitType,
+            usedTraffic: usedTraffic,
+            remainingTraffic: remainingTraffic
         };
     }
 
@@ -1179,41 +1893,75 @@
         return html;
     }
 
-    function renderNodeCardFooter(node, metrics, showUptime, showNetwork) {
+    function renderNodeCardFooter(node, metrics, showUptime, showNetwork, showTrafficTags) {
         var html = '<div class="node-card-footer">';
-        
-        if (showUptime) {
-            html += '<span class="node-uptime">' + formatUptime(metrics.uptime) + '</span>';
-        }
-        
+
+        // 第一行：价格标签 + 运行时间标签 + 到期时间标签
+        var priceText = formatPrice(node.price, node.currency, node.billing_cycle);
+        var uptimeText = formatUptime(metrics.uptime);
         var expiry = formatExpiry(node.expired_at);
-        if (expiry) {
-            html += '<span class="node-expiry level-' + expiry.level + '">' + expiry.text + '</span>';
-        }
+
+        html += '<span class="node-info-row">';
         
-        if (showNetwork) {
-            html += '<span class="node-network">';
-            html += '<span class="network-dir"><span class="arrow-up">&#9650;</span>' + formatSpeed(metrics.netUp) + '</span>';
-            html += '<span class="network-dir"><span class="arrow-down">&#9660;</span>' + formatSpeed(metrics.netDown) + '</span>';
+        // 1. 价格标签
+        if (priceText) {
+            html += '<span class="node-price">' + priceText + '</span>';
+        }
+
+        // 2. 运行时间标签（添加"已运行:"前缀）
+        if (uptimeText !== '-') {
+            html += '<span class="node-uptime">' + t('uptime_prefix') + ':' + uptimeText + '</span>';
+        }
+
+        // 3. 到期时间标签（改为"剩余:"前缀）
+        if (expiry) {
+            html += '<span class="node-expiry level-' + expiry.level + '">' + t('remaining') + ':' + expiry.text + '</span>';
+        }
+
+        html += '</span>';
+
+        // 第二行：网络信息区域（流量标签 + 实时速度）
+        if (showNetwork || showTrafficTags) {
+            html += '<span class="node-network-row">';
+
+            // 流量标签
+            if (showTrafficTags) {
+                html += '<span class="node-traffic-tag traffic-tag-up" title="' + t('total_upload') + '">↑ ' + formatBytes(metrics.netTotalUp) + '</span>';
+                html += '<span class="node-traffic-tag traffic-tag-down" title="' + t('total_download') + '">↓ ' + formatBytes(metrics.netTotalDown) + '</span>';
+                
+                // 剩余流量标签（如果有流量限制）
+                if (metrics.trafficLimit > 0) {
+                    html += '<span class="node-traffic-tag traffic-tag-remaining" title="' + t('traffic_limit') + ': ' + formatBytes(metrics.trafficLimit) + '">' + t('remaining') + ':' + formatBytes(metrics.remainingTraffic) + '</span>';
+                }
+            }
+
+            // 实时速度
+            if (showNetwork) {
+                html += '<span class="node-network-speed">';
+                html += '<span class="network-dir"><span class="arrow-up">&#9650;</span>' + formatSpeed(metrics.netUp) + '</span>';
+                html += '<span class="network-dir"><span class="arrow-down">&#9660;</span>' + formatSpeed(metrics.netDown) + '</span>';
+                html += '</span>';
+            }
+
             html += '</span>';
         }
-        
+
         html += '</div>';
-        
+
         return html;
     }
 
-    function renderNodeCard(node, metrics, showUptime, showNetwork, showPing) {
+    function renderNodeCard(node, metrics, showUptime, showNetwork, showPing, showTrafficTags) {
         var html = '';
-        
+
         html += '<div class="node-card' + (metrics.isOnline ? '' : ' offline') + (state.initialRender ? ' animate-in' : '') + '" data-uuid="' + node.uuid + '">';
         html += renderNodeCardHeader(node, metrics);
         html += '<div class="node-card-metrics">';
         html += renderNodeMetrics(metrics);
         html += '</div>';
-        html += renderNodeCardFooter(node, metrics, showUptime, showNetwork);
+        html += renderNodeCardFooter(node, metrics, showUptime, showNetwork, showTrafficTags);
         html += '</div>';
-        
+
         return html;
     }
 
@@ -1240,11 +1988,12 @@
         var showUptime = state.themeSettings.show_uptime !== false;
         var showNetwork = state.themeSettings.show_network_speed !== false;
         var showPing = state.themeSettings.show_ping !== false;
+        var showTrafficTags = state.themeSettings.show_traffic_tags !== false;
 
         var html = '';
         nodes.forEach(function (node) {
             var metrics = calculateNodeMetrics(node);
-            html += renderNodeCard(node, metrics, showUptime, showNetwork, showPing);
+            html += renderNodeCard(node, metrics, showUptime, showNetwork, showPing, showTrafficTags);
         });
 
         container.innerHTML = html;
@@ -1263,11 +2012,12 @@
         }
 
         var showNetwork = state.themeSettings.show_network_speed !== false;
+        var showTrafficTags = state.themeSettings.show_traffic_tags !== false;
 
         var html = '<div class="table-cards">';
         nodes.forEach(function (node) {
             var metrics = calculateNodeMetrics(node);
-            html += renderTableCard(node, metrics, showNetwork);
+            html += renderTableCard(node, metrics, showNetwork, showTrafficTags);
         });
         html += '</div>';
 
@@ -1275,17 +2025,17 @@
         bindTableCardEvents(container);
     }
 
-    function renderTableCard(node, metrics, showNetwork) {
+    function renderTableCard(node, metrics, showNetwork, showTrafficTags) {
         var html = '';
-        
+
         html += '<div class="table-card' + (metrics.isOnline ? '' : ' offline') + '" data-uuid="' + node.uuid + '">';
         html += renderTableCardHeader(node, metrics);
         html += '<div class="table-card-metrics">';
         html += renderTableCardMetrics(node, metrics, showNetwork);
-        html += renderTableCardTags(node);
+        html += renderTableCardTags(node, showTrafficTags);
         html += '</div>';
         html += '</div>';
-        
+
         return html;
     }
 
@@ -1388,24 +2138,35 @@
         return html;
     }
 
-    function renderTableCardTags(node) {
+    function renderTableCardTags(node, showTrafficTags) {
         var hasIpTags = node.ipv4 || node.ipv6;
         var hasTags = node.tags && node.tags.split(';').filter(function(t) { return t.trim(); }).length > 0;
-        
-        if (!hasIpTags && !hasTags) {
+        var metrics = calculateNodeMetrics(node);
+        var hasTraffic = showTrafficTags && (metrics.netTotalUp > 0 || metrics.netTotalDown > 0);
+        var hasRemainingTraffic = metrics.trafficLimit > 0; // 剩余流量标签不受开关影响
+
+        if (!hasIpTags && !hasTags && !hasTraffic && !hasRemainingTraffic) {
             return '';
         }
-        
+
         var html = '<div class="table-card-metric table-card-metric-tags">';
         html += '<div class="table-card-tags">';
-        
+
+        // 1. IPv4/IPv6标签（最前面）
         if (node.ipv4) {
             html += '<span class="table-card-tag tag-ip tag-ipv4">IPv4</span>';
         }
         if (node.ipv6) {
             html += '<span class="table-card-tag tag-ip tag-ipv6">IPv6</span>';
         }
-        
+
+        // 2. 流量标签（中间） - 受开关控制
+        if (hasTraffic) {
+            html += '<span class="table-card-tag tag-traffic tag-upload" title="' + t('total_upload') + '">↑ ' + formatBytes(metrics.netTotalUp) + '</span>';
+            html += '<span class="table-card-tag tag-traffic tag-download" title="' + t('total_download') + '">↓ ' + formatBytes(metrics.netTotalDown) + '</span>';
+        }
+
+        // 3. 自定义标签（中间）
         if (node.tags) {
             var tags = node.tags.split(';').filter(function(t) { return t.trim(); });
             tags.forEach(function(tag) {
@@ -1413,10 +2174,15 @@
                 html += '<span class="table-card-tag' + tagInfo.className + '">' + escapeHtml(tagInfo.text) + '</span>';
             });
         }
-        
+
+        // 4. 剩余流量标签（最后面，最右侧） - 不受开关影响，始终显示
+        if (hasRemainingTraffic) {
+            html += '<span class="table-card-tag tag-traffic tag-remaining" title="' + t('traffic_limit') + ': ' + formatBytes(metrics.trafficLimit) + '">' + t('remaining_traffic') + ': ' + formatBytes(metrics.remainingTraffic) + '</span>';
+        }
+
         html += '</div>';
         html += '</div>';
-        
+
         return html;
     }
 
@@ -1508,7 +2274,7 @@
     function openNodeModal(uuid) {
         state.selectedNodeUuid = uuid;
         state.chartsDrawn = {};
-        
+
         var node = state.nodes.find(function (n) { return n.uuid === uuid; });
         if (!node) return;
 
@@ -1516,6 +2282,9 @@
         var els = getModalElements();
 
         if (els.nodeName) els.nodeName.textContent = node.name;
+
+        // 设置时间范围按钮的初始激活状态
+        updateTimeRangeButtons();
 
         switchModalPage('overview');
         renderOverviewPage(node, rt, uuid);
@@ -1527,12 +2296,16 @@
 
         initChartObserver();
 
+        // 使用当前选择的时间范围加载数据
+        var historyHours = timeRangeToHours(state.historyTimeRange);
+        var pingHours = timeRangeToHours(state.pingTimeRange);
+
         Promise.all([
-            loadNodeHistory(uuid),
-            loadPingHistory(uuid, 1)
+            loadNodeHistory(uuid, historyHours),
+            loadPingHistory(uuid, pingHours)
         ]).then(function () {
             renderLatencyPage(uuid);
-            
+
             [els.cpuChart, els.ramChart, els.networkChart, els.latencyChart].forEach(function(canvas) {
                 if (canvas) {
                     canvas.classList.add('chart-loading');
@@ -1540,6 +2313,25 @@
                 }
             });
         });
+    }
+
+    // 更新时间范围按钮的激活状态
+    function updateTimeRangeButtons() {
+        var overviewTimeRange = document.getElementById('overviewTimeRange');
+        if (overviewTimeRange) {
+            overviewTimeRange.querySelectorAll('.time-range-btn').forEach(function (btn) {
+                var range = btn.getAttribute('data-range');
+                btn.classList.toggle('active', range === state.historyTimeRange);
+            });
+        }
+
+        var pingTimeRange = document.getElementById('pingTimeRange');
+        if (pingTimeRange) {
+            pingTimeRange.querySelectorAll('.time-range-btn').forEach(function (btn) {
+                var range = btn.getAttribute('data-range');
+                btn.classList.toggle('active', range === state.pingTimeRange);
+            });
+        }
     }
 
     function renderOverviewPage(node, rt, uuid) {
@@ -1722,41 +2514,317 @@
         switchModalPage('overview');
     }
 
+    // ==================== 配置驱动的图表系统 ====================
+
+    /**
+     * 图表配置系统 - 参考 PurCarte 的配置驱动架构
+     * 定义所有图表的配置，实现统一的渲染逻辑
+     */
+    function getChartConfigs(node, liveData) {
+        // OKLCH 颜色系统
+        var colors = ['#F38181', '#FCE38A', '#EAFFD0', '#95E1D3'];
+
+        // 提取 liveData 的实际值（liveData 是对象格式）
+        var cpuUsage = liveData && liveData.cpu ? liveData.cpu.usage : null;
+        var ramUsed = liveData && liveData.ram ? liveData.ram.used : null;
+        var ramTotal = liveData && liveData.ram ? liveData.ram.total : (node ? node.mem_total : 0);
+
+        return [
+            {
+                id: 'cpu',
+                canvasId: 'cpuChart',
+                title: t('cpu_usage'),
+                type: 'area',
+                dataKey: 'cpu',
+                valueFn: function(r) { return r.cpu; },
+                liveValue: cpuUsage !== null ? cpuUsage.toFixed(2) + '%' : '-',
+                yAxisDomain: [0, 100],
+                yAxisFormatter: function(value) { return value.toFixed(0) + '%'; },
+                color: colors[0],
+                tooltipFormatter: function(value) { return value.toFixed(2) + '%'; },
+                tooltipLabel: t('cpu_usage'),
+                smoothKeys: ['cpu']
+            },
+            {
+                id: 'ram',
+                canvasId: 'ramChart',
+                title: t('ram_usage'),
+                type: 'area',
+                dataKey: 'ram',
+                valueFn: function(r) {
+                    var ramVal = r.ram;
+                    if (ramVal === null || ramVal === undefined) return null;
+                    if (ramVal > 100 && r.ram_total > 0) {
+                        return (ramVal / r.ram_total) * 100;
+                    }
+                    return ramVal;
+                },
+                liveValue: ramUsed !== null ? formatBytes(ramUsed) + ' / ' + formatBytes(ramTotal) : '-',
+                yAxisDomain: [0, 100],
+                yAxisFormatter: function(value) { return value.toFixed(0) + '%'; },
+                color: colors[1],
+                tooltipFormatter: function(value, raw) { return formatBytes(raw ? raw.ram : 0) + ' (' + value.toFixed(0) + '%)'; },
+                tooltipLabel: t('ram_usage'),
+                smoothKeys: ['ram']
+            },
+            {
+                id: 'network',
+                canvasId: 'networkChart',
+                title: t('network_traffic'),
+                type: 'line',
+                series: [
+                    {
+                        dataKey: 'net_in',
+                        color: colors[2],
+                        tooltipLabel: t('download'),
+                        tooltipFormatter: function(value) { return formatSpeed(value); }
+                    },
+                    {
+                        dataKey: 'net_out',
+                        color: colors[3],
+                        tooltipLabel: t('upload'),
+                        tooltipFormatter: function(value) { return formatSpeed(value); }
+                    }
+                ],
+                liveValue: liveData && liveData.network ? ('▲ ' + formatSpeed(liveData.network.up || 0) + '  ▼ ' + formatSpeed(liveData.network.down || 0)) : '-',
+                yAxisFormatter: function(value) { return formatSpeed(value); },
+                smoothKeys: ['net_in', 'net_out']
+            }
+        ];
+    }
+
+    /**
+     * 统一的图表绘制函数 - 根据配置渲染图表
+     * 参考 PurCarte 的 renderChart 函数设计
+     */
+    function renderChartByConfig(config, records, hours) {
+        var canvas = document.getElementById(config.canvasId);
+        if (!canvas) return;
+
+        var ctx = canvas.getContext('2d');
+        var dpr = window.devicePixelRatio || 1;
+        var rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+
+        var w = rect.width;
+        var h = rect.height;
+        var padding = config.padding || { top: 24, right: 20, bottom: 32, left: 50 };
+        var chartW = w - padding.left - padding.right;
+        var chartH = h - padding.top - padding.bottom;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // 主题适配
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        var gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+        var textColor = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)';
+        var bgColor = isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)';
+
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(padding.left, padding.top, chartW, chartH);
+
+        // 绘制网格和Y轴
+        ctx.strokeStyle = gridColor;
+        ctx.lineWidth = 1;
+        ctx.font = '11px ' + getComputedStyle(document.body).fontFamily;
+        ctx.fillStyle = textColor;
+        ctx.textAlign = 'right';
+
+        var yAxisDomain = config.yAxisDomain || [0, 100];
+        var yTicks = 4;
+        var maxVal = yAxisDomain[1];
+        var minVal = yAxisDomain[0];
+
+        // 网络图表需要动态计算最大值
+        if (config.type === 'line' && config.series) {
+            var allValues = [];
+            config.series.forEach(function(series) {
+                records.forEach(function(r) {
+                    var v = r[series.dataKey];
+                    if (v !== null && v !== undefined && !isNaN(v)) {
+                        allValues.push(v);
+                    }
+                });
+            });
+            maxVal = allValues.length > 0 ? Math.max.apply(null, allValues) : 1024;
+            maxVal = Math.ceil(maxVal / 1024) * 1024;
+            minVal = 0;
+        }
+
+        for (var i = 0; i <= yTicks; i++) {
+            var y = padding.top + (chartH / yTicks) * i;
+            ctx.beginPath();
+            ctx.setLineDash([4, 4]);
+            ctx.moveTo(padding.left, y);
+            ctx.lineTo(w - padding.right, y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            var val = maxVal - (maxVal - minVal) * (i / yTicks);
+            var yLabel = config.yAxisFormatter ? config.yAxisFormatter(val) : val.toFixed(0);
+            ctx.fillText(yLabel, padding.left - 8, y + 4);
+        }
+
+        // 绘制数据
+        if (config.series) {
+            // 多系列图表（网络图表）
+            config.series.forEach(function(series) {
+                var values = records.map(function(r) { return r[series.dataKey] || 0; });
+                drawSmoothAreaLine(ctx, values, series.color, padding, chartW, chartH, maxVal, minVal, false);
+            });
+        } else {
+            // 单系列图表（CPU/RAM 图表）
+            var values = records.map(config.valueFn);
+            drawSmoothAreaLine(ctx, values, config.color, padding, chartW, chartH, maxVal, minVal, config.type === 'area');
+        }
+
+        // 绘制时间标签（只显示首尾）
+        ctx.fillStyle = textColor;
+        ctx.textAlign = 'center';
+        ctx.font = '10px ' + getComputedStyle(document.body).fontFamily;
+
+        var dataLength = records.length;
+        var firstTime = new Date(records[0].time);
+        var lastTime = new Date(records[records.length - 1].time);
+
+        // 左侧时间标签
+        ctx.fillText(formatTimeLabel(firstTime, hours), padding.left, h - 10);
+        // 右侧时间标签
+        ctx.fillText(formatTimeLabel(lastTime, hours), w - padding.right, h - 10);
+
+        // 存储图表数据用于 Tooltip
+        canvas._chartData = {
+            type: config.series ? 'network' : 'line',
+            config: config,
+            records: records,
+            padding: padding,
+            maxVal: maxVal,
+            minVal: minVal,
+            hours: hours
+        };
+
+        canvas.onmousemove = function(e) {
+            showChartTooltip(e, canvas, canvas._chartData);
+        };
+        canvas.onmouseleave = createHideHandler(canvas);
+
+        canvas.ontouchmove = function(e) {
+            if (e.touches.length === 1) {
+                var touch = e.touches[0];
+                showChartTooltip({ clientX: touch.clientX, clientY: touch.clientY }, canvas, canvas._chartData);
+            }
+        };
+        canvas.ontouchend = createHideHandler(canvas);
+    }
+
+    /**
+     * 绘制平滑曲线（带可选填充）
+     */
+    function drawSmoothAreaLine(ctx, values, color, padding, chartW, chartH, maxVal, minVal, fill) {
+        var points = [];
+        for (var j = 0; j < values.length; j++) {
+            if (values[j] === null || values[j] === undefined || isNaN(values[j])) continue;
+            var x = padding.left + (j / Math.max(values.length - 1, 1)) * chartW;
+            var normalized = (values[j] - minVal) / (maxVal - minVal);
+            normalized = Math.max(0, Math.min(1, normalized));
+            var y = padding.top + chartH - normalized * chartH;
+            points.push({ x: x, y: y, value: values[j] });
+        }
+
+        if (points.length > 1) {
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+
+            // 使用贝塞尔曲线绘制平滑曲线
+            for (var k = 1; k < points.length; k++) {
+                var prev = points[k - 1];
+                var curr = points[k];
+                var cpx = (prev.x + curr.x) / 2;
+                ctx.quadraticCurveTo(prev.x + (curr.x - prev.x) * 0.5, prev.y, cpx, (prev.y + curr.y) / 2);
+                ctx.quadraticCurveTo(cpx, curr.y, curr.x, curr.y);
+            }
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2.5;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            // 填充渐变（仅用于 area 类型）
+            if (fill) {
+                ctx.lineTo(points[points.length - 1].x, padding.top + chartH);
+                ctx.lineTo(points[0].x, padding.top + chartH);
+                ctx.closePath();
+
+                var gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
+                gradient.addColorStop(0, color + '40');
+                gradient.addColorStop(0.5, color + '15');
+                gradient.addColorStop(1, color + '02');
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            }
+        }
+
+        return points;
+    }
+
+    /**
+     * 绘制空图表提示
+     */
+    function drawEmptyChart(canvas) {
+        if (!canvas) return;
+
+        var ctx = canvas.getContext('2d');
+        var dpr = window.devicePixelRatio || 1;
+        var rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        ctx.clearRect(0, 0, rect.width, rect.height);
+
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        ctx.fillStyle = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)';
+        ctx.font = '12px ' + getComputedStyle(document.body).fontFamily;
+        ctx.textAlign = 'center';
+        ctx.fillText(t('login_required') || 'Login required to view history', rect.width / 2, rect.height / 2);
+    }
+
+    /**
+     * 重构后的 drawCharts 函数 - 使用配置驱动
+     */
     function drawCharts(uuid) {
-        var records = state.historyData[uuid] || [];
+        var hours = timeRangeToHours(state.historyTimeRange);
+        var records;
+
+        if (hours === 0) {
+            // 实时模式：使用实时历史数据
+            records = state.realtimeHistory[uuid] || [];
+        } else {
+            // 历史模式：直接使用历史数据，不需要额外处理
+            records = state.historyData[uuid] || [];
+        }
+
         var els = getModalElements();
-        
+        var node = state.nodes.find(function(n) { return n.uuid === uuid; });
+        var liveData = state.realtimeData[uuid];
+
+        // 获取图表配置
+        var chartConfigs = getChartConfigs(node, liveData);
+
         if (records.length === 0) {
-            [els.cpuChart, els.ramChart, els.networkChart].forEach(function(canvas) {
-                if (canvas) {
-                    var ctx = canvas.getContext('2d');
-                    var dpr = window.devicePixelRatio || 1;
-                    var rect = canvas.getBoundingClientRect();
-                    canvas.width = rect.width * dpr;
-                    canvas.height = rect.height * dpr;
-                    ctx.scale(dpr, dpr);
-                    ctx.clearRect(0, 0, rect.width, rect.height);
-                    
-                    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-                    ctx.fillStyle = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)';
-                    ctx.font = '12px ' + getComputedStyle(document.body).fontFamily;
-                    ctx.textAlign = 'center';
-                    ctx.fillText(t('login_required') || 'Login required to view history', rect.width / 2, rect.height / 2);
-                }
+            chartConfigs.forEach(function(config) {
+                var canvas = document.getElementById(config.canvasId);
+                drawEmptyChart(canvas);
             });
             return;
         }
 
-        drawLineChart('cpuChart', records, function (r) { return r.cpu; }, 0, 100, '#e8668a', 'CPU %');
-        drawLineChart('ramChart', records, function (r) {
-            var ramVal = r.ram;
-            if (ramVal === null || ramVal === undefined) return null;
-            if (ramVal > 100 && r.ram_total > 0) {
-                return (ramVal / r.ram_total) * 100;
-            }
-            return ramVal;
-        }, 0, 100, '#5c9ced', 'RAM %');
-        drawNetworkChart('networkChart', records);
+        // 根据配置渲染每个图表
+        chartConfigs.forEach(function(config) {
+            renderChartByConfig(config, records, hours);
+        });
     }
 
     var PING_COLORS = ['#e8668a', '#5c9ced', '#4caf7d', '#f5a623', '#9c5ce0', '#00bcd4', '#ff5722', '#795548'];
@@ -1768,9 +2836,19 @@
         var padding = options.padding || { top: 10, right: 20, bottom: 30, left: 50 };
         var timeLabels = options.timeLabels || 6;
         var timeLabelBottomOffset = options.timeLabelBottomOffset || 10;
-        var colors = options.colors || PING_COLORS;
         var filterFn = options.filterFn || function (v) { return v !== null && v !== undefined && !isNaN(v) && v >= 0; };
         var yAxisSuffix = options.yAxisSuffix || t('ping_ms');
+
+        // 动态生成颜色（使用 OKLCH 色彩空间）
+        var colors = [];
+        var totalTasks = tasks.length;
+        for (var i = 0; i < totalTasks; i++) {
+            colors.push(generateOKLCHColor(i, totalTasks));
+        }
+        // 如果提供了自定义颜色，优先使用
+        if (options.colors && options.colors.length >= totalTasks) {
+            colors = options.colors;
+        }
 
         var ctx = canvas.getContext('2d');
         var dpr = window.devicePixelRatio || 1;
@@ -1790,9 +2868,69 @@
         var gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
         var textColor = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)';
 
-        var validValues = records.filter(filterFn).map(function (r) { return r.value; });
-        var maxVal = validValues.length > 0 ? Math.max(Math.max.apply(null, validValues), 100) : 100;
-        maxVal = Math.ceil(maxVal / 50) * 50;
+        var validValues = records.map(function (r) { return r.value; }).filter(filterFn);
+
+        // 计算数据范围
+        var dataMin = validValues.length > 0 ? Math.min.apply(null, validValues) : 0;
+        var dataMax = validValues.length > 0 ? Math.max.apply(null, validValues) : 100;
+
+        // 智能决定Y轴范围和刻度间隔
+        var minVal, maxVal, step;
+        var ADAPTIVE_THRESHOLD = 50; // 自适应阈值
+
+        if (dataMin > ADAPTIVE_THRESHOLD) {
+            // 使用自适应范围：根据数据范围选择合适的刻度间隔
+            var range = dataMax - dataMin;
+            var valuePadding = range * 0.1 || 10; // 给数据范围留10%的边距
+            
+            // 根据数据范围选择刻度间隔
+            var adjustedMin = dataMin - valuePadding;
+            var adjustedMax = dataMax + valuePadding;
+            var fullRange = adjustedMax - adjustedMin;
+            
+            // 选择合适的刻度间隔（目标：4-6个刻度）
+            if (fullRange <= 60) {
+                step = 15; // 0-15-30-45-60
+            } else if (fullRange <= 100) {
+                step = 20; // 0-20-40-60-80-100
+            } else if (fullRange <= 200) {
+                step = 50; // 0-50-100-150-200
+            } else if (fullRange <= 500) {
+                step = 100; // 0-100-200-300-400-500
+            } else if (fullRange <= 1000) {
+                step = 200; // 0-200-400-600-800-1000
+            } else {
+                step = 500; // 更大范围
+            }
+            
+            minVal = Math.max(0, Math.floor(adjustedMin / step) * step);
+            maxVal = Math.ceil(adjustedMax / step) * step;
+        } else {
+            // 从0开始：根据数据最大值选择合适的刻度间隔
+            var targetMax = Math.max(dataMax, 60); // 至少显示到60ms
+            
+            // 选择合适的刻度间隔
+            if (targetMax <= 60) {
+                step = 15; // 0-15-30-45-60
+            } else if (targetMax <= 100) {
+                step = 20; // 0-20-40-60-80-100
+            } else if (targetMax <= 200) {
+                step = 50; // 0-50-100-150-200
+            } else {
+                step = 100; // 更大范围
+            }
+            
+            minVal = 0;
+            maxVal = Math.ceil(targetMax / step) * step;
+        }
+
+        // 计算刻度数量
+        var tickCount = Math.round((maxVal - minVal) / step);
+        // 确保刻度数量在合理范围内（最多8个）
+        if (tickCount > 8) {
+            tickCount = 8;
+            step = (maxVal - minVal) / tickCount;
+        }
 
         ctx.strokeStyle = gridColor;
         ctx.lineWidth = 1;
@@ -1800,13 +2938,15 @@
         ctx.fillStyle = textColor;
         ctx.textAlign = 'right';
 
-        for (var i = 0; i <= 4; i++) {
-            var y = padding.top + (chartH / 4) * i;
+        for (var i = 0; i <= tickCount; i++) {
+            var y = padding.top + (chartH / tickCount) * i;
             ctx.beginPath();
             ctx.moveTo(padding.left, y);
             ctx.lineTo(w - padding.right, y);
             ctx.stroke();
-            ctx.fillText((maxVal * (1 - i / 4)).toFixed(0) + yAxisSuffix, padding.left - 6, y + 3);
+            // Y轴刻度从 minVal 到 maxVal
+            var val = maxVal - (maxVal - minVal) * (i / tickCount);
+            ctx.fillText(val.toFixed(0) + yAxisSuffix, padding.left - 6, y + 3);
         }
 
         var taskMap = {};
@@ -1823,41 +2963,90 @@
 
         taskIds.forEach(function (taskId) {
             var taskRecs = taskRecords[taskId];
-            var values = taskRecs.map(function (r) { return r.value; });
+            var validRecs = taskRecs.filter(function (r) {
+                return r.value !== null && r.value !== undefined && !isNaN(r.value) && r.value >= 0;
+            });
+
+            // 如果启用平滑，应用 EWMA 算法
+            var smoothedRecs = validRecs;
+            if (state.latencyChartSmooth && validRecs.length > 1) {
+                var originalValues = validRecs.map(function (r) { return r.value; });
+                var smoothedValues = applyEWMA(originalValues, state.ewmaAlpha);
+
+                // 创建平滑后的记录对象（保留原始时间等信息）
+                smoothedRecs = validRecs.map(function (r, idx) {
+                    return {
+                        task_id: r.task_id,
+                        time: r.time,
+                        value: smoothedValues[idx],
+                        originalValue: r.value // 保存原始值用于 tooltip
+                    };
+                });
+            }
+
             var color = colors[colorIdx % colors.length];
             colorIdx++;
 
             var points = [];
-            for (var j = 0; j < values.length; j++) {
-                if (values[j] === null || values[j] === undefined || isNaN(values[j]) || values[j] < 0) continue;
-                var x = padding.left + (j / Math.max(values.length - 1, 1)) * chartW;
-                var normalized = values[j] / maxVal;
+            for (var j = 0; j < smoothedRecs.length; j++) {
+                var x = padding.left + (j / Math.max(smoothedRecs.length - 1, 1)) * chartW;
+                // 使用 minVal 和 maxVal 进行归一化
+                var normalized = (smoothedRecs[j].value - minVal) / (maxVal - minVal);
                 normalized = Math.max(0, Math.min(1, normalized));
                 var y = padding.top + chartH - normalized * chartH;
-                points.push({ x: x, y: y });
+                points.push({ x: x, y: y, value: smoothedRecs[j].value, originalValue: smoothedRecs[j].originalValue });
             }
 
             if (points.length > 1) {
                 ctx.beginPath();
                 ctx.moveTo(points[0].x, points[0].y);
+
+                // EWMA 已经平滑了数据，直接用直线连接即可
                 for (var k = 1; k < points.length; k++) {
                     ctx.lineTo(points[k].x, points[k].y);
                 }
+
                 ctx.strokeStyle = color;
                 ctx.lineWidth = 2;
                 ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
                 ctx.stroke();
             }
         });
 
+        // 如果启用平滑，显示提示信息
+        if (state.latencyChartSmooth) {
+            ctx.fillStyle = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)';
+            ctx.font = '10px ' + getComputedStyle(document.body).fontFamily;
+            ctx.textAlign = 'right';
+
+            var hintText = 'EWMA 平滑趋势';
+            var hintX = w - padding.right - 5;
+            var hintY = padding.top + 12; // 放在图表内部顶部
+
+            ctx.fillText(hintText, hintX, hintY);
+        }
+
         ctx.fillStyle = textColor;
         ctx.textAlign = 'center';
         var firstTaskRecs = taskRecords[taskIds[0]] || records;
+
+        // 只显示首尾时间标签（参考 PurCarte 实现）
+        var hours = timeRangeToHours(state.pingTimeRange);
+        var dataLength = firstTaskRecs.length;
+
         for (var ti = 0; ti <= timeLabels; ti++) {
             var idx = Math.floor((firstTaskRecs.length - 1) * ti / timeLabels);
             var x = padding.left + (ti / timeLabels) * chartW;
             var time = new Date(firstTaskRecs[idx].time);
-            ctx.fillText(time.getHours().toString().padStart(2, '0') + ':' + time.getMinutes().toString().padStart(2, '0'), x, h - timeLabelBottomOffset);
+
+            // 只在首尾显示时间标签，其他位置为空
+            var timeText = '';
+            if (idx === 0 || idx === dataLength - 1) {
+                timeText = formatTimeLabel(time, hours);
+            }
+
+            ctx.fillText(timeText, x, h - timeLabelBottomOffset);
         }
 
         if (options.drawLegend) {
@@ -1870,6 +3059,7 @@
             tasks: tasks,
             taskRecords: taskRecords,
             taskMap: taskMap,
+            minVal: minVal,
             maxVal: maxVal,
             padding: padding
         };
@@ -1916,6 +3106,10 @@
         return chartTooltip;
     }
 
+    /**
+     * 改进的 Tooltip 显示函数 - 参考 PurCarte 的 CustomTooltip
+     * 支持配置驱动、毛玻璃效果、智能时间格式化
+     */
     function showChartTooltip(e, canvas, chartData) {
         var tooltip = getOrCreateTooltip();
         var rect = canvas.getBoundingClientRect();
@@ -1926,6 +3120,7 @@
         var chartW = rect.width - padding.left - padding.right;
         var chartH = rect.height - padding.top - padding.bottom;
 
+        // 边界检查
         if (x < padding.left || x > rect.width - padding.right || y < padding.top || y > rect.height - padding.bottom) {
             tooltip.classList.remove('visible');
             if (canvas._crosshair) {
@@ -1944,6 +3139,7 @@
             return;
         }
 
+        // 创建十字线
         var crosshair = canvas._crosshair;
         if (!crosshair) {
             crosshair = document.createElement('div');
@@ -1973,27 +3169,83 @@
         crosshair.style.opacity = '0.5';
 
         var time = new Date(record.time);
-        var timeStr = time.getHours().toString().padStart(2, '0') + ':' +
-                      time.getMinutes().toString().padStart(2, '0') + ':' +
-                      time.getSeconds().toString().padStart(2, '0');
 
-        var html = '<div class="chart-tooltip-time">' + timeStr + '</div>';
+        // 智能时间格式化：根据时间范围选择合适的显示格式
+        var hours = chartData.hours || timeRangeToHours(state.historyTimeRange);
+        if (chartData.type === 'ping') {
+            hours = timeRangeToHours(state.pingTimeRange);
+        }
 
-        if (chartData.type === 'line') {
+        var timeStr = formatTooltipTime(time, hours);
+
+        // 毛玻璃效果容器
+        var html = '<div class="chart-tooltip-glass">';
+        html += '<div class="chart-tooltip-time">' + timeStr + '</div>';
+        html += '<div class="chart-tooltip-content">';
+
+        // 根据图表类型渲染内容
+        if (chartData.config) {
+            // 新的配置驱动模式
+            var config = chartData.config;
+
+            if (config.series) {
+                // 多系列图表（网络）
+                config.series.forEach(function(series) {
+                    var value = record[series.dataKey] || 0;
+                    var formattedValue = series.tooltipFormatter ? series.tooltipFormatter(value, record) : formatSpeed(value);
+                    html += '<div class="chart-tooltip-row">';
+                    html += '<div class="chart-tooltip-indicator" style="background:' + series.color + '"></div>';
+                    html += '<span class="chart-tooltip-label">' + series.tooltipLabel + '</span>';
+                    html += '<span class="chart-tooltip-value"><strong>' + formattedValue + '</strong></span>';
+                    html += '</div>';
+                });
+            } else {
+                // 单系列图表（CPU/RAM）
+                var value = config.valueFn(record);
+                if (value !== null && value !== undefined && !isNaN(value)) {
+                    var formattedValue = config.tooltipFormatter ? config.tooltipFormatter(value, record) : value.toFixed(2) + '%';
+                    html += '<div class="chart-tooltip-row">';
+                    html += '<div class="chart-tooltip-indicator" style="background:' + config.color + '"></div>';
+                    html += '<span class="chart-tooltip-label">' + config.tooltipLabel + '</span>';
+                    html += '<span class="chart-tooltip-value"><strong>' + formattedValue + '</strong></span>';
+                    html += '</div>';
+                }
+            }
+        } else if (chartData.type === 'line') {
+            // 旧模式兼容
             var val = chartData.valueFn(record);
             if (val !== null && val !== undefined && !isNaN(val)) {
-                html += '<div class="chart-tooltip-value" style="color:' + chartData.color + '">' + chartData.label + ': <strong>' + val.toFixed(1) + '%</strong></div>';
+                html += '<div class="chart-tooltip-row">';
+                html += '<div class="chart-tooltip-indicator" style="background:' + chartData.color + '"></div>';
+                html += '<span class="chart-tooltip-label">' + chartData.label + '</span>';
+                html += '<span class="chart-tooltip-value"><strong>' + val.toFixed(1) + '%</strong></span>';
+                html += '</div>';
             }
         } else if (chartData.type === 'network') {
+            // 网络图表
             var netIn = record.net_in || 0;
             var netOut = record.net_out || 0;
-            html += '<div class="chart-tooltip-value" style="color: #4caf7d">▲ ' + t('up') + ': <strong>' + formatSpeed(netOut) + '</strong></div>';
-            html += '<div class="chart-tooltip-value" style="color: #5c9ced">▼ ' + t('down') + ': <strong>' + formatSpeed(netIn) + '</strong></div>';
+            html += '<div class="chart-tooltip-row">';
+            html += '<div class="chart-tooltip-indicator" style="background:#4caf7d"></div>';
+            html += '<span class="chart-tooltip-label">▲ ' + t('up') + '</span>';
+            html += '<span class="chart-tooltip-value"><strong>' + formatSpeed(netOut) + '</strong></span>';
+            html += '</div>';
+            html += '<div class="chart-tooltip-row">';
+            html += '<div class="chart-tooltip-indicator" style="background:#5c9ced"></div>';
+            html += '<span class="chart-tooltip-label">▼ ' + t('down') + '</span>';
+            html += '<span class="chart-tooltip-value"><strong>' + formatSpeed(netIn) + '</strong></span>';
+            html += '</div>';
         } else if (chartData.type === 'ping') {
+            // Ping 图表
             var taskRecords = chartData.taskRecords;
             var taskMap = chartData.taskMap;
             var taskIds = Object.keys(taskRecords);
-            taskIds.forEach(function (taskId, colorIdx) {
+
+            if (state.latencyChartSmooth) {
+                html += '<div class="chart-tooltip-hint">EWMA 平滑趋势</div>';
+            }
+
+            taskIds.forEach(function(taskId, colorIdx) {
                 var taskRecs = taskRecords[taskId];
                 var task = taskMap[taskId];
                 if (taskRecs && taskRecs.length > 0) {
@@ -2001,27 +3253,65 @@
                     recIdx = Math.max(0, Math.min(recIdx, taskRecs.length - 1));
                     var taskRec = taskRecs[recIdx];
                     if (taskRec && taskRec.value !== null && taskRec.value !== undefined && taskRec.value >= 0) {
-                        var color = PING_COLORS[colorIdx % PING_COLORS.length];
-                        html += '<div class="chart-tooltip-value" style="color: ' + color + '">' + escapeHtml(task.name) + ': <strong>' + taskRec.value.toFixed(1) + t('ping_ms') + '</strong></div>';
+                        var color = generateOKLCHColor(colorIdx, taskIds.length);
+
+                        html += '<div class="chart-tooltip-row">';
+                        html += '<div class="chart-tooltip-indicator" style="background:' + color + '"></div>';
+                        html += '<span class="chart-tooltip-label">' + escapeHtml(task.name) + '</span>';
+
+                        if (taskRec.originalValue !== undefined) {
+                            html += '<span class="chart-tooltip-value"><strong>' + taskRec.value.toFixed(1) + t('ping_ms') + '</strong>';
+                            html += '<span class="chart-tooltip-original">(' + taskRec.originalValue.toFixed(1) + t('ping_ms') + ')</span></span>';
+                        } else {
+                            html += '<span class="chart-tooltip-value"><strong>' + taskRec.value.toFixed(1) + t('ping_ms') + '</strong></span>';
+                        }
+
+                        html += '</div>';
                     }
                 }
             });
         }
 
+        html += '</div></div>';
+
         tooltip.innerHTML = html;
+
+        // 定位 Tooltip
         var tooltipRect = tooltip.getBoundingClientRect();
         var tooltipWidth = tooltipRect.width || 140;
         var tooltipHeight = tooltipRect.height || 60;
-        
+
         var leftPos = e.clientX - tooltipWidth - 16;
         if (leftPos < 10) leftPos = e.clientX + 16;
-        
+
         var topPos = e.clientY - tooltipHeight - 12;
         if (topPos < 10) topPos = e.clientY + 16;
-        
+
         tooltip.style.left = leftPos + 'px';
         tooltip.style.top = topPos + 'px';
         tooltip.classList.add('visible');
+    }
+
+    /**
+     * 智能时间格式化 - 用于 Tooltip
+     */
+    function formatTooltipTime(time, hours) {
+        if (hours <= 4) {
+            // 1h、4h：显示"小时:分钟:秒"
+            return time.getHours().toString().padStart(2, '0') + ':' +
+                   time.getMinutes().toString().padStart(2, '0') + ':' +
+                   time.getSeconds().toString().padStart(2, '0');
+        } else if (hours <= 24) {
+            // 1d：显示"小时:分钟"
+            return time.getHours().toString().padStart(2, '0') + ':' +
+                   time.getMinutes().toString().padStart(2, '0');
+        } else {
+            // 7d及以上：显示"月-日 小时:分钟"
+            return (time.getMonth() + 1).toString().padStart(2, '0') + '-' +
+                   time.getDate().toString().padStart(2, '0') + ' ' +
+                   time.getHours().toString().padStart(2, '0') + ':' +
+                   time.getMinutes().toString().padStart(2, '0');
+        }
     }
 
     function hideChartTooltip(canvas) {
@@ -2142,11 +3432,23 @@
         ctx.textAlign = 'center';
         ctx.font = '10px ' + getComputedStyle(document.body).fontFamily;
         var timeLabels = Math.min(6, Math.floor(chartW / 60));
+
+        // 只显示首尾时间标签（参考 PurCarte 实现）
+        var hours = timeRangeToHours(state.historyTimeRange);
+        var dataLength = records.length;
+
         for (var ti = 0; ti <= timeLabels; ti++) {
             var idx = Math.floor((records.length - 1) * ti / timeLabels);
             var x = padding.left + (ti / timeLabels) * chartW;
             var time = new Date(records[idx].time);
-            ctx.fillText(time.getHours().toString().padStart(2, '0') + ':' + time.getMinutes().toString().padStart(2, '0'), x, h - 10);
+
+            // 只在首尾显示时间标签，其他位置为空
+            var timeText = '';
+            if (idx === 0 || idx === dataLength - 1) {
+                timeText = formatTimeLabel(time, hours);
+            }
+
+            ctx.fillText(timeText, x, h - 10);
         }
 
         canvas._chartData = {
@@ -2272,11 +3574,23 @@
         ctx.textAlign = 'center';
         ctx.font = '10px ' + getComputedStyle(document.body).fontFamily;
         var timeLabels = Math.min(6, Math.floor(chartW / 60));
+
+        // 只显示首尾时间标签（参考 PurCarte 实现）
+        var hours = timeRangeToHours(state.historyTimeRange);
+        var dataLength = records.length;
+
         for (var ti = 0; ti <= timeLabels; ti++) {
             var idx = Math.floor((records.length - 1) * ti / timeLabels);
             var x = padding.left + (ti / timeLabels) * chartW;
             var time = new Date(records[idx].time);
-            ctx.fillText(time.getHours().toString().padStart(2, '0') + ':' + time.getMinutes().toString().padStart(2, '0'), x, h - 10);
+
+            // 只在首尾显示时间标签，其他位置为空
+            var timeText = '';
+            if (idx === 0 || idx === dataLength - 1) {
+                timeText = formatTimeLabel(time, hours);
+            }
+
+            ctx.fillText(timeText, x, h - 10);
         }
 
         canvas._chartData = {
@@ -2367,11 +3681,17 @@
         if (bgOpacity === undefined || bgOpacity === null) {
             bgOpacity = isMobile ? 100 : 30;
         }
-        
+
         var bgBlur = state.themeSettings[prefix + 'background_blur'];
         if (bgBlur === undefined || bgBlur === null) {
             bgBlur = state.themeSettings.background_blur || 0;
         }
+
+        // 注入 CSS 变量：卡片磨砂效果（参考 PurCarte 实现）
+        var root = document.documentElement;
+        root.style.setProperty('--custom-blur', bgBlur + 'px');
+        // 卡片半透明背景：固定 0.85 不透明度（轻微透明，保证可读性）
+        root.style.setProperty('--custom-card-alpha', '0.85');
 
         if (bgType !== 'none') {
             document.body.classList.add('has-custom-background');
@@ -2417,6 +3737,7 @@
             }
         }
 
+        // 背景模糊/透明度：背景本身模糊 + 透明度由 background_blur 和 background_opacity 控制
         bgContainer.style.opacity = bgOpacity / 100;
         bgContainer.style.filter = 'blur(' + bgBlur + 'px)';
     }
@@ -2507,15 +3828,99 @@
             if (e.key === 'Escape') closeModal();
         });
 
+        // 延迟趋势图表平滑按钮
+        var latencySmoothBtn = document.getElementById('latencySmoothBtn');
+        if (latencySmoothBtn) {
+            latencySmoothBtn.addEventListener('click', function () {
+                state.latencyChartSmooth = !state.latencyChartSmooth;
+                this.classList.toggle('active', state.latencyChartSmooth);
+
+                // 重新绘制延迟图表
+                if (state.selectedNodeUuid && state.pingData[state.selectedNodeUuid]) {
+                    var pingInfo = state.pingData[state.selectedNodeUuid];
+                    if (pingInfo && pingInfo.records && pingInfo.tasks) {
+                        drawLatencyChart('latencyChart', pingInfo.records, pingInfo.tasks);
+                    }
+                }
+            });
+        }
+
+        // 概要图表时间范围选择
+        var overviewTimeRange = document.getElementById('overviewTimeRange');
+        if (overviewTimeRange) {
+            overviewTimeRange.querySelectorAll('.time-range-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var range = this.getAttribute('data-range');
+                    console.log('概要图表时间范围切换:', range, '-> hours:', timeRangeToHours(range));
+                    state.historyTimeRange = range;
+
+                    // 更新按钮激活状态
+                    overviewTimeRange.querySelectorAll('.time-range-btn').forEach(function (b) {
+                        b.classList.remove('active');
+                    });
+                    this.classList.add('active');
+
+                    // 重新加载历史数据并绘制图表
+                    if (state.selectedNodeUuid) {
+                        var hours = timeRangeToHours(range);
+                        console.log('加载历史数据:', state.selectedNodeUuid, 'hours:', hours);
+
+                        loadNodeHistory(state.selectedNodeUuid, hours).then(function () {
+                            console.log('历史数据加载完成，准备绘制图表');
+                            console.log('实时历史数据点数:', (state.realtimeHistory[state.selectedNodeUuid] || []).length);
+                            console.log('历史数据点数:', (state.historyData[state.selectedNodeUuid] || []).length);
+
+                            drawCharts(state.selectedNodeUuid);
+                        }).catch(function (err) {
+                            console.error('加载历史数据失败:', err);
+                        });
+                    }
+                });
+            });
+        }
+
+        // 延迟图表时间范围选择
+        var pingTimeRange = document.getElementById('pingTimeRange');
+        if (pingTimeRange) {
+            pingTimeRange.querySelectorAll('.time-range-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var range = this.getAttribute('data-range');
+                    state.pingTimeRange = range;
+
+                    // 更新按钮激活状态
+                    pingTimeRange.querySelectorAll('.time-range-btn').forEach(function (b) {
+                        b.classList.remove('active');
+                    });
+                    this.classList.add('active');
+
+                    // 重新加载 Ping 数据并绘制图表
+                    if (state.selectedNodeUuid) {
+                        var hours = timeRangeToHours(range);
+                        loadPingHistory(state.selectedNodeUuid, hours).then(function () {
+                            renderLatencyPage(state.selectedNodeUuid);
+                        });
+                    }
+                });
+            });
+        }
+
         initModalDragScroll();
 
+        // 响应式防抖优化（参考 PurCarte 的 debounce=50）
         var resizeTimer = null;
+        var chartResizeTimer = null;
         var lastIsMobile = isMobileDevice();
+
         window.addEventListener('resize', function () {
-            if (state.selectedNodeUuid && state.historyData[state.selectedNodeUuid]) {
-                drawCharts(state.selectedNodeUuid);
-            }
-            
+            // 图表重绘防抖：延迟 50ms 后执行，避免频繁重绘
+            if (chartResizeTimer) clearTimeout(chartResizeTimer);
+            chartResizeTimer = setTimeout(function() {
+                if (state.selectedNodeUuid && state.historyData[state.selectedNodeUuid]) {
+                    drawCharts(state.selectedNodeUuid);
+                }
+            }, 50);  // PurCarte 使用 debounce=50
+
+            // 移动设备检测防抖：延迟 100ms 后执行
             if (resizeTimer) clearTimeout(resizeTimer);
             resizeTimer = setTimeout(function() {
                 var currentIsMobile = isMobileDevice();

@@ -93,6 +93,21 @@
                 }
             },
             {
+                "key": "show_traffic_tags",
+                "name": {
+                    "en": "Show Traffic Tags",
+                    "zh-CN": "显示流量标签",
+                    "ja": "トラフィックタグを表示"
+                },
+                "type": "switch",
+                "default": false,
+                "help": {
+                    "en": "Display total upload/download traffic tags on node cards",
+                    "zh-CN": "在节点卡片上显示总上传/下载流量标签",
+                    "ja": "ノードカードに総アップロード/ダウンロードトラフィックタグを表示"
+                }
+            },
+            {
                 "key": "icon_bounce",
                 "name": {
                     "en": "Icon Bounce Animation",
