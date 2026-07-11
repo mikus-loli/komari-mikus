@@ -264,6 +264,7 @@
             traffic_limit: '流量限制',
             remaining_traffic: '剩余',
             remaining: '剩余',
+            latency_not_configured: '请在后台节点编辑中设置延迟监测任务',
             month: '月',
             quarter: '季',
             half_year: '半年',
@@ -342,6 +343,7 @@
             traffic_limit: 'Traffic Limit',
             remaining_traffic: 'Remaining',
             remaining: 'Remaining',
+            latency_not_configured: 'Please set up latency monitoring tasks in the admin panel',
             month: 'Month',
             quarter: 'Quarter',
             half_year: 'Half Year',
@@ -399,8 +401,8 @@
         chartObserver: null,
         latencyChartSmooth: true, // 默认启用平滑曲线
         ewmaAlpha: 0.3, // EWMA 平滑因子（0.1-0.5，越小越平滑）
-        historyTimeRange: '1d', // 概要图表时间范围：realtime, 1h, 4h, 1d, 7d, 30d
-        pingTimeRange: '1d' // 延迟图表时间范围：1h, 4h, 1d, 7d, 30d
+        historyTimeRange: '1h', // 概要图表时间范围：realtime, 1h, 4h, 1d
+        pingTimeRange: '1h' // 延迟图表时间范围：1h, 4h, 1d
     };
 
     // ==================== PurCarte 核心算法实现 ====================
@@ -2032,7 +2034,7 @@
         html += renderTableCardHeader(node, metrics);
         html += '<div class="table-card-metrics">';
         html += renderTableCardMetrics(node, metrics, showNetwork);
-        html += renderTableCardTags(node, showTrafficTags);
+        html += renderTableCardTags(node, metrics, showTrafficTags);
         html += '</div>';
         html += '</div>';
 
@@ -2138,10 +2140,9 @@
         return html;
     }
 
-    function renderTableCardTags(node, showTrafficTags) {
+    function renderTableCardTags(node, metrics, showTrafficTags) {
         var hasIpTags = node.ipv4 || node.ipv6;
         var hasTags = node.tags && node.tags.split(';').filter(function(t) { return t.trim(); }).length > 0;
-        var metrics = calculateNodeMetrics(node);
         var hasTraffic = showTrafficTags && (metrics.netTotalUp > 0 || metrics.netTotalDown > 0);
         var hasRemainingTraffic = metrics.trafficLimit > 0; // 剩余流量标签不受开关影响
 
@@ -2374,12 +2375,25 @@
 
     function renderLatencyPage(uuid) {
         var pingInfo = state.pingData[uuid];
-        if (!pingInfo) return;
-
         var els = getModalElements();
         var summaryEl = els.latencySummary;
         var tasksEl = els.latencyTasks;
         var legendEl = els.latencyLegend;
+        var chartEl = els.latencyChart;
+
+        // 没有延迟数据：显示提示
+        if (!pingInfo || !pingInfo.tasks || pingInfo.tasks.length === 0) {
+            if (summaryEl) summaryEl.innerHTML = '';
+            if (legendEl) legendEl.innerHTML = '';
+            if (tasksEl) {
+                tasksEl.innerHTML = '<div class="latency-empty">' + t('latency_not_configured') + '</div>';
+            }
+            if (chartEl) {
+                var ctx = chartEl.getContext('2d');
+                ctx.clearRect(0, 0, chartEl.width, chartEl.height);
+            }
+            return;
+        }
 
         if (summaryEl && pingInfo.records && pingInfo.records.length > 0) {
             var allValues = pingInfo.records.map(function (r) { return r.value; }).filter(function (v) { return v !== null && v !== undefined && v >= 0; });
@@ -2868,9 +2882,27 @@
         var gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
         var textColor = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)';
 
-        var validValues = records.map(function (r) { return r.value; }).filter(filterFn);
+        var allValues = records.map(function (r) { return r.value; }).filter(filterFn);
 
-        // 计算数据范围
+        // 丢包检测：计算中位数，超过阈值的视为丢包
+        var sortedValues = allValues.slice().sort(function(a, b) { return a - b; });
+        var median = sortedValues.length > 0 ? sortedValues[Math.floor(sortedValues.length / 2)] : 50;
+        var lossThreshold = Math.max(500, median * 5); // 丢包阈值
+
+        // 分离正常值和丢包值
+        var validValues = allValues.filter(function(v) { return v <= lossThreshold; });
+        var lossValues = allValues.filter(function(v) { return v > lossThreshold; });
+
+        // 标记丢包记录（按 task_id 分组）
+        var lossRecordsByTask = {};
+        records.forEach(function(r) {
+            if (r.value !== null && r.value !== undefined && !isNaN(r.value) && r.value > lossThreshold) {
+                if (!lossRecordsByTask[r.task_id]) lossRecordsByTask[r.task_id] = [];
+                lossRecordsByTask[r.task_id].push(r);
+            }
+        });
+
+        // 计算数据范围（仅使用正常值）
         var dataMin = validValues.length > 0 ? Math.min.apply(null, validValues) : 0;
         var dataMax = validValues.length > 0 ? Math.max.apply(null, validValues) : 100;
 
@@ -2964,7 +2996,7 @@
         taskIds.forEach(function (taskId) {
             var taskRecs = taskRecords[taskId];
             var validRecs = taskRecs.filter(function (r) {
-                return r.value !== null && r.value !== undefined && !isNaN(r.value) && r.value >= 0;
+                return r.value !== null && r.value !== undefined && !isNaN(r.value) && r.value >= 0 && r.value <= lossThreshold;
             });
 
             // 如果启用平滑，应用 EWMA 算法
@@ -2995,6 +3027,32 @@
                 normalized = Math.max(0, Math.min(1, normalized));
                 var y = padding.top + chartH - normalized * chartH;
                 points.push({ x: x, y: y, value: smoothedRecs[j].value, originalValue: smoothedRecs[j].originalValue });
+            }
+
+            // 绘制丢包竖线（红色虚线）
+            if (lossRecordsByTask[taskId] && lossRecordsByTask[taskId].length > 0) {
+                var lossRecs = lossRecordsByTask[taskId];
+                ctx.save();
+                ctx.strokeStyle = isDark ? 'rgba(255,100,100,0.6)' : 'rgba(220,50,50,0.5)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([3, 3]);
+                for (var li = 0; li < lossRecs.length; li++) {
+                    var lossIdx = -1;
+                    for (var lr = 0; lr < taskRecs.length; lr++) {
+                        if (taskRecs[lr].time === lossRecs[li].time && taskRecs[lr].task_id === lossRecs[li].task_id) {
+                            lossIdx = lr;
+                            break;
+                        }
+                    }
+                    if (lossIdx >= 0) {
+                        var lossX = padding.left + (lossIdx / Math.max(taskRecs.length - 1, 1)) * chartW;
+                        ctx.beginPath();
+                        ctx.moveTo(lossX, padding.top);
+                        ctx.lineTo(lossX, padding.top + chartH);
+                        ctx.stroke();
+                    }
+                }
+                ctx.restore();
             }
 
             if (points.length > 1) {

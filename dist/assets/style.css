@@ -1027,6 +1027,10 @@ body::before {
     font-size: 0.75rem;
     color: var(--text-secondary);
     font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 .stats-bar {
@@ -2837,6 +2841,14 @@ body.view-table .stat-value {
     padding-left: 12px;
 }
 
+.latency-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-tertiary);
+    font-size: 0.9rem;
+}
+
 .latency-tasks-title::before {
     content: '';
     position: absolute;
@@ -3794,6 +3806,10 @@ body.view-table .stat-value {
 
     .time-label {
         font-size: 0.68rem;
+    }
+
+    .traffic-text {
+        font-size: 0.6rem;
     }
 
     .stats-bar {
