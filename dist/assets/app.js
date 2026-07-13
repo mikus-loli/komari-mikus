@@ -197,8 +197,8 @@
     var RPC_METHODS = {
         getPublicSettings: 'public:getPublicSettings',
         getPublicSettingsFallback: 'common:getPublicInfo',
-        getNodesInformation: 'public:getNodesInformation',
-        getNodesInformationFallback: 'common:getNodes',
+        getNodesInformation: 'common:getNodes',
+        getNodesInformationFallback: 'public:getNodesInformation',
         getClientRecentRecords: 'public:getClientRecentRecords',
         getClientRecentRecordsFallback: 'common:getNodeRecentStatus',
         getRecordsByUUID: 'public:getRecordsByUUID',
@@ -1209,7 +1209,7 @@
                 state.nodes = nodes.filter(function(n) { return !n.hidden; });
             }
         }).catch(function(err) {
-            console.warn('public:getNodesInformation failed, falling back:', err);
+            console.warn('common:getNodes failed, falling back:', err);
             return state.rpc.call(RPC_METHODS.getNodesInformationFallback, {}, true).then(function(result) {
                 if (result) {
                     var nodes = Array.isArray(result) ? result : Object.values(result);
@@ -2412,7 +2412,10 @@
     }
 
     function renderTableCardTags(node, metrics, showTrafficTags) {
-        var hasIpTags = node.ipv4 || node.ipv6;
+        // IPv4/IPv6 是字符串地址，需要检查是否为非空字符串
+        var hasIpv4 = node.ipv4 && typeof node.ipv4 === 'string' && node.ipv4.trim() !== '';
+        var hasIpv6 = node.ipv6 && typeof node.ipv6 === 'string' && node.ipv6.trim() !== '';
+        var hasIpTags = hasIpv4 || hasIpv6;
         var hasTags = node.tags && node.tags.split(';').filter(function(t) { return t.trim(); }).length > 0;
         var hasTraffic = showTrafficTags && (metrics.netTotalUp > 0 || metrics.netTotalDown > 0);
         var hasRemainingTraffic = metrics.trafficLimit > 0; // 剩余流量标签不受开关影响
@@ -2425,10 +2428,10 @@
         html += '<div class="table-card-tags">';
 
         // 1. IPv4/IPv6标签（最前面）
-        if (node.ipv4) {
+        if (hasIpv4) {
             html += '<span class="table-card-tag tag-ip tag-ipv4">IPv4</span>';
         }
-        if (node.ipv6) {
+        if (hasIpv6) {
             html += '<span class="table-card-tag tag-ip tag-ipv6">IPv6</span>';
         }
 
