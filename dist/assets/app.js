@@ -96,7 +96,7 @@
                 };
 
                 self.pendingCalls[id] = { resolve: resolve, reject: reject };
-                
+
                 try {
                     self.ws.send(JSON.stringify(request));
                 } catch (e) {
@@ -205,7 +205,9 @@
         getRecordsByUUIDFallback: 'common:getRecords',
         getPingRecords: 'public:getPingRecords',
         getPingRecordsFallback: 'common:getRecords',
-        getPublicPingTasks: 'public:getPublicPingTasks'
+        getPublicPingTasks: 'public:getPublicPingTasks',
+        queryMetrics: 'public:queryMetrics',
+        getPingMetricStats: 'public:getPingMetricStats'
     };
 
     var i18n = {
@@ -1331,7 +1333,7 @@
     }
 
     function loadPingHistory(uuid, hours) {
-        hours = hours || 24;
+        hours = hours || 4;
 
         // 检查缓存
         var cacheKey = uuid + '-' + hours;
@@ -1341,103 +1343,103 @@
             return Promise.resolve();
         }
 
-        return state.rpc.call(RPC_METHODS.getPingRecords, { uuid: uuid, hours: String(hours) })
-            .then(function(result) {
-                if (result) {
-                    var records = result.records || [];
-                    var maxPoints = getMaxDataPoints(hours);
-                    records = trimRecords(records, maxPoints);
+        // 使用 public:queryMetrics API 获取 ping.latency_ms 指标数据
+        var metricRequest = state.rpc.call(RPC_METHODS.queryMetrics, {
+            metric_keys: ['ping.latency_ms'],
+            entity_id: uuid,
+            hours: hours,
+            downsample: true,
+            max_points: 600,
+            aggregation: 'avg',
+            fill_empty: false
+        });
 
-                    var basicInfo = result.basic_info || [];
-                    var taskMap = {};
+        // 获取 Ping 任务列表
+        var taskRequest = state.rpc.call(RPC_METHODS.getPublicPingTasks, {}).catch(function() { return []; });
 
-                    records.forEach(function(r) {
-                        if (r.task_id !== undefined && !taskMap[r.task_id]) {
-                            taskMap[r.task_id] = {
-                                id: r.task_id,
-                                name: t('task') + ' #' + r.task_id
-                            };
-                        }
+        // 获取 Ping 统计数据
+        var statsRequest = state.rpc.call(RPC_METHODS.getPingMetricStats, {
+            entity_id: uuid,
+            hours: hours,
+            max_points: 600
+        }).catch(function() { return null; });
+
+        return Promise.all([metricRequest, taskRequest, statsRequest])
+            .then(function(results) {
+                var metricResult = results[0];
+                var taskList = results[1];
+                var statsResult = results[2];
+
+                // 构建任务映射
+                var taskMap = {};
+                if (Array.isArray(taskList)) {
+                    taskList.forEach(function(task) {
+                        var taskId = String(task.id);
+                        taskMap[taskId] = {
+                            id: task.id,
+                            name: task.name || (t('task') + ' #' + task.id),
+                            interval: task.interval
+                        };
                     });
-
-                    // public:getPingRecords 可能直接返回 tasks 字段
-                    if (result.tasks && Array.isArray(result.tasks)) {
-                        result.tasks.forEach(function(task) {
-                            if (taskMap[task.id]) {
-                                if (task.name) taskMap[task.id].name = task.name;
-                                if (task.interval) taskMap[task.id].interval = task.interval;
-                                if (task.loss !== undefined) taskMap[task.id].loss = task.loss;
-                            }
-                        });
-                    }
-
-                    basicInfo.forEach(function(info, idx) {
-                        var taskIds = Object.keys(taskMap);
-                        if (taskIds[idx]) {
-                            taskMap[taskIds[idx]].loss = info.loss;
-                            taskMap[taskIds[idx]].min = info.min;
-                            taskMap[taskIds[idx]].max = info.max;
-                        }
-                    });
-
-                    var tasks = Object.keys(taskMap).map(function(k) { return taskMap[k]; });
-
-                    var pingData = {
-                        records: records,
-                        tasks: tasks
-                    };
-
-                    state.pingData[uuid] = pingData;
-                    setCachedData(pingCache, cacheKey, pingData);
-
-                    // 用 RPC 调用替代 REST API 获取完整 task 元数据
-                    enrichPingTasksFromRPC(uuid);
                 }
+
+                // 统计数据映射
+                var statsMap = {};
+                if (statsResult && Array.isArray(statsResult.stats)) {
+                    statsResult.stats.forEach(function(stat) {
+                        var key = stat.task_id;
+                        statsMap[key] = stat;
+                    });
+                }
+
+                // 将 series 数据转换为 records 格式
+                var records = [];
+                var series = metricResult && metricResult.series ? metricResult.series : [];
+
+                series.forEach(function(s) {
+                    var tags = s.tags || s.tag || {};
+                    var taskId = tags.task_id;
+                    var points = s.points || [];
+
+                    points.forEach(function(point) {
+                        if (typeof point.value === 'number' && point.value >= 0) {
+                            records.push({
+                                time: point.time,
+                                value: point.value,
+                                task_id: taskId
+                            });
+                        }
+                    });
+                });
+
+                // 按时间排序
+                records.sort(function(a, b) {
+                    return new Date(a.time) - new Date(b.time);
+                });
+
+                // 更新任务的统计信息
+                Object.keys(taskMap).forEach(function(taskId) {
+                    if (statsMap[taskId]) {
+                        var stat = statsMap[taskId];
+                        taskMap[taskId].loss = stat.loss;
+                        taskMap[taskId].min = stat.min;
+                        taskMap[taskId].max = stat.max;
+                        taskMap[taskId].avg = stat.avg;
+                    }
+                });
+
+                var tasks = Object.keys(taskMap).map(function(k) { return taskMap[k]; });
+
+                var pingData = {
+                    records: records,
+                    tasks: tasks
+                };
+
+                state.pingData[uuid] = pingData;
+                setCachedData(pingCache, cacheKey, pingData);
             })
             .catch(function(err) {
-                if (err && err.code !== 401) {
-                    console.warn('public:getPingRecords failed, falling back:', err);
-                }
-                return state.rpc.call(RPC_METHODS.getPingRecordsFallback, { uuid: uuid, type: 'ping', hours: hours })
-                    .then(function(result) {
-                        if (result) {
-                            var records = result.records || [];
-                            var maxPoints = getMaxDataPoints(hours);
-                            records = trimRecords(records, maxPoints);
-
-                            var basicInfo = result.basic_info || [];
-                            var taskMap = {};
-                            records.forEach(function(r) {
-                                if (r.task_id !== undefined && !taskMap[r.task_id]) {
-                                    taskMap[r.task_id] = {
-                                        id: r.task_id,
-                                        name: t('task') + ' #' + r.task_id
-                                    };
-                                }
-                            });
-
-                            basicInfo.forEach(function(info, idx) {
-                                var taskIds = Object.keys(taskMap);
-                                if (taskIds[idx]) {
-                                    taskMap[taskIds[idx]].loss = info.loss;
-                                    taskMap[taskIds[idx]].min = info.min;
-                                    taskMap[taskIds[idx]].max = info.max;
-                                }
-                            });
-
-                            var tasks = Object.keys(taskMap).map(function(k) { return taskMap[k]; });
-                            var pingData = { records: records, tasks: tasks };
-                            state.pingData[uuid] = pingData;
-                            setCachedData(pingCache, cacheKey, pingData);
-
-                            fetchPingTaskNames(uuid);
-                        }
-                    })
-                    .catch(function(err2) {
-                        if (err2 && err2.code !== 401) {
-                            console.warn('Failed to load ping history for', uuid, err2);
-                        }
-                    });
+                console.error('Failed to load ping history:', err);
             });
     }
 
@@ -1533,8 +1535,10 @@
     function getTaskLatestPing(uuid, taskId) {
         var pingInfo = state.pingData[uuid];
         if (!pingInfo || !pingInfo.records) return null;
+        // 使用 String() 转换确保类型匹配
+        var targetTaskId = String(taskId);
         for (var i = pingInfo.records.length - 1; i >= 0; i--) {
-            if (pingInfo.records[i].task_id === taskId) {
+            if (String(pingInfo.records[i].task_id) === targetTaskId) {
                 return pingInfo.records[i].value;
             }
         }
@@ -3441,6 +3445,13 @@
             taskRecords[r.task_id].push(r);
         });
 
+        // 按时间升序排序每个任务的记录（确保时间轴从左到右是正确的时间顺序）
+        Object.keys(taskRecords).forEach(function(taskId) {
+            taskRecords[taskId].sort(function(a, b) {
+                return new Date(a.time) - new Date(b.time);
+            });
+        });
+
         var taskIds = Object.keys(taskRecords);
         var colorIdx = 0;
 
@@ -4408,7 +4419,6 @@
             overviewTimeRange.querySelectorAll('.time-range-btn').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     var range = this.getAttribute('data-range');
-                    console.log('概要图表时间范围切换:', range, '-> hours:', timeRangeToHours(range));
                     state.historyTimeRange = range;
 
                     // 更新按钮激活状态
@@ -4420,12 +4430,15 @@
                     // 重新加载历史数据并绘制图表
                     if (state.selectedNodeUuid) {
                         var hours = timeRangeToHours(range);
-                        console.log('加载历史数据:', state.selectedNodeUuid, 'hours:', hours);
 
                         loadNodeHistory(state.selectedNodeUuid, hours).then(function () {
-                            console.log('历史数据加载完成，准备绘制图表');
-                            console.log('实时历史数据点数:', (state.realtimeHistory[state.selectedNodeUuid] || []).length);
-                            console.log('历史数据点数:', (state.historyData[state.selectedNodeUuid] || []).length);
+                            // 重置图表动画
+                            var chartSections = document.querySelectorAll('.modal-charts .chart-section');
+                            chartSections.forEach(function(section) {
+                                section.style.animation = 'none';
+                                void section.offsetHeight;
+                                section.style.animation = '';
+                            });
 
                             drawCharts(state.selectedNodeUuid);
                         }).catch(function (err) {
@@ -4452,9 +4465,29 @@
 
                     // 重新加载 Ping 数据并绘制图表
                     if (state.selectedNodeUuid) {
+                        // 清除图表绘制状态，确保图表重新绘制
+                        if (state.chartsDrawn[state.selectedNodeUuid + '_latencyChart']) {
+                            delete state.chartsDrawn[state.selectedNodeUuid + '_latencyChart'];
+                        }
+
                         var hours = timeRangeToHours(range);
                         loadPingHistory(state.selectedNodeUuid, hours).then(function () {
+                            // 重置延迟页面动画
+                            var latencyAnimated = document.querySelectorAll('#pageLatency .latency-stat, #pageLatency .latency-task-card, #pageLatency .latency-chart-container');
+                            latencyAnimated.forEach(function(el) {
+                                el.style.animation = 'none';
+                                void el.offsetHeight;
+                                el.style.animation = '';
+                            });
+
                             renderLatencyPage(state.selectedNodeUuid);
+
+                            // 直接绘制延迟图表（不依赖 IntersectionObserver）
+                            var pingInfo = state.pingData[state.selectedNodeUuid];
+                            if (pingInfo && pingInfo.records && pingInfo.tasks) {
+                                drawLatencyChart('latencyChart', pingInfo.records, pingInfo.tasks);
+                                state.chartsDrawn[state.selectedNodeUuid + '_latencyChart'] = true;
+                            }
                         });
                     }
                 });
