@@ -2209,7 +2209,7 @@ body.view-table .stat-value {
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
     z-index: 200;
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
     padding: 24px;
@@ -2217,19 +2217,26 @@ body.view-table .stat-value {
     visibility: hidden;
     transition: opacity 0.25s ease, visibility 0.25s ease;
     -webkit-overflow-scrolling: touch;
+    pointer-events: none;
 }
 
 .modal-overlay.active {
-    display: flex;
     opacity: 1;
     visibility: visible;
+    pointer-events: auto;
+}
+
+.modal-overlay.closing {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
 }
 
 .modal {
     background: var(--bg-modal);
     border-radius: var(--radius-xl);
     width: 100%;
-    max-width: 800px;
+    max-width: 1200px;
     max-height: 90vh;
     overflow-y: auto;
     overflow-x: hidden;
@@ -2509,7 +2516,22 @@ body.view-table .stat-value {
     background: var(--bg-tertiary);
     border-radius: var(--radius-sm);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    opacity: 0;
+    animation: staggerFadeIn 0.35s ease forwards;
 }
+
+.modal-info-item:nth-child(1) { animation-delay: 0.03s; }
+.modal-info-item:nth-child(2) { animation-delay: 0.06s; }
+.modal-info-item:nth-child(3) { animation-delay: 0.09s; }
+.modal-info-item:nth-child(4) { animation-delay: 0.12s; }
+.modal-info-item:nth-child(5) { animation-delay: 0.15s; }
+.modal-info-item:nth-child(6) { animation-delay: 0.18s; }
+.modal-info-item:nth-child(7) { animation-delay: 0.21s; }
+.modal-info-item:nth-child(8) { animation-delay: 0.24s; }
+.modal-info-item:nth-child(9) { animation-delay: 0.27s; }
+.modal-info-item:nth-child(10) { animation-delay: 0.30s; }
+.modal-info-item:nth-child(11) { animation-delay: 0.33s; }
+.modal-info-item:nth-child(12) { animation-delay: 0.36s; }
 
 .modal-info-item:hover {
     transform: translateY(-2px);
@@ -2528,19 +2550,38 @@ body.view-table .stat-value {
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--text-primary);
-    word-break: break-all;
+    overflow-wrap: break-word;
     line-height: 1.4;
+}
+
+.modal-info-value-nowrap {
+    white-space: nowrap;
+    overflow-wrap: normal;
 }
 
 .modal-charts {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     gap: 20px;
+}
+
+.modal-charts .chart-section {
+    flex: 1 1 calc(33.333% - 14px);
+    min-width: 0;
 }
 
 .chart-section {
     position: relative;
+    opacity: 0;
+    animation: chartReveal 0.4s ease forwards;
 }
+
+.chart-section:nth-child(1) { animation-delay: 0.05s; }
+.chart-section:nth-child(2) { animation-delay: 0.10s; }
+.chart-section:nth-child(3) { animation-delay: 0.15s; }
+.chart-section:nth-child(4) { animation-delay: 0.20s; }
+.chart-section:nth-child(5) { animation-delay: 0.25s; }
+.chart-section:nth-child(6) { animation-delay: 0.30s; }
 
 .chart-header {
     display: flex;
@@ -2625,11 +2666,11 @@ body.view-table .stat-value {
 }
 
 .legend-up .legend-dot {
-    background: #4caf7d;
+    background: var(--legend-up-color, #95E1D3);
 }
 
 .legend-down .legend-dot {
-    background: #5c9ced;
+    background: var(--legend-down-color, #5BB85B);
 }
 
 .chart-section canvas {
@@ -2639,6 +2680,20 @@ body.view-table .stat-value {
     background: var(--bg-tertiary);
     cursor: crosshair;
     display: block;
+    touch-action: none;
+}
+
+.chart-highlight-dot {
+    position: absolute;
+    pointer-events: none;
+    display: none;
+    z-index: 11;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid var(--bg-card, #fff);
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+    transform: translate(-50%, -50%);
 }
 
 .chart-section canvas.chart-loading {
@@ -2795,7 +2850,13 @@ body.view-table .stat-value {
     border-radius: var(--radius-md);
     text-align: center;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    opacity: 0;
+    animation: staggerFadeIn 0.35s ease forwards;
 }
+
+.latency-stat:nth-child(1) { animation-delay: 0.03s; }
+.latency-stat:nth-child(2) { animation-delay: 0.08s; }
+.latency-stat:nth-child(3) { animation-delay: 0.13s; }
 
 .latency-stat:hover {
     transform: translateY(-3px);
@@ -2884,7 +2945,22 @@ body.view-table .stat-value {
     position: relative;
     gap: 6px;
     overflow: hidden;
+    opacity: 0;
+    animation: cardSlideIn 0.35s ease forwards;
 }
+
+.latency-task-card:nth-child(1) { animation-delay: 0.02s; }
+.latency-task-card:nth-child(2) { animation-delay: 0.04s; }
+.latency-task-card:nth-child(3) { animation-delay: 0.06s; }
+.latency-task-card:nth-child(4) { animation-delay: 0.08s; }
+.latency-task-card:nth-child(5) { animation-delay: 0.10s; }
+.latency-task-card:nth-child(6) { animation-delay: 0.12s; }
+.latency-task-card:nth-child(7) { animation-delay: 0.14s; }
+.latency-task-card:nth-child(8) { animation-delay: 0.16s; }
+.latency-task-card:nth-child(9) { animation-delay: 0.18s; }
+.latency-task-card:nth-child(10) { animation-delay: 0.20s; }
+.latency-task-card:nth-child(11) { animation-delay: 0.22s; }
+.latency-task-card:nth-child(12) { animation-delay: 0.24s; }
 
 .latency-task-card::before {
     content: '';
@@ -3000,6 +3076,8 @@ body.view-table .stat-value {
     background: var(--bg-tertiary);
     border-radius: var(--radius-md);
     padding: 16px;
+    opacity: 0;
+    animation: chartReveal 0.4s ease 0.25s forwards;
 }
 
 .latency-chart-header {
@@ -3505,6 +3583,10 @@ body.view-table .stat-value {
 
     .modal-charts {
         gap: 16px;
+    }
+
+    .modal-charts .chart-section {
+        flex: 1 1 100%;
     }
 
     .chart-header {
@@ -4384,6 +4466,39 @@ body.view-table .stat-value {
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+}
+
+@keyframes staggerFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes chartReveal {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes cardSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 @keyframes bounce {

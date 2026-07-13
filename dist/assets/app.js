@@ -16,6 +16,7 @@
             this.isConnected = false;
             this.onConnect = null;
             this.onDisconnect = null;
+            this.pollMethod = options.pollMethod || 'common:getNodesLatestStatus';
         }
 
         RPC2Client.prototype.connect = function() {
@@ -159,7 +160,7 @@
                     self.rpcId++;
                     var request = {
                         jsonrpc: '2.0',
-                        method: 'common:getNodesLatestStatus',
+                        method: self.pollMethod,
                         params: {},
                         id: self.rpcId
                     };
@@ -193,6 +194,20 @@
         return RPC2Client;
     })();
 
+    var RPC_METHODS = {
+        getPublicSettings: 'public:getPublicSettings',
+        getPublicSettingsFallback: 'common:getPublicInfo',
+        getNodesInformation: 'public:getNodesInformation',
+        getNodesInformationFallback: 'common:getNodes',
+        getClientRecentRecords: 'public:getClientRecentRecords',
+        getClientRecentRecordsFallback: 'common:getNodeRecentStatus',
+        getRecordsByUUID: 'public:getRecordsByUUID',
+        getRecordsByUUIDFallback: 'common:getRecords',
+        getPingRecords: 'public:getPingRecords',
+        getPingRecordsFallback: 'common:getRecords',
+        getPublicPingTasks: 'public:getPublicPingTasks'
+    };
+
     var i18n = {
         'zh-CN': {
             total_nodes: '节点总数',
@@ -207,6 +222,9 @@
             cpu_usage: 'CPU 使用率',
             ram_usage: '内存使用率',
             network_traffic: '网络流量',
+            disk_usage: '磁盘使用率',
+            process_count: '进程数',
+            connection_count: '连接数',
             search_placeholder: '搜索节点...',
             loading: '加载中...',
             no_nodes: '暂无节点数据',
@@ -286,6 +304,9 @@
             cpu_usage: 'CPU Usage',
             ram_usage: 'RAM Usage',
             network_traffic: 'Network Traffic',
+            disk_usage: 'Disk Usage',
+            process_count: 'Processes',
+            connection_count: 'Connections',
             search_placeholder: 'Search nodes...',
             loading: 'Loading...',
             no_nodes: 'No node data available',
@@ -411,6 +432,18 @@
      * EWMA（指数加权移动平均）算法 - 基础版本
      * 使用指数加权移动平均算法平滑数据
      */
+    var _cachedFontFamily = null;
+    var _cachedFontFamilyTime = 0;
+
+    function getCachedFontFamily() {
+        var now = Date.now();
+        if (!_cachedFontFamily || now - _cachedFontFamilyTime > 5000) {
+            _cachedFontFamily = getComputedStyle(document.body).fontFamily;
+            _cachedFontFamilyTime = now;
+        }
+        return _cachedFontFamily;
+    }
+
     function applyEWMA(values, alpha) {
         if (!values || values.length === 0) return [];
 
@@ -430,6 +463,71 @@
         }
 
         return smoothed;
+    }
+
+    function lttbDownsampleRecords(records, threshold, valueExtractor) {
+        if (!records || records.length <= threshold || threshold < 3) {
+            return records.map(function(item, idx) {
+                return { data: item, originalIndex: idx };
+            });
+        }
+
+        var dataLength = records.length;
+        var bucketSize = (dataLength - 2) / (threshold - 2);
+        var result = [];
+
+        result.push({ data: records[0], originalIndex: 0 });
+
+        var prevSelectedIdx = 0;
+        var prevSelectedVal = valueExtractor(records[0]) || 0;
+
+        for (var i = 0; i < threshold - 2; i++) {
+            var bucketStart = Math.floor((i + 1) * bucketSize) + 1;
+            var bucketEnd = Math.floor((i + 2) * bucketSize) + 1;
+            bucketEnd = Math.min(bucketEnd, dataLength);
+
+            var nextBucketStart = Math.floor((i + 2) * bucketSize) + 1;
+            var nextBucketEnd = Math.min(Math.floor((i + 3) * bucketSize) + 1, dataLength);
+
+            var avgX = 0, avgY = 0, avgCount = 0;
+            for (var j = nextBucketStart; j < nextBucketEnd; j++) {
+                var v = valueExtractor(records[j]);
+                if (v !== null && v !== undefined && !isNaN(v)) {
+                    avgX += j;
+                    avgY += v;
+                    avgCount++;
+                }
+            }
+            if (avgCount === 0) {
+                avgX = nextBucketStart;
+                avgY = 0;
+            } else {
+                avgX /= avgCount;
+                avgY /= avgCount;
+            }
+
+            var maxArea = -1;
+            var maxAreaIdx = bucketStart;
+            for (var k = bucketStart; k < bucketEnd; k++) {
+                var val = valueExtractor(records[k]);
+                if (val === null || val === undefined || isNaN(val)) continue;
+                var area = Math.abs(
+                    (prevSelectedIdx - avgX) * (val - prevSelectedVal) -
+                    (prevSelectedIdx - k) * (avgY - prevSelectedVal)
+                ) * 0.5;
+                if (area > maxArea) {
+                    maxArea = area;
+                    maxAreaIdx = k;
+                }
+            }
+
+            result.push({ data: records[maxAreaIdx], originalIndex: maxAreaIdx });
+            prevSelectedIdx = maxAreaIdx;
+            prevSelectedVal = valueExtractor(records[maxAreaIdx]) || 0;
+        }
+
+        result.push({ data: records[dataLength - 1], originalIndex: dataLength - 1 });
+        return result;
     }
 
     /**
@@ -909,6 +1007,43 @@
         return (bytesPerSec / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + units[i] + '/s';
     }
 
+    function formatAxisSpeed(bytesPerSec, maxVal) {
+        if (bytesPerSec === 0) return '0';
+        if (maxVal === undefined) maxVal = bytesPerSec;
+        var unitIdx = 0;
+        if (maxVal >= 1024 * 1024 * 1024) {
+            unitIdx = 3;
+        } else if (maxVal >= 1024 * 1024) {
+            unitIdx = 2;
+        } else if (maxVal >= 1024) {
+            unitIdx = 1;
+        }
+        var units = ['', 'K', 'M', 'G'];
+        var value = bytesPerSec / Math.pow(1024, unitIdx);
+        if (unitIdx === 0) return Math.round(value).toString();
+        return value.toFixed(value >= 100 ? 0 : 1);
+    }
+
+    function getSpeedAxisUnit(maxVal) {
+        if (maxVal >= 1024 * 1024 * 1024) return 'GB/s';
+        if (maxVal >= 1024 * 1024) return 'MB/s';
+        if (maxVal >= 1024) return 'KB/s';
+        return 'B/s';
+    }
+
+    function formatAxisCount(val, maxVal) {
+        if (maxVal === undefined) maxVal = val;
+        if (maxVal >= 10000) {
+            return (val / 1000).toFixed(val >= 1000 ? 0 : 1);
+        }
+        return Math.round(val).toString();
+    }
+
+    function getCountAxisUnit(maxVal) {
+        if (maxVal >= 10000) return '×10³';
+        return '';
+    }
+
     function formatUptime(seconds) {
         if (!seconds || seconds <= 0) return '-';
         var d = Math.floor(seconds / 86400);
@@ -1051,23 +1186,69 @@
     }
 
     function loadPublicSettings() {
-        return state.rpc.call('common:getPublicInfo', {}, true).then(function(result) {
+        return state.rpc.call(RPC_METHODS.getPublicSettings, {}, true).then(function(result) {
             state.publicSettings = result || {};
             state.themeSettings = result.theme_settings || {};
+        }).catch(function(err) {
+            console.warn('public:getPublicSettings failed, falling back:', err);
+            return state.rpc.call(RPC_METHODS.getPublicSettingsFallback, {}, true).then(function(result) {
+                state.publicSettings = result || {};
+                state.themeSettings = result.theme_settings || {};
+            });
         }).catch(function(err) {
             console.warn('Failed to load public settings:', err);
         });
     }
 
     function loadNodes() {
-        return state.rpc.call('common:getNodes', {}, true).then(function(result) {
+        return state.rpc.call(RPC_METHODS.getNodesInformation, {}, true).then(function(result) {
             if (result) {
                 var nodes = Array.isArray(result) ? result : Object.values(result);
                 state.nodes = nodes.filter(function(n) { return !n.hidden; });
             }
         }).catch(function(err) {
+            console.warn('public:getNodesInformation failed, falling back:', err);
+            return state.rpc.call(RPC_METHODS.getNodesInformationFallback, {}, true).then(function(result) {
+                if (result) {
+                    var nodes = Array.isArray(result) ? result : Object.values(result);
+                    state.nodes = nodes.filter(function(n) { return !n.hidden; });
+                }
+            });
+        }).catch(function(err) {
             console.warn('Failed to load nodes:', err);
         });
+    }
+
+    function loadRecentRecordsFallback(uuid, cacheKey) {
+        return state.rpc.call(RPC_METHODS.getClientRecentRecords, { uuid: uuid })
+            .then(function(result) {
+                var records = Array.isArray(result) ? result : (result && result.records ? result.records : null);
+                if (records && records.length > 0) {
+                    var trimmedRecords = trimRecords(records, 600);
+                    if (cacheKey) {
+                        state.historyData[uuid] = trimmedRecords;
+                        setCachedData(historyCache, cacheKey, trimmedRecords);
+                    } else {
+                        state.realtimeHistory[uuid] = trimmedRecords;
+                    }
+                }
+            })
+            .catch(function(err) {
+                console.warn('public:getClientRecentRecords failed, falling back:', err);
+                return state.rpc.call(RPC_METHODS.getClientRecentRecordsFallback, { uuid: uuid })
+                    .then(function(fallback) {
+                        if (fallback && fallback.records) {
+                            var trimmedRecords = trimRecords(fallback.records, 600);
+                            if (cacheKey) {
+                                state.historyData[uuid] = trimmedRecords;
+                                setCachedData(historyCache, cacheKey, trimmedRecords);
+                            } else {
+                                state.realtimeHistory[uuid] = trimmedRecords;
+                            }
+                        }
+                    });
+            })
+            .catch(function() {});
     }
 
     function loadNodeHistory(uuid, hours) {
@@ -1075,16 +1256,8 @@
 
         // 实时模式（hours=0）：使用实时历史数据，不从 API 加载
         if (hours === 0) {
-            // 实时历史数据已经在 handleRpcResult 中实时更新
-            // 如果没有实时历史数据，加载最近的历史数据作为初始数据
             if (!state.realtimeHistory[uuid] || state.realtimeHistory[uuid].length === 0) {
-                return state.rpc.call('common:getNodeRecentStatus', { uuid: uuid })
-                    .then(function(fallback) {
-                        if (fallback && fallback.records) {
-                            var trimmedRecords = trimRecords(fallback.records, 600);
-                            state.realtimeHistory[uuid] = trimmedRecords;
-                        }
-                    }).catch(function() {});
+                return loadRecentRecordsFallback(uuid, null);
             }
             return Promise.resolve();
         }
@@ -1097,50 +1270,63 @@
             return Promise.resolve();
         }
 
-        return state.rpc.call('common:getRecords', { uuid: uuid, type: 'load', hours: hours, maxCount: 4000 })
+        return state.rpc.call(RPC_METHODS.getRecordsByUUID, { uuid: uuid, hours: String(hours) })
             .then(function(result) {
                 var records = [];
-                if (result && result.records) {
-                    if (Array.isArray(result.records)) {
-                        records = result.records;
-                    } else if (typeof result.records === 'object') {
-                        Object.keys(result.records).forEach(function(key) {
-                            if (Array.isArray(result.records[key])) {
-                                records = records.concat(result.records[key]);
-                            }
-                        });
+                if (result) {
+                    if (Array.isArray(result)) {
+                        records = result;
+                    } else if (result.records) {
+                        if (Array.isArray(result.records)) {
+                            records = result.records;
+                        } else if (typeof result.records === 'object') {
+                            Object.keys(result.records).forEach(function(key) {
+                                if (Array.isArray(result.records[key])) {
+                                    records = records.concat(result.records[key]);
+                                }
+                            });
+                        }
                     }
                 }
                 if (records.length > 0) {
-                    // 数据裁剪：限制数据点数量，防止性能问题
                     var maxPoints = getMaxDataPoints(hours);
                     var trimmedRecords = trimRecords(records, maxPoints);
                     state.historyData[uuid] = trimmedRecords;
-
-                    // 缓存数据
                     setCachedData(historyCache, cacheKey, trimmedRecords);
                     return;
                 }
-                return state.rpc.call('common:getNodeRecentStatus', { uuid: uuid })
-                    .then(function(fallback) {
-                        if (fallback && fallback.records) {
-                            var trimmedRecords = trimRecords(fallback.records, 600);
-                            state.historyData[uuid] = trimmedRecords;
-                            setCachedData(historyCache, cacheKey, trimmedRecords);
-                        }
-                    }).catch(function() {});
-            }).catch(function(err) {
+                return loadRecentRecordsFallback(uuid, cacheKey);
+            })
+            .catch(function(err) {
                 if (err && err.code !== 401) {
-                    console.warn('Failed to load history for', uuid, err);
+                    console.warn('public:getRecordsByUUID failed, falling back:', err);
                 }
-                return state.rpc.call('common:getNodeRecentStatus', { uuid: uuid })
-                    .then(function(fallback) {
-                        if (fallback && fallback.records) {
-                            var trimmedRecords = trimRecords(fallback.records, 600);
+                return state.rpc.call(RPC_METHODS.getRecordsByUUIDFallback, { uuid: uuid, type: 'load', hours: hours, maxCount: 4000 })
+                    .then(function(result) {
+                        var records = [];
+                        if (result && result.records) {
+                            if (Array.isArray(result.records)) {
+                                records = result.records;
+                            } else if (typeof result.records === 'object') {
+                                Object.keys(result.records).forEach(function(key) {
+                                    if (Array.isArray(result.records[key])) {
+                                        records = records.concat(result.records[key]);
+                                    }
+                                });
+                            }
+                        }
+                        if (records.length > 0) {
+                            var maxPoints = getMaxDataPoints(hours);
+                            var trimmedRecords = trimRecords(records, maxPoints);
                             state.historyData[uuid] = trimmedRecords;
                             setCachedData(historyCache, cacheKey, trimmedRecords);
+                            return;
                         }
-                    }).catch(function() {});
+                        return loadRecentRecordsFallback(uuid, cacheKey);
+                    })
+                    .catch(function() {
+                        return loadRecentRecordsFallback(uuid, cacheKey);
+                    });
             });
     }
 
@@ -1155,18 +1341,16 @@
             return Promise.resolve();
         }
 
-        return state.rpc.call('common:getRecords', { uuid: uuid, type: 'ping', hours: hours })
+        return state.rpc.call(RPC_METHODS.getPingRecords, { uuid: uuid, hours: String(hours) })
             .then(function(result) {
                 if (result) {
                     var records = result.records || [];
-
-                    // 数据裁剪：限制数据点数量，防止性能问题
                     var maxPoints = getMaxDataPoints(hours);
                     records = trimRecords(records, maxPoints);
 
                     var basicInfo = result.basic_info || [];
-
                     var taskMap = {};
+
                     records.forEach(function(r) {
                         if (r.task_id !== undefined && !taskMap[r.task_id]) {
                             taskMap[r.task_id] = {
@@ -1175,6 +1359,17 @@
                             };
                         }
                     });
+
+                    // public:getPingRecords 可能直接返回 tasks 字段
+                    if (result.tasks && Array.isArray(result.tasks)) {
+                        result.tasks.forEach(function(task) {
+                            if (taskMap[task.id]) {
+                                if (task.name) taskMap[task.id].name = task.name;
+                                if (task.interval) taskMap[task.id].interval = task.interval;
+                                if (task.loss !== undefined) taskMap[task.id].loss = task.loss;
+                            }
+                        });
+                    }
 
                     basicInfo.forEach(function(info, idx) {
                         var taskIds = Object.keys(taskMap);
@@ -1193,16 +1388,88 @@
                     };
 
                     state.pingData[uuid] = pingData;
-
-                    // 缓存数据
                     setCachedData(pingCache, cacheKey, pingData);
 
-                    fetchPingTaskNames(uuid);
+                    // 用 RPC 调用替代 REST API 获取完整 task 元数据
+                    enrichPingTasksFromRPC(uuid);
                 }
-            }).catch(function(err) {
+            })
+            .catch(function(err) {
                 if (err && err.code !== 401) {
-                    console.warn('Failed to load ping history for', uuid, err);
+                    console.warn('public:getPingRecords failed, falling back:', err);
                 }
+                return state.rpc.call(RPC_METHODS.getPingRecordsFallback, { uuid: uuid, type: 'ping', hours: hours })
+                    .then(function(result) {
+                        if (result) {
+                            var records = result.records || [];
+                            var maxPoints = getMaxDataPoints(hours);
+                            records = trimRecords(records, maxPoints);
+
+                            var basicInfo = result.basic_info || [];
+                            var taskMap = {};
+                            records.forEach(function(r) {
+                                if (r.task_id !== undefined && !taskMap[r.task_id]) {
+                                    taskMap[r.task_id] = {
+                                        id: r.task_id,
+                                        name: t('task') + ' #' + r.task_id
+                                    };
+                                }
+                            });
+
+                            basicInfo.forEach(function(info, idx) {
+                                var taskIds = Object.keys(taskMap);
+                                if (taskIds[idx]) {
+                                    taskMap[taskIds[idx]].loss = info.loss;
+                                    taskMap[taskIds[idx]].min = info.min;
+                                    taskMap[taskIds[idx]].max = info.max;
+                                }
+                            });
+
+                            var tasks = Object.keys(taskMap).map(function(k) { return taskMap[k]; });
+                            var pingData = { records: records, tasks: tasks };
+                            state.pingData[uuid] = pingData;
+                            setCachedData(pingCache, cacheKey, pingData);
+
+                            fetchPingTaskNames(uuid);
+                        }
+                    })
+                    .catch(function(err2) {
+                        if (err2 && err2.code !== 401) {
+                            console.warn('Failed to load ping history for', uuid, err2);
+                        }
+                    });
+            });
+    }
+
+    function enrichPingTasksFromRPC(uuid) {
+        state.rpc.call(RPC_METHODS.getPublicPingTasks, {})
+            .then(function(tasks) {
+                if (!tasks || !Array.isArray(tasks)) return;
+                var pingInfo = state.pingData[uuid];
+                if (!pingInfo) return;
+
+                var taskNameMap = {};
+                tasks.forEach(function(task) {
+                    taskNameMap[task.id] = task;
+                });
+
+                pingInfo.tasks.forEach(function(task) {
+                    var rpcTask = taskNameMap[task.id];
+                    if (rpcTask) {
+                        if (rpcTask.name) task.name = rpcTask.name;
+                        if (rpcTask.interval) task.interval = rpcTask.interval;
+                        if (rpcTask.loss !== undefined) task.loss = rpcTask.loss;
+                    }
+                });
+
+                var cacheKey = uuid + '-1';
+                setCachedData(pingCache, cacheKey, pingInfo);
+
+                renderLatencyPage(uuid);
+            })
+            .catch(function(err) {
+                console.warn('public:getPublicPingTasks failed, falling back to REST:', err);
+                fetchPingTaskNames(uuid);
             });
     }
     
@@ -2219,6 +2486,9 @@
                 cpuChart: document.getElementById('cpuChart'),
                 ramChart: document.getElementById('ramChart'),
                 networkChart: document.getElementById('networkChart'),
+                diskChart: document.getElementById('diskChart'),
+                processChart: document.getElementById('processChart'),
+                connectionsChart: document.getElementById('connectionsChart'),
                 latencyChart: document.getElementById('latencyChart')
             };
         }
@@ -2246,19 +2516,28 @@
                         } else {
                             var records = state.historyData[uuid] || [];
                             if (records.length > 0) {
-                                if (chartId === 'cpuChart') {
-                                    drawLineChart('cpuChart', records, function (r) { return r.cpu; }, 0, 100, '#e8668a', 'CPU %');
-                                } else if (chartId === 'ramChart') {
-                                    drawLineChart('ramChart', records, function (r) {
-                                        var ramVal = r.ram;
-                                        if (ramVal === null || ramVal === undefined) return null;
-                                        if (ramVal > 100 && r.ram_total > 0) {
-                                            return (ramVal / r.ram_total) * 100;
-                                        }
-                                        return ramVal;
-                                    }, 0, 100, '#5c9ced', 'RAM %');
-                                } else if (chartId === 'networkChart') {
-                                    drawNetworkChart('networkChart', records);
+                                var node = state.nodes.find(function(n) { return n.uuid === uuid; });
+                                var liveData = state.realtimeData[uuid];
+                                var chartConfigs = getChartConfigs(node, liveData);
+                                var config = chartConfigs.find(function(c) { return c.canvasId === chartId; });
+                                if (config) {
+                                    renderChartByConfig(config, records, timeRangeToHours(state.historyTimeRange));
+                                } else {
+                                    // fallback to legacy draw functions
+                                    if (chartId === 'cpuChart') {
+                                        drawLineChart('cpuChart', records, function (r) { return r.cpu; }, 0, 100, '#e8668a', 'CPU %');
+                                    } else if (chartId === 'ramChart') {
+                                        drawLineChart('ramChart', records, function (r) {
+                                            var ramVal = r.ram;
+                                            if (ramVal === null || ramVal === undefined) return null;
+                                            if (ramVal > 100 && r.ram_total > 0) {
+                                                return (ramVal / r.ram_total) * 100;
+                                            }
+                                            return ramVal;
+                                        }, 0, 100, '#5c9ced', 'RAM %');
+                                    } else if (chartId === 'networkChart') {
+                                        drawNetworkChart('networkChart', records);
+                                    }
                                 }
                                 state.chartsDrawn[uuid + '_' + chartId] = true;
                             }
@@ -2295,6 +2574,15 @@
             document.body.style.overflow = 'hidden';
         }
 
+        // 重置图表动画：重新触发 .chart-section 的入场动画
+        var chartSections = document.querySelectorAll('.modal-charts .chart-section');
+        chartSections.forEach(function(section) {
+            section.style.animation = 'none';
+            // 强制 reflow
+            void section.offsetHeight;
+            section.style.animation = '';
+        });
+
         initChartObserver();
 
         // 使用当前选择的时间范围加载数据
@@ -2307,7 +2595,7 @@
         ]).then(function () {
             renderLatencyPage(uuid);
 
-            [els.cpuChart, els.ramChart, els.networkChart, els.latencyChart].forEach(function(canvas) {
+            [els.cpuChart, els.ramChart, els.networkChart, els.diskChart, els.processChart, els.connectionsChart, els.latencyChart].forEach(function(canvas) {
                 if (canvas) {
                     canvas.classList.add('chart-loading');
                     state.chartObserver.observe(canvas);
@@ -2367,7 +2655,7 @@
             buildInfoItem(t('processes'), String(process)),
             buildInfoItem(t('connections'), 'TCP: ' + tcpConn + ' / UDP: ' + udpConn),
             buildInfoItem(t('uptime'), formatUptime(rt.uptime || 0)),
-            buildInfoItem(t('network'), t('up') + ': ' + formatBytes(netTotalUp) + ' / ' + t('down') + ': ' + formatBytes(netTotalDown))
+            buildInfoItem(t('network'), t('up') + ': ' + formatBytes(netTotalUp) + ' / ' + t('down') + ': ' + formatBytes(netTotalDown), true)
         ];
 
         infoEl.innerHTML = items.join('');
@@ -2452,7 +2740,7 @@
 
             var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
             ctx.fillStyle = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)';
-            ctx.font = '12px ' + getComputedStyle(document.body).fontFamily;
+            ctx.font = '12px ' + getCachedFontFamily();
             ctx.textAlign = 'center';
             ctx.fillText(t('login_required') || 'Login required to view history', rect.width / 2, rect.height / 2);
             return;
@@ -2473,6 +2761,14 @@
             if (page.id === 'page' + pageName.charAt(0).toUpperCase() + pageName.slice(1)) {
                 page.classList.remove('slide-out');
                 page.classList.add('active');
+
+                // 重置页面内元素的入场动画
+                var animatedElements = page.querySelectorAll('.modal-info-item, .chart-section, .latency-stat, .latency-task-card, .latency-chart-container');
+                animatedElements.forEach(function(el) {
+                    el.style.animation = 'none';
+                    void el.offsetHeight; // 强制 reflow
+                    el.style.animation = '';
+                });
             } else {
                 page.classList.remove('active');
             }
@@ -2490,42 +2786,52 @@
         }
     }
 
-    function buildInfoItem(label, value) {
-        return '<div class="modal-info-item"><div class="modal-info-label">' + escapeHtml(label) + '</div><div class="modal-info-value">' + escapeHtml(value) + '</div></div>';
+    function buildInfoItem(label, value, nowrap) {
+        var cls = nowrap ? 'modal-info-value modal-info-value-nowrap' : 'modal-info-value';
+        return '<div class="modal-info-item"><div class="modal-info-label">' + escapeHtml(label) + '</div><div class="' + cls + '">' + escapeHtml(value) + '</div></div>';
     }
 
     function closeModal() {
         var els = getModalElements();
-        if (els.overlay) {
-            els.overlay.classList.remove('active');
-            document.body.style.overflow = '';
-        }
-        
-        if (els.modal) {
-            els.modal.scrollTop = 0;
-            els.modal.classList.remove('dragging');
-            els.modal.style.maxHeight = '';
-            els.modal.style.transform = '';
-            els.modal.style.opacity = '';
-        }
-        
-        if (els.scrollIndicator) {
-            els.scrollIndicator.classList.remove('visible');
-            els.scrollIndicator.style.setProperty('--scroll-progress', '0');
-        }
-        
-        if (state.chartObserver) {
-            [els.cpuChart, els.ramChart, els.networkChart, els.latencyChart].forEach(function(canvas) {
-                if (canvas) {
-                    state.chartObserver.unobserve(canvas);
-                    canvas.classList.remove('chart-loading');
+        if (els.overlay && els.overlay.classList.contains('active')) {
+            els.overlay.classList.add('closing');
+
+            if (els.modal) {
+                els.modal.style.transform = 'scale(0.95) translateY(20px)';
+                els.modal.style.opacity = '0';
+            }
+
+            setTimeout(function() {
+                els.overlay.classList.remove('active');
+                els.overlay.classList.remove('closing');
+                document.body.style.overflow = '';
+
+                if (els.modal) {
+                    els.modal.scrollTop = 0;
+                    els.modal.classList.remove('dragging');
+                    els.modal.style.maxHeight = '';
+                    els.modal.style.transform = '';
+                    els.modal.style.opacity = '';
                 }
-            });
+
+                if (els.scrollIndicator) {
+                    els.scrollIndicator.classList.remove('visible');
+                    els.scrollIndicator.style.setProperty('--scroll-progress', '0');
+                }
+
+                if (state.chartObserver) {
+                    [els.cpuChart, els.ramChart, els.networkChart, els.diskChart, els.processChart, els.connectionsChart, els.latencyChart].forEach(function(canvas) {
+                        if (canvas) {
+                            state.chartObserver.unobserve(canvas);
+                        }
+                    });
+                }
+
+                state.selectedNodeUuid = null;
+                state.chartsDrawn = {};
+                switchModalPage('overview');
+            }, 250);
         }
-        
-        state.selectedNodeUuid = null;
-        state.chartsDrawn = {};
-        switchModalPage('overview');
     }
 
     // ==================== 配置驱动的图表系统 ====================
@@ -2535,13 +2841,17 @@
      * 定义所有图表的配置，实现统一的渲染逻辑
      */
     function getChartConfigs(node, liveData) {
-        // OKLCH 颜色系统
-        var colors = ['#F38181', '#FCE38A', '#EAFFD0', '#95E1D3'];
+        var colors = ['#F38181', '#FCE38A', '#5BB85B', '#95E1D3', '#AA96DA', '#FCBAD3', '#6C9CE9', '#F4A261'];
 
         // 提取 liveData 的实际值（liveData 是对象格式）
         var cpuUsage = liveData && liveData.cpu ? liveData.cpu.usage : null;
         var ramUsed = liveData && liveData.ram ? liveData.ram.used : null;
         var ramTotal = liveData && liveData.ram ? liveData.ram.total : (node ? node.mem_total : 0);
+        var diskUsed = liveData && liveData.disk ? liveData.disk.used : null;
+        var diskTotal = liveData && liveData.disk ? liveData.disk.total : (node ? node.disk_total : 0);
+        var processCount = liveData ? liveData.process : null;
+        var connTcp = liveData && liveData.connections ? liveData.connections.tcp : null;
+        var connUdp = liveData && liveData.connections ? liveData.connections.udp : null;
 
         return [
             {
@@ -2601,8 +2911,70 @@
                     }
                 ],
                 liveValue: liveData && liveData.network ? ('▲ ' + formatSpeed(liveData.network.up || 0) + '  ▼ ' + formatSpeed(liveData.network.down || 0)) : '-',
-                yAxisFormatter: function(value) { return formatSpeed(value); },
+                yAxisFormatter: function(value, maxVal) { return formatAxisSpeed(value, maxVal); },
+                yAxisUnitFn: function(maxVal) { return getSpeedAxisUnit(maxVal); },
                 smoothKeys: ['net_in', 'net_out']
+            },
+            {
+                id: 'disk',
+                canvasId: 'diskChart',
+                title: t('disk_usage'),
+                type: 'area',
+                dataKey: 'disk',
+                valueFn: function(r) {
+                    var diskVal = r.disk;
+                    if (diskVal === null || diskVal === undefined) return null;
+                    if (diskVal > 100 && r.disk_total > 0) {
+                        return (diskVal / r.disk_total) * 100;
+                    }
+                    return diskVal;
+                },
+                liveValue: diskUsed !== null ? formatBytes(diskUsed) + ' / ' + formatBytes(diskTotal) : '-',
+                yAxisDomain: [0, 100],
+                yAxisFormatter: function(value) { return value.toFixed(0) + '%'; },
+                color: colors[4],
+                tooltipFormatter: function(value, raw) { return formatBytes(raw ? raw.disk : 0) + ' (' + value.toFixed(0) + '%)'; },
+                tooltipLabel: t('disk_usage'),
+                smoothKeys: ['disk']
+            },
+            {
+                id: 'process',
+                canvasId: 'processChart',
+                title: t('process_count'),
+                type: 'line',
+                dataKey: 'process',
+                valueFn: function(r) { return r.process; },
+                liveValue: processCount !== null ? String(processCount) : '-',
+                yAxisFormatter: function(value, maxVal) { return formatAxisCount(value, maxVal); },
+                yAxisUnitFn: function(maxVal) { return getCountAxisUnit(maxVal); },
+                color: colors[5],
+                tooltipFormatter: function(value) { return Math.round(value); },
+                tooltipLabel: t('process_count'),
+                smoothKeys: ['process']
+            },
+            {
+                id: 'connections',
+                canvasId: 'connectionsChart',
+                title: t('connection_count'),
+                type: 'line',
+                series: [
+                    {
+                        dataKey: 'connections',
+                        color: colors[6],
+                        tooltipLabel: 'TCP',
+                        tooltipFormatter: function(value) { return Math.round(value); }
+                    },
+                    {
+                        dataKey: 'connections_udp',
+                        color: colors[7],
+                        tooltipLabel: 'UDP',
+                        tooltipFormatter: function(value) { return Math.round(value); }
+                    }
+                ],
+                liveValue: connTcp !== null ? ('TCP: ' + connTcp + ' / UDP: ' + (connUdp || 0)) : '-',
+                yAxisFormatter: function(value, maxVal) { return formatAxisCount(value, maxVal); },
+                yAxisUnitFn: function(maxVal) { return getCountAxisUnit(maxVal); },
+                smoothKeys: ['connections', 'connections_udp']
             }
         ];
     }
@@ -2642,16 +3014,15 @@
         // 绘制网格和Y轴
         ctx.strokeStyle = gridColor;
         ctx.lineWidth = 1;
-        ctx.font = '11px ' + getComputedStyle(document.body).fontFamily;
+        ctx.font = '11px ' + getCachedFontFamily();
         ctx.fillStyle = textColor;
         ctx.textAlign = 'right';
 
-        var yAxisDomain = config.yAxisDomain || [0, 100];
+        var yAxisDomain = config.yAxisDomain;
         var yTicks = 4;
-        var maxVal = yAxisDomain[1];
-        var minVal = yAxisDomain[0];
+        var maxVal, minVal;
 
-        // 网络图表需要动态计算最大值
+        // 动态计算最大值（多系列图表和无固定域的单系列图表）
         if (config.type === 'line' && config.series) {
             var allValues = [];
             config.series.forEach(function(series) {
@@ -2663,9 +3034,42 @@
                 });
             });
             maxVal = allValues.length > 0 ? Math.max.apply(null, allValues) : 1024;
-            maxVal = Math.ceil(maxVal / 1024) * 1024;
+            // 智能对齐：按数据量级选择步长
+            if (maxVal >= 1024 * 1024 * 1024) {
+                maxVal = Math.ceil(maxVal / (1024 * 1024 * 1024)) * (1024 * 1024 * 1024);
+            } else if (maxVal >= 1024 * 1024) {
+                maxVal = Math.ceil(maxVal / (1024 * 1024)) * (1024 * 1024);
+            } else if (maxVal >= 1024) {
+                maxVal = Math.ceil(maxVal / 1024) * 1024;
+            } else {
+                maxVal = Math.ceil(maxVal / 100) * 100;
+            }
             minVal = 0;
+        } else if (!yAxisDomain && config.valueFn) {
+            // 单系列无固定域：动态计算
+            var singleValues = records.map(config.valueFn).filter(function(v) {
+                return v !== null && v !== undefined && !isNaN(v);
+            });
+            maxVal = singleValues.length > 0 ? Math.max.apply(null, singleValues) : 100;
+            // 智能对齐
+            if (maxVal >= 10000) {
+                maxVal = Math.ceil(maxVal / 1000) * 1000;
+            } else if (maxVal >= 1000) {
+                maxVal = Math.ceil(maxVal / 100) * 100;
+            } else if (maxVal >= 100) {
+                maxVal = Math.ceil(maxVal / 50) * 50;
+            } else {
+                maxVal = Math.ceil(maxVal / 10) * 10;
+            }
+            maxVal = Math.max(maxVal, 10);
+            minVal = 0;
+        } else {
+            maxVal = yAxisDomain ? yAxisDomain[1] : 100;
+            minVal = yAxisDomain ? yAxisDomain[0] : 0;
         }
+
+        // 动态 Y 轴单位
+        var yAxisUnit = config.yAxisUnitFn ? config.yAxisUnitFn(maxVal) : '';
 
         for (var i = 0; i <= yTicks; i++) {
             var y = padding.top + (chartH / yTicks) * i;
@@ -2677,31 +3081,61 @@
             ctx.setLineDash([]);
 
             var val = maxVal - (maxVal - minVal) * (i / yTicks);
-            var yLabel = config.yAxisFormatter ? config.yAxisFormatter(val) : val.toFixed(0);
+            var yLabel = config.yAxisFormatter ? config.yAxisFormatter(val, maxVal) : val.toFixed(0);
             ctx.fillText(yLabel, padding.left - 8, y + 4);
+        }
+
+        // 在图表右上角显示 Y 轴单位
+        if (yAxisUnit) {
+            ctx.fillStyle = textColor;
+            ctx.textAlign = 'right';
+            ctx.font = '10px ' + getCachedFontFamily();
+            ctx.fillText(yAxisUnit, w - padding.right, padding.top - 6);
+            ctx.textAlign = 'right';
+        }
+
+        // LTTB 降采样
+        var DOWNSAMPLE_THRESHOLD = 200;
+        var renderRecords = records;
+        if (records.length > DOWNSAMPLE_THRESHOLD) {
+            var valueExtractor;
+            if (config.series) {
+                valueExtractor = function(r) {
+                    var sum = 0;
+                    config.series.forEach(function(s) {
+                        var v = r[s.dataKey];
+                        if (v !== null && v !== undefined && !isNaN(v)) sum += Math.abs(v);
+                    });
+                    return sum;
+                };
+            } else {
+                valueExtractor = config.valueFn;
+            }
+            var downsampled = lttbDownsampleRecords(records, DOWNSAMPLE_THRESHOLD, valueExtractor);
+            renderRecords = downsampled.map(function(d) { return d.data; });
         }
 
         // 绘制数据
         if (config.series) {
             // 多系列图表（网络图表）
             config.series.forEach(function(series) {
-                var values = records.map(function(r) { return r[series.dataKey] || 0; });
+                var values = renderRecords.map(function(r) { return r[series.dataKey] || 0; });
                 drawSmoothAreaLine(ctx, values, series.color, padding, chartW, chartH, maxVal, minVal, false);
             });
         } else {
             // 单系列图表（CPU/RAM 图表）
-            var values = records.map(config.valueFn);
+            var values = renderRecords.map(config.valueFn);
             drawSmoothAreaLine(ctx, values, config.color, padding, chartW, chartH, maxVal, minVal, config.type === 'area');
         }
 
         // 绘制时间标签（只显示首尾）
         ctx.fillStyle = textColor;
         ctx.textAlign = 'center';
-        ctx.font = '10px ' + getComputedStyle(document.body).fontFamily;
+        ctx.font = '10px ' + getCachedFontFamily();
 
-        var dataLength = records.length;
-        var firstTime = new Date(records[0].time);
-        var lastTime = new Date(records[records.length - 1].time);
+        var dataLength = renderRecords.length;
+        var firstTime = new Date(renderRecords[0].time);
+        var lastTime = new Date(renderRecords[renderRecords.length - 1].time);
 
         // 左侧时间标签
         ctx.fillText(formatTimeLabel(firstTime, hours), padding.left, h - 10);
@@ -2712,25 +3146,19 @@
         canvas._chartData = {
             type: config.series ? 'network' : 'line',
             config: config,
-            records: records,
+            records: renderRecords,
             padding: padding,
             maxVal: maxVal,
             minVal: minVal,
             hours: hours
         };
 
-        canvas.onmousemove = function(e) {
-            showChartTooltip(e, canvas, canvas._chartData);
-        };
+        canvas.onmousemove = createMouseMoveHandler(canvas);
         canvas.onmouseleave = createHideHandler(canvas);
 
-        canvas.ontouchmove = function(e) {
-            if (e.touches.length === 1) {
-                var touch = e.touches[0];
-                showChartTooltip({ clientX: touch.clientX, clientY: touch.clientY }, canvas, canvas._chartData);
-            }
-        };
+        canvas.ontouchmove = createTouchMoveHandler(canvas);
         canvas.ontouchend = createHideHandler(canvas);
+        canvas.ontouchcancel = createHideHandler(canvas);
     }
 
     /**
@@ -2800,7 +3228,7 @@
 
         var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         ctx.fillStyle = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)';
-        ctx.font = '12px ' + getComputedStyle(document.body).fontFamily;
+        ctx.font = '12px ' + getCachedFontFamily();
         ctx.textAlign = 'center';
         ctx.fillText(t('login_required') || 'Login required to view history', rect.width / 2, rect.height / 2);
     }
@@ -2839,6 +3267,23 @@
         chartConfigs.forEach(function(config) {
             renderChartByConfig(config, records, hours);
         });
+
+        updateNetworkLegend(chartConfigs);
+    }
+
+    function updateNetworkLegend(chartConfigs) {
+        var networkConfig = chartConfigs.find(function(c) { return c.id === 'network'; });
+        if (networkConfig && networkConfig.series) {
+            var uploadSeries = networkConfig.series.find(function(s) { return s.dataKey === 'net_out'; });
+            var downloadSeries = networkConfig.series.find(function(s) { return s.dataKey === 'net_in'; });
+            var legendEl = document.getElementById('networkLegend');
+            if (legendEl) {
+                var upDot = legendEl.querySelector('.legend-up .legend-dot');
+                var downDot = legendEl.querySelector('.legend-down .legend-dot');
+                if (upDot && uploadSeries) upDot.style.background = uploadSeries.color;
+                if (downDot && downloadSeries) downDot.style.background = downloadSeries.color;
+            }
+        }
     }
 
     var PING_COLORS = ['#e8668a', '#5c9ced', '#4caf7d', '#f5a623', '#9c5ce0', '#00bcd4', '#ff5722', '#795548'];
@@ -2966,7 +3411,7 @@
 
         ctx.strokeStyle = gridColor;
         ctx.lineWidth = 1;
-        ctx.font = '10px ' + getComputedStyle(document.body).fontFamily;
+        ctx.font = '10px ' + getCachedFontFamily();
         ctx.fillStyle = textColor;
         ctx.textAlign = 'right';
 
@@ -2978,7 +3423,13 @@
             ctx.stroke();
             // Y轴刻度从 minVal 到 maxVal
             var val = maxVal - (maxVal - minVal) * (i / tickCount);
-            ctx.fillText(val.toFixed(0) + yAxisSuffix, padding.left - 6, y + 3);
+            var yLabel;
+            if (maxVal >= 1000) {
+                yLabel = (val / 1000).toFixed(val >= 1000 ? 0 : 1) + 's';
+            } else {
+                yLabel = val.toFixed(0) + yAxisSuffix;
+            }
+            ctx.fillText(yLabel, padding.left - 6, y + 3);
         }
 
         var taskMap = {};
@@ -3018,6 +3469,12 @@
 
             var color = colors[colorIdx % colors.length];
             colorIdx++;
+
+            // LTTB 降采样
+            if (smoothedRecs.length > 200) {
+                var downsampled = lttbDownsampleRecords(smoothedRecs, 200, function(r) { return r.value; });
+                smoothedRecs = downsampled.map(function(d) { return d.data; });
+            }
 
             var points = [];
             for (var j = 0; j < smoothedRecs.length; j++) {
@@ -3075,7 +3532,7 @@
         // 如果启用平滑，显示提示信息
         if (state.latencyChartSmooth) {
             ctx.fillStyle = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)';
-            ctx.font = '10px ' + getComputedStyle(document.body).fontFamily;
+            ctx.font = '10px ' + getCachedFontFamily();
             ctx.textAlign = 'right';
 
             var hintText = 'EWMA 平滑趋势';
@@ -3122,10 +3579,11 @@
             padding: padding
         };
 
-        canvas.onmousemove = function(e) {
-            showChartTooltip(e, canvas, canvas._chartData);
-        };
+        canvas.onmousemove = createMouseMoveHandler(canvas);
         canvas.onmouseleave = createHideHandler(canvas);
+        canvas.ontouchmove = createTouchMoveHandler(canvas);
+        canvas.ontouchend = createHideHandler(canvas);
+        canvas.ontouchcancel = createHideHandler(canvas);
     }
 
     function drawPingChart(canvasId, records, tasks) {
@@ -3137,7 +3595,7 @@
             filterFn: function (v) { return v !== null && v !== undefined && v >= 0; },
             drawLegend: function (ctx, padding, tasks, colors, textColor) {
                 if (tasks.length > 0) {
-                    ctx.font = '11px ' + getComputedStyle(document.body).fontFamily;
+                    ctx.font = '11px ' + getCachedFontFamily();
                     ctx.textAlign = 'left';
                     var legendX = padding.left + 10;
                     tasks.forEach(function (task, idx) {
@@ -3184,6 +3642,9 @@
             if (canvas._crosshair) {
                 canvas._crosshair.style.display = 'none';
             }
+            if (canvas._highlightDot) {
+                canvas._highlightDot.style.display = 'none';
+            }
             return;
         }
 
@@ -3197,25 +3658,36 @@
             return;
         }
 
-        // 创建十字线
+        // 如果 idx 未变化，只更新 tooltip 位置，跳过 innerHTML 重建
+        if (canvas._lastTooltipIdx === idx) {
+            positionTooltip(tooltip, e);
+            return;
+        }
+        canvas._lastTooltipIdx = idx;
+
+        // 创建十字线和高亮圆点
         var crosshair = canvas._crosshair;
+        var highlightDot = canvas._highlightDot;
         if (!crosshair) {
             crosshair = document.createElement('div');
             crosshair.className = 'chart-crosshair';
             crosshair.style.cssText = 'position:absolute;pointer-events:none;display:none;z-index:10;';
+            highlightDot = document.createElement('div');
+            highlightDot.className = 'chart-highlight-dot';
             var chartSection = canvas.closest('.chart-section');
-            if (chartSection) {
-                chartSection.style.position = 'relative';
-                chartSection.appendChild(crosshair);
-            } else {
-                canvas.parentElement.style.position = 'relative';
-                canvas.parentElement.appendChild(crosshair);
-            }
+            var mountParent = chartSection || canvas.parentElement;
+            mountParent.style.position = 'relative';
+            mountParent.appendChild(crosshair);
+            mountParent.appendChild(highlightDot);
             canvas._crosshair = crosshair;
+            canvas._highlightDot = highlightDot;
         }
 
-        var canvasOffsetLeft = canvas.offsetLeft || 0;
-        var canvasOffsetTop = canvas.offsetTop || 0;
+        // 使用 getBoundingClientRect 差值计算定位
+        var parentRect = crosshair.parentElement.getBoundingClientRect();
+        var canvasRect = canvas.getBoundingClientRect();
+        var canvasOffsetLeft = canvasRect.left - parentRect.left;
+        var canvasOffsetTop = canvasRect.top - parentRect.top;
 
         var pointX = canvasOffsetLeft + padding.left + (idx / Math.max(chartData.records.length - 1, 1)) * chartW;
         crosshair.style.display = 'block';
@@ -3225,6 +3697,39 @@
         crosshair.style.height = chartH + 'px';
         crosshair.style.background = 'var(--accent)';
         crosshair.style.opacity = '0.5';
+
+        // 计算高亮圆点位置
+        var pointY = null;
+        var dotColor = 'var(--accent)';
+        if (chartData.config) {
+            if (chartData.config.series) {
+                var series = chartData.config.series[0];
+                var seriesValue = record[series.dataKey];
+                if (seriesValue !== null && seriesValue !== undefined && !isNaN(seriesValue)) {
+                    var sNorm = (seriesValue - chartData.minVal) / (chartData.maxVal - chartData.minVal);
+                    sNorm = Math.max(0, Math.min(1, sNorm));
+                    pointY = canvasOffsetTop + padding.top + chartH - sNorm * chartH;
+                    dotColor = series.color;
+                }
+            } else {
+                var singleValue = chartData.config.valueFn(record);
+                if (singleValue !== null && singleValue !== undefined && !isNaN(singleValue)) {
+                    var norm = (singleValue - chartData.minVal) / (chartData.maxVal - chartData.minVal);
+                    norm = Math.max(0, Math.min(1, norm));
+                    pointY = canvasOffsetTop + padding.top + chartH - norm * chartH;
+                    dotColor = chartData.config.color;
+                }
+            }
+        }
+
+        if (pointY !== null) {
+            highlightDot.style.display = 'block';
+            highlightDot.style.left = pointX + 'px';
+            highlightDot.style.top = pointY + 'px';
+            highlightDot.style.background = dotColor;
+        } else {
+            highlightDot.style.display = 'none';
+        }
 
         var time = new Date(record.time);
 
@@ -3269,30 +3774,6 @@
                     html += '</div>';
                 }
             }
-        } else if (chartData.type === 'line') {
-            // 旧模式兼容
-            var val = chartData.valueFn(record);
-            if (val !== null && val !== undefined && !isNaN(val)) {
-                html += '<div class="chart-tooltip-row">';
-                html += '<div class="chart-tooltip-indicator" style="background:' + chartData.color + '"></div>';
-                html += '<span class="chart-tooltip-label">' + chartData.label + '</span>';
-                html += '<span class="chart-tooltip-value"><strong>' + val.toFixed(1) + '%</strong></span>';
-                html += '</div>';
-            }
-        } else if (chartData.type === 'network') {
-            // 网络图表
-            var netIn = record.net_in || 0;
-            var netOut = record.net_out || 0;
-            html += '<div class="chart-tooltip-row">';
-            html += '<div class="chart-tooltip-indicator" style="background:#4caf7d"></div>';
-            html += '<span class="chart-tooltip-label">▲ ' + t('up') + '</span>';
-            html += '<span class="chart-tooltip-value"><strong>' + formatSpeed(netOut) + '</strong></span>';
-            html += '</div>';
-            html += '<div class="chart-tooltip-row">';
-            html += '<div class="chart-tooltip-indicator" style="background:#5c9ced"></div>';
-            html += '<span class="chart-tooltip-label">▼ ' + t('down') + '</span>';
-            html += '<span class="chart-tooltip-value"><strong>' + formatSpeed(netIn) + '</strong></span>';
-            html += '</div>';
         } else if (chartData.type === 'ping') {
             // Ping 图表
             var taskRecords = chartData.taskRecords;
@@ -3333,8 +3814,10 @@
         html += '</div></div>';
 
         tooltip.innerHTML = html;
+        positionTooltip(tooltip, e);
+    }
 
-        // 定位 Tooltip
+    function positionTooltip(tooltip, e) {
         var tooltipRect = tooltip.getBoundingClientRect();
         var tooltipWidth = tooltipRect.width || 140;
         var tooltipHeight = tooltipRect.height || 60;
@@ -3378,11 +3861,43 @@
         if (canvas && canvas._crosshair) {
             canvas._crosshair.style.display = 'none';
         }
+        if (canvas && canvas._highlightDot) {
+            canvas._highlightDot.style.display = 'none';
+        }
+        if (canvas) {
+            canvas._lastTooltipIdx = -1;
+        }
     }
 
     function createHideHandler(canvas) {
         return function() {
             hideChartTooltip(canvas);
+        };
+    }
+
+    function createTouchMoveHandler(canvas) {
+        return function(e) {
+            if (e.touches.length === 1) {
+                e.preventDefault();
+                e.stopPropagation();
+                var touch = e.touches[0];
+                showChartTooltip({ clientX: touch.clientX, clientY: touch.clientY }, canvas, canvas._chartData);
+            }
+        };
+    }
+
+    function createMouseMoveHandler(canvas) {
+        var rafId = null;
+        var lastEvent = null;
+        return function(e) {
+            lastEvent = e;
+            if (rafId !== null) return;
+            rafId = requestAnimationFrame(function() {
+                rafId = null;
+                if (lastEvent) {
+                    showChartTooltip(lastEvent, canvas, canvas._chartData);
+                }
+            });
         };
     }
 
@@ -3415,7 +3930,7 @@
 
         ctx.strokeStyle = gridColor;
         ctx.lineWidth = 1;
-        ctx.font = '11px ' + getComputedStyle(document.body).fontFamily;
+        ctx.font = '11px ' + getCachedFontFamily();
         ctx.fillStyle = textColor;
         ctx.textAlign = 'right';
 
@@ -3488,7 +4003,7 @@
 
         ctx.fillStyle = textColor;
         ctx.textAlign = 'center';
-        ctx.font = '10px ' + getComputedStyle(document.body).fontFamily;
+        ctx.font = '10px ' + getCachedFontFamily();
         var timeLabels = Math.min(6, Math.floor(chartW / 60));
 
         // 只显示首尾时间标签（参考 PurCarte 实现）
@@ -3567,7 +4082,7 @@
 
         ctx.strokeStyle = gridColor;
         ctx.lineWidth = 1;
-        ctx.font = '11px ' + getComputedStyle(document.body).fontFamily;
+        ctx.font = '11px ' + getCachedFontFamily();
         ctx.fillStyle = textColor;
         ctx.textAlign = 'right';
 
@@ -3630,7 +4145,7 @@
 
         ctx.fillStyle = textColor;
         ctx.textAlign = 'center';
-        ctx.font = '10px ' + getComputedStyle(document.body).fontFamily;
+        ctx.font = '10px ' + getCachedFontFamily();
         var timeLabels = Math.min(6, Math.floor(chartW / 60));
 
         // 只显示首尾时间标签（参考 PurCarte 实现）
