@@ -63,19 +63,30 @@ export function initChartObserver() {
                         if (pingInfo) {
                             drawLatencyChart('latencyChart', pingInfo.records, pingInfo.tasks);
                             state.chartsDrawn[uuid + '_' + chartId] = true;
+                            var latencyContainer = document.querySelector('.latency-chart-container');
+                            if (latencyContainer) latencyContainer.classList.remove('loading');
                         }
                     } else {
-                        var records = state.historyData[uuid] || [];
+                        var dataHours = state.historyDataHours[uuid] !== undefined
+                            ? state.historyDataHours[uuid]
+                            : timeRangeToHours(state.historyTimeRange);
+                        // 实时模式使用 realtimeHistory，历史模式使用 historyData
+                        var records;
+                        if (dataHours === 0) {
+                            records = state.realtimeHistory[uuid] || [];
+                        } else {
+                            records = state.historyData[uuid] || [];
+                        }
                         if (records.length > 0) {
                             var node = state.nodes.find(function(n) { return n.uuid === uuid; });
                             var liveData = state.realtimeData[uuid];
                             var chartConfigs = getChartConfigs(node, liveData);
                             var config = chartConfigs.find(function(c) { return c.canvasId === chartId; });
                             if (config) {
-                                renderChartByConfig(config, records, timeRangeToHours(state.historyTimeRange));
+                                renderChartByConfig(config, records, dataHours);
                             } else {
                                 if (chartId === 'cpuChart') {
-                                    drawLineChart('cpuChart', records, function (r) { return r.cpu; }, 0, 100, '#e8668a', 'CPU %');
+                                    drawLineChart('cpuChart', records, function (r) { return r.cpu; }, 0, 100, '#e8668a', 'CPU %', dataHours);
                                 } else if (chartId === 'ramChart') {
                                     drawLineChart('ramChart', records, function (r) {
                                         var ramVal = r.ram;
@@ -84,13 +95,16 @@ export function initChartObserver() {
                                             return (ramVal / r.ram_total) * 100;
                                         }
                                         return ramVal;
-                                    }, 0, 100, '#5c9ced', 'RAM %');
+                                    }, 0, 100, '#5c9ced', 'RAM %', dataHours);
                                 } else if (chartId === 'networkChart') {
-                                    drawNetworkChart('networkChart', records);
+                                    drawNetworkChart('networkChart', records, dataHours);
                                 }
                             }
                             state.chartsDrawn[uuid + '_' + chartId] = true;
                         }
+                        // 概览图表渲染完成或无数据时，均移除该区域的加载动画
+                        var section = canvas.closest('.chart-section');
+                        if (section) section.classList.remove('loading');
                     }
                 }
             }
@@ -117,6 +131,18 @@ export function openNodeModal(uuid) {
 
     if (els.nodeName) els.nodeName.textContent = node.name;
 
+    // 清空所有 canvas 并显示加载动画，避免新节点加载时短暂显示旧图表
+    [els.cpuChart, els.ramChart, els.networkChart, els.diskChart, els.processChart, els.connectionsChart].forEach(function(canvas) {
+        if (canvas) {
+            var ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    });
+    var chartSections = document.querySelectorAll('.modal-charts .chart-section');
+    chartSections.forEach(function(section) { section.classList.add('loading'); });
+    var latencyContainer = document.querySelector('.latency-chart-container');
+    if (latencyContainer) latencyContainer.classList.add('loading');
+
     updateTimeRangeButtons();
 
     switchModalPage('overview');
@@ -124,6 +150,10 @@ export function openNodeModal(uuid) {
 
     if (els.overlay) {
         els.overlay.classList.add('active');
+        var scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+        if (scrollbarWidth > 0) {
+            document.body.style.paddingRight = scrollbarWidth + 'px';
+        }
         document.body.style.overflow = 'hidden';
     }
 
@@ -151,6 +181,13 @@ export function openNodeModal(uuid) {
                 state.chartObserver.observe(canvas);
             }
         });
+    }).catch(function () {
+        // 加载失败也移除动画
+        document.querySelectorAll('.modal-charts .chart-section').forEach(function(section) {
+            section.classList.remove('loading');
+        });
+        var latencyContainer = document.querySelector('.latency-chart-container');
+        if (latencyContainer) latencyContainer.classList.remove('loading');
     });
 }
 
@@ -350,6 +387,7 @@ export function closeModal() {
             els.overlay.classList.remove('active');
             els.overlay.classList.remove('closing');
             document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
 
             if (els.modal) {
                 els.modal.scrollTop = 0;

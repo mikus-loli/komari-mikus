@@ -44,16 +44,14 @@ export function applyEWMA(values, alpha) {
  */
 export function lttbDownsampleRecords(records, threshold, valueExtractor) {
     if (!records || records.length <= threshold || threshold < 3) {
-        return records.map(function(item, idx) {
-            return { data: item, originalIndex: idx };
-        });
+        return records;
     }
 
     var dataLength = records.length;
     var bucketSize = (dataLength - 2) / (threshold - 2);
     var result = [];
 
-    result.push({ data: records[0], originalIndex: 0 });
+    result.push(records[0]);
 
     var prevSelectedIdx = 0;
     var prevSelectedVal = valueExtractor(records[0]) || 0;
@@ -98,12 +96,12 @@ export function lttbDownsampleRecords(records, threshold, valueExtractor) {
             }
         }
 
-        result.push({ data: records[maxAreaIdx], originalIndex: maxAreaIdx });
+        result.push(records[maxAreaIdx]);
         prevSelectedIdx = maxAreaIdx;
         prevSelectedVal = valueExtractor(records[maxAreaIdx]) || 0;
     }
 
-    result.push({ data: records[dataLength - 1], originalIndex: dataLength - 1 });
+    result.push(records[dataLength - 1]);
     return result;
 }
 

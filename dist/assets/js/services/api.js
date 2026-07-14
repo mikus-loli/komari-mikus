@@ -54,41 +54,125 @@ export function loadNodes() {
 }
 
 /**
- * 加载最近记录（fallback）
+ * 将 /api/recent/ 返回的嵌套 Record 转为扁平格式
+ * /api/recent/ 返回: { cpu: {usage}, ram: {used}, updated_at, ... }
+ * realtimeHistory 需要: { time, cpu, ram, ram_total, disk, disk_total, ... }
+ */
+function flattenRecentRecords(rawRecords) {
+    return rawRecords.map(function(r) {
+        return {
+            time: r.updated_at || r.time || '',
+            cpu: r.cpu && r.cpu.usage !== undefined ? r.cpu.usage : (r.cpu || null),
+            ram: r.ram && typeof r.ram === 'object' ? r.ram.used : (r.ram || null),
+            ram_total: r.ram && typeof r.ram === 'object' && r.ram.total !== undefined ? r.ram.total : (r.ram_total || null),
+            swap: r.swap && typeof r.swap === 'object' ? r.swap.used : (r.swap || null),
+            swap_total: r.swap && typeof r.swap === 'object' && r.swap.total !== undefined ? r.swap.total : (r.swap_total || null),
+            disk: r.disk && typeof r.disk === 'object' ? r.disk.used : (r.disk || null),
+            disk_total: r.disk && typeof r.disk === 'object' && r.disk.total !== undefined ? r.disk.total : (r.disk_total || null),
+            load: r.load && typeof r.load === 'object' ? r.load.load1 : (r.load || null),
+            load5: r.load && typeof r.load === 'object' ? r.load.load5 : (r.load5 || null),
+            load15: r.load && typeof r.load === 'object' ? r.load.load15 : (r.load15 || null),
+            net_in: r.network && typeof r.network === 'object' ? r.network.down : (r.net_in || null),
+            net_out: r.network && typeof r.network === 'object' ? r.network.up : (r.net_out || null),
+            net_total_up: r.network && typeof r.network === 'object' ? r.network.totalUp : (r.net_total_up || null),
+            net_total_down: r.network && typeof r.network === 'object' ? r.network.totalDown : (r.net_total_down || null),
+            process: r.process || null,
+            connections: r.connections && typeof r.connections === 'object' ? r.connections.tcp : (r.connections || null),
+            connections_udp: r.connections && typeof r.connections === 'object' ? r.connections.udp : (r.connections_udp || null),
+            gpu: r.gpu || null
+        };
+    });
+}
+
+/**
+ * 合并近期记录到 realtimeHistory（去重、排序、限600条）
+ */
+function mergeIntoRealtimeHistory(uuid, records) {
+    var existing = state.realtimeHistory[uuid] || [];
+    var timeSet = {};
+    existing.forEach(function(r) { if (r.time) timeSet[r.time] = true; });
+    var merged = existing.slice();
+    records.forEach(function(r) {
+        if (r.time && !timeSet[r.time]) {
+            merged.push(r);
+            timeSet[r.time] = true;
+        }
+    });
+    merged.sort(function(a, b) { return new Date(a.time).getTime() - new Date(b.time).getTime(); });
+    if (merged.length > 600) merged = merged.slice(merged.length - 600);
+    state.realtimeHistory[uuid] = merged;
+    state.historyDataHours[uuid] = 0;
+}
+
+/**
+ * 加载最近记录（使用 /api/recent/ REST API，与 komari-web 一致）
  * @param {string} uuid - 节点 UUID
  * @param {string|null} cacheKey - 缓存键
+ * @param {number} [fallbackHours] - 备用小时数
  * @returns {Promise}
  */
-export function loadRecentRecordsFallback(uuid, cacheKey) {
-    return state.rpc.call(RPC_METHODS.getClientRecentRecords, { uuid: uuid })
-        .then(function(result) {
-            var records = Array.isArray(result) ? result : (result && result.records ? result.records : null);
-            if (records && records.length > 0) {
-                var trimmedRecords = trimRecords(records, 600);
-                if (cacheKey) {
-                    state.historyData[uuid] = trimmedRecords;
-                    setCachedData(historyCache, cacheKey, trimmedRecords);
-                } else {
-                    state.realtimeHistory[uuid] = trimmedRecords;
-                }
-            }
-        })
-        .catch(function(err) {
-            console.warn('public:getClientRecentRecords failed, falling back:', err);
-            return state.rpc.call(RPC_METHODS.getClientRecentRecordsFallback, { uuid: uuid })
-                .then(function(fallback) {
-                    if (fallback && fallback.records) {
-                        var trimmedRecords = trimRecords(fallback.records, 600);
-                        if (cacheKey) {
-                            state.historyData[uuid] = trimmedRecords;
-                            setCachedData(historyCache, cacheKey, trimmedRecords);
-                        } else {
-                            state.realtimeHistory[uuid] = trimmedRecords;
-                        }
+export function loadRecentRecordsFallback(uuid, cacheKey, fallbackHours) {
+    // 优先使用 /api/recent/ REST API（与 komari-web 一致）
+    return fetch(getApiBase() + '/api/recent/' + encodeURIComponent(uuid), {
+        credentials: 'include'
+    })
+    .then(function(res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+    })
+    .then(function(data) {
+        var rawRecords = (data && data.data) ? data.data : [];
+        if (!Array.isArray(rawRecords) || rawRecords.length === 0) {
+            throw new Error('No recent records from /api/recent/');
+        }
+        // 保留最近 150 条（与 komari-web length=30*5 一致）
+        rawRecords = rawRecords.slice(-150);
+        var records = flattenRecentRecords(rawRecords);
+
+        if (cacheKey) {
+            state.historyData[uuid] = records;
+            if (fallbackHours !== undefined) state.historyDataHours[uuid] = fallbackHours;
+            setCachedData(historyCache, cacheKey, records);
+        } else {
+            mergeIntoRealtimeHistory(uuid, records);
+        }
+    })
+    .catch(function(err) {
+        // /api/recent/ 失败，fallback 到 RPC
+        console.warn('/api/recent/ failed, falling back to RPC:', err);
+        return state.rpc.call(RPC_METHODS.getClientRecentRecords, { uuid: uuid })
+            .then(function(result) {
+                var records = Array.isArray(result) ? result : (result && result.records ? result.records : null);
+                if (records && records.length > 0) {
+                    var trimmedRecords = trimRecords(records, 600);
+                    if (cacheKey) {
+                        state.historyData[uuid] = trimmedRecords;
+                        if (fallbackHours !== undefined) state.historyDataHours[uuid] = fallbackHours;
+                        setCachedData(historyCache, cacheKey, trimmedRecords);
+                    } else {
+                        mergeIntoRealtimeHistory(uuid, trimmedRecords);
                     }
-                });
-        })
-        .catch(function() {});
+                }
+            });
+    })
+    .catch(function(err) {
+        console.warn('RPC getClientRecentRecords failed, trying fallback:', err);
+        return state.rpc.call(RPC_METHODS.getClientRecentRecordsFallback, { uuid: uuid })
+            .then(function(fallback) {
+                var records = fallback && fallback.records ? fallback.records : [];
+                if (records.length > 0) {
+                    var trimmedRecords = trimRecords(records, 600);
+                    if (cacheKey) {
+                        state.historyData[uuid] = trimmedRecords;
+                        if (fallbackHours !== undefined) state.historyDataHours[uuid] = fallbackHours;
+                        setCachedData(historyCache, cacheKey, trimmedRecords);
+                    } else {
+                        mergeIntoRealtimeHistory(uuid, trimmedRecords);
+                    }
+                }
+            });
+    })
+    .catch(function() {});
 }
 
 /**
@@ -98,19 +182,18 @@ export function loadRecentRecordsFallback(uuid, cacheKey) {
  * @returns {Promise}
  */
 export function loadNodeHistory(uuid, hours) {
-    hours = hours || 24;
-
+    // 实时模式：始终加载近期记录作为基础，与 WebSocket 数据合并形成滚动窗口
     if (hours === 0) {
-        if (!state.realtimeHistory[uuid] || state.realtimeHistory[uuid].length === 0) {
-            return loadRecentRecordsFallback(uuid, null);
-        }
-        return Promise.resolve();
+        return loadRecentRecordsFallback(uuid, null, 0);
     }
+
+    hours = hours || 24;
 
     var cacheKey = uuid + '-' + hours;
     var cachedData = getCachedData(historyCache, cacheKey);
     if (cachedData) {
         state.historyData[uuid] = cachedData;
+        state.historyDataHours[uuid] = hours;
         return Promise.resolve();
     }
 
@@ -180,15 +263,35 @@ export function loadNodeHistory(uuid, hours) {
             return new Date(a.time) - new Date(b.time);
         });
 
+        // 前向填充 disk_total 和 ram_total
+        // queryMetrics 降采样后各指标时间点不一定对齐，
+        // 导致部分记录缺失 disk_total/ram_total，使百分比计算失败
+        var lastDiskTotal = 0;
+        var lastRamTotal = 0;
+        for (var ri = 0; ri < records.length; ri++) {
+            var rec = records[ri];
+            if (rec.disk_total && rec.disk_total > 0) {
+                lastDiskTotal = rec.disk_total;
+            } else if (lastDiskTotal > 0) {
+                rec.disk_total = lastDiskTotal;
+            }
+            if (rec.ram_total && rec.ram_total > 0) {
+                lastRamTotal = rec.ram_total;
+            } else if (lastRamTotal > 0) {
+                rec.ram_total = lastRamTotal;
+            }
+        }
+
         if (records.length > 0) {
             state.historyData[uuid] = records;
+            state.historyDataHours[uuid] = hours;
             setCachedData(historyCache, cacheKey, records);
         } else {
-            return loadRecentRecordsFallback(uuid, cacheKey);
+            return loadRecentRecordsFallback(uuid, cacheKey, hours);
         }
     }).catch(function(err) {
         console.warn('queryMetrics failed, falling back:', err);
-        return loadRecentRecordsFallback(uuid, cacheKey);
+        return loadRecentRecordsFallback(uuid, cacheKey, hours);
     });
 }
 
@@ -199,12 +302,13 @@ export function loadNodeHistory(uuid, hours) {
  * @returns {Promise}
  */
 export function loadPingHistory(uuid, hours) {
-    hours = hours || 4;
+    if (hours === 0) hours = 4; // 延迟图表不支持实时模式，默认 4h
 
     var cacheKey = uuid + '-' + hours;
     var cachedData = getCachedData(pingCache, cacheKey);
     if (cachedData) {
         state.pingData[uuid] = cachedData;
+        state.pingDataHours[uuid] = hours;
         return Promise.resolve();
     }
 
@@ -293,6 +397,7 @@ export function loadPingHistory(uuid, hours) {
             };
 
             state.pingData[uuid] = pingData;
+            state.pingDataHours[uuid] = hours;
             setCachedData(pingCache, cacheKey, pingData);
         })
         .catch(function(err) {

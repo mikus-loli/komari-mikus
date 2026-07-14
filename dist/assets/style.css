@@ -2701,6 +2701,68 @@ body.view-table .stat-value {
     animation: pulse 1.5s ease-in-out infinite;
 }
 
+/* ==================== 图表加载覆盖层 ==================== */
+
+.chart-section.loading,
+.latency-chart-container.loading {
+    position: relative;
+}
+
+.chart-section.loading::after,
+.latency-chart-container.loading::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(var(--bg-card-rgb), 0.6);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    border-radius: var(--radius-md);
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: chartLoadingFadeIn 0.2s ease forwards;
+}
+
+.chart-section.loading::before,
+.latency-chart-container.loading::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 24px;
+    height: 24px;
+    border: 2.5px solid rgba(var(--border-color-rgb), 0.3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    z-index: 6;
+    animation: chartSpin 0.6s linear infinite;
+}
+
+@keyframes chartSpin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+    from { transform: translate(-50%, -50%) rotate(0deg); }
+}
+
+@keyframes chartLoadingFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .chart-section.loading::before,
+    .latency-chart-container.loading::before {
+        animation: none;
+        border-top-color: var(--accent);
+        border-right-color: var(--accent);
+    }
+
+    .chart-section.loading::after,
+    .latency-chart-container.loading::after {
+        animation: none;
+    }
+}
+
 /* ==================== 改进的图表 Tooltip 样式 ==================== */
 /* 参考 PurCarte 的毛玻璃效果和结构化设计 */
 

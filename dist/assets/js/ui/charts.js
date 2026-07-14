@@ -24,9 +24,16 @@ export function drawLatencyChart(canvasId, records, tasks) {
         var ctx = canvas.getContext('2d');
         var dpr = window.devicePixelRatio || 1;
         var rect = canvas.getBoundingClientRect();
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
-        ctx.scale(dpr, dpr);
+        var targetW = Math.round(rect.width * dpr);
+        var targetH = Math.round(rect.height * dpr);
+
+        if (canvas.width !== targetW || canvas.height !== targetH) {
+            canvas.width = targetW;
+            canvas.height = targetH;
+            ctx.scale(dpr, dpr);
+        } else {
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
         ctx.clearRect(0, 0, rect.width, rect.height);
 
         var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -200,9 +207,17 @@ export function renderChartByConfig(config, records, hours) {
     var ctx = canvas.getContext('2d');
     var dpr = window.devicePixelRatio || 1;
     var rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
+    var targetW = Math.round(rect.width * dpr);
+    var targetH = Math.round(rect.height * dpr);
+
+    // 仅在尺寸变化时才重设 Canvas（避免不必要的上下文重置）
+    if (canvas.width !== targetW || canvas.height !== targetH) {
+        canvas.width = targetW;
+        canvas.height = targetH;
+        ctx.scale(dpr, dpr);
+    } else {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
 
     var w = rect.width;
     var h = rect.height;
@@ -221,12 +236,11 @@ export function renderChartByConfig(config, records, hours) {
     ctx.fillStyle = bgColor;
     ctx.fillRect(padding.left, padding.top, chartW, chartH);
 
-    // 绘制网格和Y轴
+    // 绘制网格线（批量路径，减少 draw call）
+    ctx.beginPath();
     ctx.strokeStyle = gridColor;
     ctx.lineWidth = 1;
-    ctx.font = '11px ' + getCachedFontFamily();
-    ctx.fillStyle = textColor;
-    ctx.textAlign = 'right';
+    ctx.setLineDash([4, 4]);
 
     var yAxisDomain = config.yAxisDomain;
     var yTicks = 4;
@@ -283,13 +297,18 @@ export function renderChartByConfig(config, records, hours) {
 
     for (var i = 0; i <= yTicks; i++) {
         var y = padding.top + (chartH / yTicks) * i;
-        ctx.beginPath();
-        ctx.setLineDash([4, 4]);
         ctx.moveTo(padding.left, y);
         ctx.lineTo(w - padding.right, y);
-        ctx.stroke();
-        ctx.setLineDash([]);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
 
+    // 绘制 Y 轴标签
+    ctx.font = '11px ' + getCachedFontFamily();
+    ctx.fillStyle = textColor;
+    ctx.textAlign = 'right';
+    for (var i = 0; i <= yTicks; i++) {
+        var y = padding.top + (chartH / yTicks) * i;
         var val = maxVal - (maxVal - minVal) * (i / yTicks);
         var yLabel = config.yAxisFormatter ? config.yAxisFormatter(val, maxVal) : val.toFixed(0);
         ctx.fillText(yLabel, padding.left - 8, y + 4);
@@ -321,8 +340,7 @@ export function renderChartByConfig(config, records, hours) {
         } else {
             valueExtractor = config.valueFn;
         }
-        var downsampled = lttbDownsampleRecords(records, DOWNSAMPLE_THRESHOLD, valueExtractor);
-        renderRecords = downsampled.map(function(d) { return d.data; });
+        renderRecords = lttbDownsampleRecords(records, DOWNSAMPLE_THRESHOLD, valueExtractor);
     }
 
     // 绘制数据
@@ -363,12 +381,15 @@ export function renderChartByConfig(config, records, hours) {
         hours: hours
     };
 
-    canvas.onmousemove = createMouseMoveHandler(canvas);
-    canvas.onmouseleave = createHideHandler(canvas);
-
-    canvas.ontouchmove = createTouchMoveHandler(canvas);
-    canvas.ontouchend = createHideHandler(canvas);
-    canvas.ontouchcancel = createHideHandler(canvas);
+    // 仅首次绑定事件（避免重复创建闭包）
+    if (!canvas._chartEventsBound) {
+        canvas._chartEventsBound = true;
+        canvas.onmousemove = createMouseMoveHandler(canvas);
+        canvas.onmouseleave = createHideHandler(canvas);
+        canvas.ontouchmove = createTouchMoveHandler(canvas);
+        canvas.ontouchend = createHideHandler(canvas);
+        canvas.ontouchcancel = createHideHandler(canvas);
+    }
 }
 
 /**
@@ -376,47 +397,60 @@ export function renderChartByConfig(config, records, hours) {
  */
 function drawSmoothAreaLine(ctx, values, color, padding, chartW, chartH, maxVal, minVal, fill) {
     var points = [];
+    var range = maxVal - minVal || 1;
+    var stepX = chartW / Math.max(values.length - 1, 1);
+    var baseY = padding.top + chartH;
+
     for (var j = 0; j < values.length; j++) {
         if (values[j] === null || values[j] === undefined || isNaN(values[j])) continue;
-        var x = padding.left + (j / Math.max(values.length - 1, 1)) * chartW;
-        var normalized = (values[j] - minVal) / (maxVal - minVal);
-        normalized = Math.max(0, Math.min(1, normalized));
-        var y = padding.top + chartH - normalized * chartH;
-        points.push({ x: x, y: y, value: values[j] });
+        var x = padding.left + j * stepX;
+        var normalized = Math.max(0, Math.min(1, (values[j] - minVal) / range));
+        var y = baseY - normalized * chartH;
+        points.push(x, y);
     }
 
-    if (points.length > 1) {
-        ctx.beginPath();
-        ctx.moveTo(points[0].x, points[0].y);
+    var pointCount = points.length >> 1;
+    if (pointCount < 2) return points;
 
-        // 使用贝塞尔曲线绘制平滑曲线
-        for (var k = 1; k < points.length; k++) {
-            var prev = points[k - 1];
-            var curr = points[k];
-            var cpx = (prev.x + curr.x) / 2;
-            ctx.quadraticCurveTo(prev.x + (curr.x - prev.x) * 0.5, prev.y, cpx, (prev.y + curr.y) / 2);
-            ctx.quadraticCurveTo(cpx, curr.y, curr.x, curr.y);
+    ctx.beginPath();
+    ctx.moveTo(points[0], points[1]);
+
+    // 密集数据（>50点）用 lineTo，稀疏数据用 quadraticCurveTo
+    if (pointCount > 50) {
+        for (var k = 2; k < points.length; k += 2) {
+            ctx.lineTo(points[k], points[k + 1]);
         }
-
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 2.5;
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
-        ctx.stroke();
-
-        // 填充渐变（仅用于 area 类型）
-        if (fill) {
-            ctx.lineTo(points[points.length - 1].x, padding.top + chartH);
-            ctx.lineTo(points[0].x, padding.top + chartH);
-            ctx.closePath();
-
-            var gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
-            gradient.addColorStop(0, color + '40');
-            gradient.addColorStop(0.5, color + '15');
-            gradient.addColorStop(1, color + '02');
-            ctx.fillStyle = gradient;
-            ctx.fill();
+    } else {
+        for (var k = 2; k < points.length; k += 2) {
+            var prevX = points[k - 2];
+            var prevY = points[k - 1];
+            var currX = points[k];
+            var currY = points[k + 1];
+            var midX = (prevX + currX) * 0.5;
+            ctx.quadraticCurveTo(midX, prevY, midX, (prevY + currY) * 0.5);
+            ctx.quadraticCurveTo(midX, currY, currX, currY);
         }
+    }
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // 填充渐变（仅用于 area 类型）
+    if (fill) {
+        var lastIdx = points.length - 2;
+        ctx.lineTo(points[lastIdx], baseY);
+        ctx.lineTo(points[0], baseY);
+        ctx.closePath();
+
+        var gradient = ctx.createLinearGradient(0, padding.top, 0, baseY);
+        gradient.addColorStop(0, color + '40');
+        gradient.addColorStop(0.5, color + '15');
+        gradient.addColorStop(1, color + '02');
+        ctx.fillStyle = gradient;
+        ctx.fill();
     }
 
     return points;
@@ -431,9 +465,16 @@ function drawEmptyChart(canvas) {
     var ctx = canvas.getContext('2d');
     var dpr = window.devicePixelRatio || 1;
     var rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
+    var targetW = Math.round(rect.width * dpr);
+    var targetH = Math.round(rect.height * dpr);
+
+    if (canvas.width !== targetW || canvas.height !== targetH) {
+        canvas.width = targetW;
+        canvas.height = targetH;
+        ctx.scale(dpr, dpr);
+    } else {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
     ctx.clearRect(0, 0, rect.width, rect.height);
 
     var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -447,7 +488,10 @@ function drawEmptyChart(canvas) {
  * 重构后的 drawCharts 函数 - 使用配置驱动
  */
 export function drawCharts(uuid) {
-    var hours = timeRangeToHours(state.historyTimeRange);
+    // 使用数据加载时存储的 hours，确保时间格式与数据一致
+    var hours = state.historyDataHours[uuid] !== undefined
+        ? state.historyDataHours[uuid]
+        : timeRangeToHours(state.historyTimeRange);
     var records;
 
     if (hours === 0) {
@@ -521,9 +565,16 @@ export function drawMultiTaskPingChart(canvas, records, tasks, options) {
     var ctx = canvas.getContext('2d');
     var dpr = window.devicePixelRatio || 1;
     var rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
+    var targetW = Math.round(rect.width * dpr);
+    var targetH = Math.round(rect.height * dpr);
+
+    if (canvas.width !== targetW || canvas.height !== targetH) {
+        canvas.width = targetW;
+        canvas.height = targetH;
+        ctx.scale(dpr, dpr);
+    } else {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
 
     var w = rect.width;
     var h = rect.height;
@@ -618,19 +669,23 @@ export function drawMultiTaskPingChart(canvas, records, tasks, options) {
         step = (maxVal - minVal) / tickCount;
     }
 
+    // 批量绘制网格线
+    ctx.beginPath();
     ctx.strokeStyle = gridColor;
     ctx.lineWidth = 1;
+    for (var i = 0; i <= tickCount; i++) {
+        var y = padding.top + (chartH / tickCount) * i;
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(w - padding.right, y);
+    }
+    ctx.stroke();
+
+    // Y 轴标签
     ctx.font = '10px ' + getCachedFontFamily();
     ctx.fillStyle = textColor;
     ctx.textAlign = 'right';
-
     for (var i = 0; i <= tickCount; i++) {
         var y = padding.top + (chartH / tickCount) * i;
-        ctx.beginPath();
-        ctx.moveTo(padding.left, y);
-        ctx.lineTo(w - padding.right, y);
-        ctx.stroke();
-        // Y轴刻度从 minVal 到 maxVal
         var val = maxVal - (maxVal - minVal) * (i / tickCount);
         var yLabel;
         if (maxVal >= 1000) {
@@ -688,8 +743,7 @@ export function drawMultiTaskPingChart(canvas, records, tasks, options) {
 
         // LTTB 降采样
         if (smoothedRecs.length > 200) {
-            var downsampled = lttbDownsampleRecords(smoothedRecs, 200, function(r) { return r.value; });
-            smoothedRecs = downsampled.map(function(d) { return d.data; });
+            smoothedRecs = lttbDownsampleRecords(smoothedRecs, 200, function(r) { return r.value; });
         }
 
         var points = [];
@@ -763,7 +817,9 @@ export function drawMultiTaskPingChart(canvas, records, tasks, options) {
     var firstTaskRecs = taskRecords[taskIds[0]] || records;
 
     // 只显示首尾时间标签（参考 PurCarte 实现）
-    var hours = timeRangeToHours(state.pingTimeRange);
+    var pingHours = state.pingDataHours[state.selectedNodeUuid] !== undefined
+        ? state.pingDataHours[state.selectedNodeUuid]
+        : timeRangeToHours(state.pingTimeRange);
     var dataLength = firstTaskRecs.length;
 
     for (var ti = 0; ti <= timeLabels; ti++) {
@@ -774,7 +830,7 @@ export function drawMultiTaskPingChart(canvas, records, tasks, options) {
         // 只在首尾显示时间标签，其他位置为空
         var timeText = '';
         if (idx === 0 || idx === dataLength - 1) {
-            timeText = formatTimeLabel(time, hours);
+            timeText = formatTimeLabel(time, pingHours);
         }
 
         ctx.fillText(timeText, x, h - timeLabelBottomOffset);
@@ -792,14 +848,18 @@ export function drawMultiTaskPingChart(canvas, records, tasks, options) {
         taskMap: taskMap,
         minVal: minVal,
         maxVal: maxVal,
-        padding: padding
+        padding: padding,
+        hours: pingHours
     };
 
-    canvas.onmousemove = createMouseMoveHandler(canvas);
-    canvas.onmouseleave = createHideHandler(canvas);
-    canvas.ontouchmove = createTouchMoveHandler(canvas);
-    canvas.ontouchend = createHideHandler(canvas);
-    canvas.ontouchcancel = createHideHandler(canvas);
+    if (!canvas._chartEventsBound) {
+        canvas._chartEventsBound = true;
+        canvas.onmousemove = createMouseMoveHandler(canvas);
+        canvas.onmouseleave = createHideHandler(canvas);
+        canvas.ontouchmove = createTouchMoveHandler(canvas);
+        canvas.ontouchend = createHideHandler(canvas);
+        canvas.ontouchcancel = createHideHandler(canvas);
+    }
 }
 
 function drawPingChart(canvasId, records, tasks) {
@@ -952,10 +1012,14 @@ function showChartTooltip(e, canvas, chartData) {
 
     var time = new Date(record.time);
 
-    // 智能时间格式化：根据时间范围选择合适的显示格式
-    var hours = chartData.hours || timeRangeToHours(state.historyTimeRange);
+    // 智能时间格式化：优先使用数据加载时存储的 hours
+    var hours = chartData.hours !== undefined
+        ? chartData.hours
+        : timeRangeToHours(state.historyTimeRange);
     if (chartData.type === 'ping') {
-        hours = timeRangeToHours(state.pingTimeRange);
+        hours = chartData.hours !== undefined
+            ? chartData.hours
+            : timeRangeToHours(state.pingTimeRange);
     }
 
     var timeStr = formatTooltipTime(time, hours);
@@ -1122,16 +1186,23 @@ export function createMouseMoveHandler(canvas) {
 
 // ==================== 基础折线图 ====================
 
-export function drawLineChart(canvasId, records, valueFn, minVal, maxVal, color, label) {
+export function drawLineChart(canvasId, records, valueFn, minVal, maxVal, color, label, hours) {
     var canvas = document.getElementById(canvasId);
     if (!canvas) return;
 
     var ctx = canvas.getContext('2d');
     var dpr = window.devicePixelRatio || 1;
     var rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
+    var targetW = Math.round(rect.width * dpr);
+    var targetH = Math.round(rect.height * dpr);
+
+    if (canvas.width !== targetW || canvas.height !== targetH) {
+        canvas.width = targetW;
+        canvas.height = targetH;
+        ctx.scale(dpr, dpr);
+    } else {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
 
     var w = rect.width;
     var h = rect.height;
@@ -1149,46 +1220,61 @@ export function drawLineChart(canvasId, records, valueFn, minVal, maxVal, color,
     ctx.fillStyle = bgColor;
     ctx.fillRect(padding.left, padding.top, chartW, chartH);
 
+    // 批量绘制网格线
+    ctx.beginPath();
     ctx.strokeStyle = gridColor;
     ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    for (var i = 0; i <= 4; i++) {
+        var y = padding.top + (chartH / 4) * i;
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(w - padding.right, y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
     ctx.font = '11px ' + getCachedFontFamily();
     ctx.fillStyle = textColor;
     ctx.textAlign = 'right';
-
     for (var i = 0; i <= 4; i++) {
         var y = padding.top + (chartH / 4) * i;
-        ctx.beginPath();
-        ctx.setLineDash([4, 4]);
-        ctx.moveTo(padding.left, y);
-        ctx.lineTo(w - padding.right, y);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
         var val = maxVal - (maxVal - minVal) * (i / 4);
         ctx.fillText(val.toFixed(0) + '%', padding.left - 8, y + 4);
     }
 
-    var values = records.map(valueFn);
+    var range = maxVal - minVal || 1;
+    var stepX = chartW / Math.max(records.length - 1, 1);
+    var baseY = padding.top + chartH;
+
     var validPoints = [];
-    for (var j = 0; j < values.length; j++) {
-        if (values[j] === null || values[j] === undefined || isNaN(values[j])) continue;
-        var x = padding.left + (j / Math.max(values.length - 1, 1)) * chartW;
-        var normalized = (values[j] - minVal) / (maxVal - minVal);
-        normalized = Math.max(0, Math.min(1, normalized));
-        var y = padding.top + chartH - normalized * chartH;
-        validPoints.push({ x: x, y: y, value: values[j] });
+    for (var j = 0; j < records.length; j++) {
+        var v = valueFn(records[j]);
+        if (v === null || v === undefined || isNaN(v)) continue;
+        var x = padding.left + j * stepX;
+        var normalized = Math.max(0, Math.min(1, (v - minVal) / range));
+        var y = baseY - normalized * chartH;
+        validPoints.push(x, y);
     }
 
-    if (validPoints.length > 1) {
+    var pointCount = validPoints.length >> 1;
+    if (pointCount > 1) {
         ctx.beginPath();
-        ctx.moveTo(validPoints[0].x, validPoints[0].y);
-        
-        for (var k = 1; k < validPoints.length; k++) {
-            var prev = validPoints[k - 1];
-            var curr = validPoints[k];
-            var cpx = (prev.x + curr.x) / 2;
-            ctx.quadraticCurveTo(prev.x + (curr.x - prev.x) * 0.5, prev.y, cpx, (prev.y + curr.y) / 2);
-            ctx.quadraticCurveTo(cpx, curr.y, curr.x, curr.y);
+        ctx.moveTo(validPoints[0], validPoints[1]);
+
+        if (pointCount > 50) {
+            for (var k = 2; k < validPoints.length; k += 2) {
+                ctx.lineTo(validPoints[k], validPoints[k + 1]);
+            }
+        } else {
+            for (var k = 2; k < validPoints.length; k += 2) {
+                var prevX = validPoints[k - 2];
+                var prevY = validPoints[k - 1];
+                var currX = validPoints[k];
+                var currY = validPoints[k + 1];
+                var midX = (prevX + currX) * 0.5;
+                ctx.quadraticCurveTo(midX, prevY, midX, (prevY + currY) * 0.5);
+                ctx.quadraticCurveTo(midX, currY, currX, currY);
+            }
         }
 
         ctx.strokeStyle = color;
@@ -1197,29 +1283,33 @@ export function drawLineChart(canvasId, records, valueFn, minVal, maxVal, color,
         ctx.lineCap = 'round';
         ctx.stroke();
 
-        ctx.lineTo(validPoints[validPoints.length - 1].x, padding.top + chartH);
-        ctx.lineTo(validPoints[0].x, padding.top + chartH);
+        var lastIdx = validPoints.length - 2;
+        ctx.lineTo(validPoints[lastIdx], baseY);
+        ctx.lineTo(validPoints[0], baseY);
         ctx.closePath();
 
-        var gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
+        var gradient = ctx.createLinearGradient(0, padding.top, 0, baseY);
         gradient.addColorStop(0, color + '40');
         gradient.addColorStop(0.5, color + '15');
         gradient.addColorStop(1, color + '02');
         ctx.fillStyle = gradient;
         ctx.fill();
 
-        validPoints.forEach(function(point, idx) {
-            if (idx % Math.ceil(validPoints.length / 20) === 0 || idx === validPoints.length - 1) {
+        var dotInterval = Math.ceil(pointCount / 20);
+        for (var di = 0; di < pointCount; di++) {
+            if (di % dotInterval === 0 || di === pointCount - 1) {
+                var px = validPoints[di * 2];
+                var py = validPoints[di * 2 + 1];
                 ctx.beginPath();
-                ctx.arc(point.x, point.y, 3, 0, Math.PI * 2);
+                ctx.arc(px, py, 3, 0, Math.PI * 2);
                 ctx.fillStyle = color;
                 ctx.fill();
                 ctx.beginPath();
-                ctx.arc(point.x, point.y, 1.5, 0, Math.PI * 2);
+                ctx.arc(px, py, 1.5, 0, Math.PI * 2);
                 ctx.fillStyle = isDark ? '#1a1a2e' : '#fff';
                 ctx.fill();
             }
-        });
+        }
     }
 
     ctx.fillStyle = textColor;
@@ -1228,7 +1318,7 @@ export function drawLineChart(canvasId, records, valueFn, minVal, maxVal, color,
     var timeLabels = Math.min(6, Math.floor(chartW / 60));
 
     // 只显示首尾时间标签（参考 PurCarte 实现）
-    var hours = timeRangeToHours(state.historyTimeRange);
+    var renderHours = hours !== undefined ? hours : timeRangeToHours(state.historyTimeRange);
     var dataLength = records.length;
 
     for (var ti = 0; ti <= timeLabels; ti++) {
@@ -1239,7 +1329,7 @@ export function drawLineChart(canvasId, records, valueFn, minVal, maxVal, color,
         // 只在首尾显示时间标签，其他位置为空
         var timeText = '';
         if (idx === 0 || idx === dataLength - 1) {
-            timeText = formatTimeLabel(time, hours);
+            timeText = formatTimeLabel(time, renderHours);
         }
 
         ctx.fillText(timeText, x, h - 10);
@@ -1252,35 +1342,45 @@ export function drawLineChart(canvasId, records, valueFn, minVal, maxVal, color,
         label: label,
         padding: padding,
         validPoints: validPoints,
-        color: color
+        color: color,
+        hours: renderHours
     };
 
-    canvas.onmousemove = function(e) {
-        showChartTooltip(e, canvas, canvas._chartData);
-    };
-    canvas.onmouseleave = createHideHandler(canvas);
-    
-    canvas.ontouchmove = function(e) {
-        if (e.touches.length === 1) {
-            var touch = e.touches[0];
-            showChartTooltip({ clientX: touch.clientX, clientY: touch.clientY }, canvas, canvas._chartData);
-        }
-    };
-    canvas.ontouchend = createHideHandler(canvas);
+    if (!canvas._chartEventsBound) {
+        canvas._chartEventsBound = true;
+        canvas.onmousemove = function(e) {
+            showChartTooltip(e, canvas, canvas._chartData);
+        };
+        canvas.onmouseleave = createHideHandler(canvas);
+        canvas.ontouchmove = function(e) {
+            if (e.touches.length === 1) {
+                var touch = e.touches[0];
+                showChartTooltip({ clientX: touch.clientX, clientY: touch.clientY }, canvas, canvas._chartData);
+            }
+        };
+        canvas.ontouchend = createHideHandler(canvas);
+    }
 }
 
 // ==================== 网络流量图 ====================
 
-export function drawNetworkChart(canvasId, records) {
+export function drawNetworkChart(canvasId, records, hours) {
     var canvas = document.getElementById(canvasId);
     if (!canvas) return;
 
     var ctx = canvas.getContext('2d');
     var dpr = window.devicePixelRatio || 1;
     var rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
+    var targetW = Math.round(rect.width * dpr);
+    var targetH = Math.round(rect.height * dpr);
+
+    if (canvas.width !== targetW || canvas.height !== targetH) {
+        canvas.width = targetW;
+        canvas.height = targetH;
+        ctx.scale(dpr, dpr);
+    } else {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
 
     var w = rect.width;
     var h = rect.height;
@@ -1303,68 +1403,85 @@ export function drawNetworkChart(canvasId, records) {
     var maxVal = Math.max(Math.max.apply(null, upValues), Math.max.apply(null, downValues), 1024);
     maxVal = Math.ceil(maxVal / 1024) * 1024;
 
+    // 批量绘制网格线
+    ctx.beginPath();
     ctx.strokeStyle = gridColor;
     ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    for (var i = 0; i <= 4; i++) {
+        var y = padding.top + (chartH / 4) * i;
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(w - padding.right, y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
     ctx.font = '11px ' + getCachedFontFamily();
     ctx.fillStyle = textColor;
     ctx.textAlign = 'right';
-
     for (var i = 0; i <= 4; i++) {
         var y = padding.top + (chartH / 4) * i;
-        ctx.beginPath();
-        ctx.setLineDash([4, 4]);
-        ctx.moveTo(padding.left, y);
-        ctx.lineTo(w - padding.right, y);
-        ctx.stroke();
-        ctx.setLineDash([]);
         ctx.fillText(formatSpeed(maxVal * (1 - i / 4)), padding.left - 8, y + 4);
     }
 
-    function drawSmoothLine(values, color) {
+    var baseY = padding.top + chartH;
+    var stepX = chartW / Math.max(records.length - 1, 1);
+
+    function drawNetLine(values, color) {
         var points = [];
         for (var j = 0; j < values.length; j++) {
             if (values[j] === null || values[j] === undefined || isNaN(values[j])) continue;
-            var x = padding.left + (j / Math.max(values.length - 1, 1)) * chartW;
-            var normalized = values[j] / maxVal;
-            normalized = Math.max(0, Math.min(1, normalized));
-            var y = padding.top + chartH - normalized * chartH;
-            points.push({ x: x, y: y, value: values[j] });
+            var x = padding.left + j * stepX;
+            var normalized = Math.max(0, Math.min(1, values[j] / maxVal));
+            var y = baseY - normalized * chartH;
+            points.push(x, y);
         }
 
-        if (points.length > 1) {
-            ctx.beginPath();
-            ctx.moveTo(points[0].x, points[0].y);
-            
-            for (var k = 1; k < points.length; k++) {
-                var prev = points[k - 1];
-                var curr = points[k];
-                var cpx = (prev.x + curr.x) / 2;
-                ctx.quadraticCurveTo(prev.x + (curr.x - prev.x) * 0.5, prev.y, cpx, (prev.y + curr.y) / 2);
-                ctx.quadraticCurveTo(cpx, curr.y, curr.x, curr.y);
+        var pointCount = points.length >> 1;
+        if (pointCount < 2) return points;
+
+        ctx.beginPath();
+        ctx.moveTo(points[0], points[1]);
+
+        if (pointCount > 50) {
+            for (var k = 2; k < points.length; k += 2) {
+                ctx.lineTo(points[k], points[k + 1]);
             }
-
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 2.5;
-            ctx.lineJoin = 'round';
-            ctx.lineCap = 'round';
-            ctx.stroke();
-
-            ctx.lineTo(points[points.length - 1].x, padding.top + chartH);
-            ctx.lineTo(points[0].x, padding.top + chartH);
-            ctx.closePath();
-
-            var gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
-            gradient.addColorStop(0, color + '35');
-            gradient.addColorStop(0.5, color + '12');
-            gradient.addColorStop(1, color + '02');
-            ctx.fillStyle = gradient;
-            ctx.fill();
+        } else {
+            for (var k = 2; k < points.length; k += 2) {
+                var prevX = points[k - 2];
+                var prevY = points[k - 1];
+                var currX = points[k];
+                var currY = points[k + 1];
+                var midX = (prevX + currX) * 0.5;
+                ctx.quadraticCurveTo(midX, prevY, midX, (prevY + currY) * 0.5);
+                ctx.quadraticCurveTo(midX, currY, currX, currY);
+            }
         }
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.stroke();
+
+        var lastIdx = points.length - 2;
+        ctx.lineTo(points[lastIdx], baseY);
+        ctx.lineTo(points[0], baseY);
+        ctx.closePath();
+
+        var gradient = ctx.createLinearGradient(0, padding.top, 0, baseY);
+        gradient.addColorStop(0, color + '35');
+        gradient.addColorStop(0.5, color + '12');
+        gradient.addColorStop(1, color + '02');
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
         return points;
     }
 
-    var upPoints = drawSmoothLine(upValues, '#4caf7d');
-    var downPoints = drawSmoothLine(downValues, '#5c9ced');
+    var upPoints = drawNetLine(upValues, '#4caf7d');
+    var downPoints = drawNetLine(downValues, '#5c9ced');
 
     ctx.fillStyle = textColor;
     ctx.textAlign = 'center';
@@ -1372,7 +1489,7 @@ export function drawNetworkChart(canvasId, records) {
     var timeLabels = Math.min(6, Math.floor(chartW / 60));
 
     // 只显示首尾时间标签（参考 PurCarte 实现）
-    var hours = timeRangeToHours(state.historyTimeRange);
+    var renderHours = hours !== undefined ? hours : timeRangeToHours(state.historyTimeRange);
     var dataLength = records.length;
 
     for (var ti = 0; ti <= timeLabels; ti++) {
@@ -1383,7 +1500,7 @@ export function drawNetworkChart(canvasId, records) {
         // 只在首尾显示时间标签，其他位置为空
         var timeText = '';
         if (idx === 0 || idx === dataLength - 1) {
-            timeText = formatTimeLabel(time, hours);
+            timeText = formatTimeLabel(time, renderHours);
         }
 
         ctx.fillText(timeText, x, h - 10);
@@ -1392,21 +1509,24 @@ export function drawNetworkChart(canvasId, records) {
     canvas._chartData = {
         type: 'network',
         records: records,
+        hours: renderHours,
         padding: padding,
         upPoints: upPoints,
         downPoints: downPoints
     };
 
-    canvas.onmousemove = function(e) {
-        showChartTooltip(e, canvas, canvas._chartData);
-    };
-    canvas.onmouseleave = createHideHandler(canvas);
-    
-    canvas.ontouchmove = function(e) {
-        if (e.touches.length === 1) {
-            var touch = e.touches[0];
-            showChartTooltip({ clientX: touch.clientX, clientY: touch.clientY }, canvas, canvas._chartData);
-        }
-    };
-    canvas.ontouchend = createHideHandler(canvas);
+    if (!canvas._chartEventsBound) {
+        canvas._chartEventsBound = true;
+        canvas.onmousemove = function(e) {
+            showChartTooltip(e, canvas, canvas._chartData);
+        };
+        canvas.onmouseleave = createHideHandler(canvas);
+        canvas.ontouchmove = function(e) {
+            if (e.touches.length === 1) {
+                var touch = e.touches[0];
+                showChartTooltip({ clientX: touch.clientX, clientY: touch.clientY }, canvas, canvas._chartData);
+            }
+        };
+        canvas.ontouchend = createHideHandler(canvas);
+    }
 }

@@ -108,9 +108,14 @@ export function bindEvents() {
                 if (state.selectedNodeUuid) {
                     var hours = timeRangeToHours(range);
 
+                    // 显示加载动画
+                    var chartSections = document.querySelectorAll('.modal-charts .chart-section');
+                    chartSections.forEach(function(section) {
+                        section.classList.add('loading');
+                    });
+
                     loadNodeHistory(state.selectedNodeUuid, hours).then(function () {
                         // 重置图表动画
-                        var chartSections = document.querySelectorAll('.modal-charts .chart-section');
                         chartSections.forEach(function(section) {
                             section.style.animation = 'none';
                             void section.offsetHeight;
@@ -118,8 +123,16 @@ export function bindEvents() {
                         });
 
                         drawCharts(state.selectedNodeUuid);
+
+                        // 隐藏加载动画
+                        chartSections.forEach(function(section) {
+                            section.classList.remove('loading');
+                        });
                     }).catch(function (err) {
                         console.error('加载历史数据失败:', err);
+                        chartSections.forEach(function(section) {
+                            section.classList.remove('loading');
+                        });
                     });
                 }
             });
@@ -147,6 +160,12 @@ export function bindEvents() {
                         delete state.chartsDrawn[state.selectedNodeUuid + '_latencyChart'];
                     }
 
+                    // 显示加载动画
+                    var latencyChartContainer = document.querySelector('.latency-chart-container');
+                    if (latencyChartContainer) {
+                        latencyChartContainer.classList.add('loading');
+                    }
+
                     var hours = timeRangeToHours(range);
                     loadPingHistory(state.selectedNodeUuid, hours).then(function () {
                         // 重置延迟页面动画
@@ -164,6 +183,16 @@ export function bindEvents() {
                         if (pingInfo && pingInfo.records && pingInfo.tasks) {
                             drawLatencyChart('latencyChart', pingInfo.records, pingInfo.tasks);
                             state.chartsDrawn[state.selectedNodeUuid + '_latencyChart'] = true;
+                        }
+
+                        // 隐藏加载动画
+                        if (latencyChartContainer) {
+                            latencyChartContainer.classList.remove('loading');
+                        }
+                    }).catch(function (err) {
+                        console.error('加载 Ping 数据失败:', err);
+                        if (latencyChartContainer) {
+                            latencyChartContainer.classList.remove('loading');
                         }
                     });
                 }
