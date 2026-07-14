@@ -64,6 +64,7 @@ export class RPC2Client {
 
         this.ws.onerror = function() {
             self.isConnected = false;
+            self.scheduleReconnect();
         };
     }
 
