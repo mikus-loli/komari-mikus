@@ -1272,64 +1272,91 @@
             return Promise.resolve();
         }
 
-        return state.rpc.call(RPC_METHODS.getRecordsByUUID, { uuid: uuid, hours: String(hours) })
-            .then(function(result) {
-                var records = [];
-                if (result) {
-                    if (Array.isArray(result)) {
-                        records = result;
-                    } else if (result.records) {
-                        if (Array.isArray(result.records)) {
-                            records = result.records;
-                        } else if (typeof result.records === 'object') {
-                            Object.keys(result.records).forEach(function(key) {
-                                if (Array.isArray(result.records[key])) {
-                                    records = records.concat(result.records[key]);
-                                }
-                            });
-                        }
+        // 使用 public:queryMetrics API 获取指标数据
+        var metricKeys = [
+            'cpu.usage', 'load.average',
+            'memory.used', 'memory.total', 'swap.used',
+            'disk.used', 'disk.total',
+            'net.in.rate', 'net.out.rate', 'net.total.down', 'net.total.up',
+            'process.count', 'connections.tcp', 'connections.udp'
+        ];
+
+        return state.rpc.call(RPC_METHODS.queryMetrics, {
+            metric_keys: metricKeys,
+            entity_id: uuid,
+            hours: hours,
+            downsample: true,
+            max_points: 600,
+            aggregation: 'avg',
+            fill_empty: false
+        }).then(function(result) {
+            // 将 series 数据转换为 records 格式
+            var recordsMap = {};
+            var series = result && result.series ? result.series : [];
+
+            series.forEach(function(s) {
+                var metricKey = s.metric_key || s.key;
+                var points = s.points || [];
+
+                points.forEach(function(point) {
+                    var time = point.time;
+                    if (!recordsMap[time]) {
+                        recordsMap[time] = { time: time };
                     }
-                }
-                if (records.length > 0) {
-                    var maxPoints = getMaxDataPoints(hours);
-                    var trimmedRecords = trimRecords(records, maxPoints);
-                    state.historyData[uuid] = trimmedRecords;
-                    setCachedData(historyCache, cacheKey, trimmedRecords);
-                    return;
-                }
-                return loadRecentRecordsFallback(uuid, cacheKey);
-            })
-            .catch(function(err) {
-                if (err && err.code !== 401) {
-                    console.warn('public:getRecordsByUUID failed, falling back:', err);
-                }
-                return state.rpc.call(RPC_METHODS.getRecordsByUUIDFallback, { uuid: uuid, type: 'load', hours: hours, maxCount: 4000 })
-                    .then(function(result) {
-                        var records = [];
-                        if (result && result.records) {
-                            if (Array.isArray(result.records)) {
-                                records = result.records;
-                            } else if (typeof result.records === 'object') {
-                                Object.keys(result.records).forEach(function(key) {
-                                    if (Array.isArray(result.records[key])) {
-                                        records = records.concat(result.records[key]);
-                                    }
-                                });
-                            }
-                        }
-                        if (records.length > 0) {
-                            var maxPoints = getMaxDataPoints(hours);
-                            var trimmedRecords = trimRecords(records, maxPoints);
-                            state.historyData[uuid] = trimmedRecords;
-                            setCachedData(historyCache, cacheKey, trimmedRecords);
-                            return;
-                        }
-                        return loadRecentRecordsFallback(uuid, cacheKey);
-                    })
-                    .catch(function() {
-                        return loadRecentRecordsFallback(uuid, cacheKey);
-                    });
+                    // 将指标值映射到记录中（使用图表期望的字段名）
+                    if (metricKey === 'cpu.usage') {
+                        recordsMap[time].cpu = point.value;
+                    } else if (metricKey === 'load.average') {
+                        recordsMap[time].load = point.value;
+                    } else if (metricKey === 'memory.used') {
+                        // 图表期望 ram 是字节数
+                        recordsMap[time].ram = point.value;
+                    } else if (metricKey === 'memory.total') {
+                        recordsMap[time].ram_total = point.value;
+                    } else if (metricKey === 'swap.used') {
+                        recordsMap[time].swap = point.value;
+                    } else if (metricKey === 'disk.used') {
+                        // 图表期望 disk 是字节数
+                        recordsMap[time].disk = point.value;
+                    } else if (metricKey === 'disk.total') {
+                        recordsMap[time].disk_total = point.value;
+                    } else if (metricKey === 'net.in.rate') {
+                        // 图表期望 net_in 和 net_out 字段
+                        recordsMap[time].net_in = point.value;
+                    } else if (metricKey === 'net.out.rate') {
+                        recordsMap[time].net_out = point.value;
+                    } else if (metricKey === 'net.total.down') {
+                        recordsMap[time].netTotalDown = point.value;
+                    } else if (metricKey === 'net.total.up') {
+                        recordsMap[time].netTotalUp = point.value;
+                    } else if (metricKey === 'process.count') {
+                        recordsMap[time].process = point.value;
+                    } else if (metricKey === 'connections.tcp') {
+                        // 图表期望 connections 字段
+                        recordsMap[time].connections = point.value;
+                    } else if (metricKey === 'connections.udp') {
+                        recordsMap[time].connections_udp = point.value;
+                    }
+                });
             });
+
+            // 转换为数组并按时间排序
+            var records = Object.values(recordsMap);
+            records.sort(function(a, b) {
+                return new Date(a.time) - new Date(b.time);
+            });
+
+            if (records.length > 0) {
+                state.historyData[uuid] = records;
+                setCachedData(historyCache, cacheKey, records);
+            } else {
+                // 如果 queryMetrics 没有数据，fallback 到 getRecordsByUUID
+                return loadRecentRecordsFallback(uuid, cacheKey);
+            }
+        }).catch(function(err) {
+            console.warn('queryMetrics failed, falling back:', err);
+            return loadRecentRecordsFallback(uuid, cacheKey);
+        });
     }
 
     function loadPingHistory(uuid, hours) {
