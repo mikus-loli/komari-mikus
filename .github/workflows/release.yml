@@ -62,8 +62,8 @@ jobs:
             missing_files="$missing_files dist/assets/style.css"
           fi
           
-          if [ ! -f "dist/assets/app.js" ]; then
-            missing_files="$missing_files dist/assets/app.js"
+          if [ ! -f "dist/assets/js/app.js" ]; then
+            missing_files="$missing_files dist/assets/js/app.js"
           fi
           
           if [ -n "$missing_files" ]; then
