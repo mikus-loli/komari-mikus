@@ -130,7 +130,7 @@ export function loadNodeHistory(uuid, hours) {
         max_points: 600,
         aggregation: 'avg',
         fill_empty: false
-    }).then(function(result) {
+    }, true).then(function(result) {
         var recordsMap = {};
         var series = result && result.series ? result.series : [];
 
@@ -216,15 +216,15 @@ export function loadPingHistory(uuid, hours) {
         max_points: 600,
         aggregation: 'avg',
         fill_empty: false
-    });
+    }, true);
 
-    var taskRequest = state.rpc.call(RPC_METHODS.getPublicPingTasks, {}).catch(function() { return []; });
+    var taskRequest = state.rpc.call(RPC_METHODS.getPublicPingTasks, {}, true).catch(function() { return []; });
 
     var statsRequest = state.rpc.call(RPC_METHODS.getPingMetricStats, {
         entity_id: uuid,
         hours: hours,
         max_points: 600
-    }).catch(function() { return null; });
+    }, true).catch(function() { return null; });
 
     return Promise.all([metricRequest, taskRequest, statsRequest])
         .then(function(results) {
