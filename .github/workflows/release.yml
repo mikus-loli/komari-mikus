@@ -95,8 +95,17 @@ jobs:
           cp -r dist release_temp/
           cp komari-theme.json release_temp/
           
-          if [ -f "preview.png" ]; then
-            cp preview.png release_temp/
+          # 复制预览图片（支持 png/jpg/jpeg/webp）
+          for ext in png jpg jpeg webp; do
+            if [ -f "preview.$ext" ]; then
+              cp "preview.$ext" release_temp/
+            fi
+          done
+          
+          # 复制 komari-theme.json 中指定的 preview 文件
+          PREVIEW_FILE=$(grep -o '"preview"[[:space:]]*:[[:space:]]*"[^"]*"' komari-theme.json | sed 's/.*:.*"\(.*\)"/\1/')
+          if [ -n "$PREVIEW_FILE" ] && [ -f "$PREVIEW_FILE" ] && [ ! -f "release_temp/$PREVIEW_FILE" ]; then
+            cp "$PREVIEW_FILE" release_temp/
           fi
           
           cd release_temp
@@ -131,8 +140,14 @@ jobs:
           echo "### 📋 Included Files" >> release_notes.md
           echo "- \`dist/\` - Theme files (HTML, CSS, JS, images, flags)" >> release_notes.md
           echo "- \`komari-theme.json\` - Theme configuration" >> release_notes.md
-          if [ -f "preview.png" ]; then
-            echo "- \`preview.png\` - Theme preview image" >> release_notes.md
+          # 列出包中的预览图片
+          for ext in png jpg jpeg webp; do
+            if [ -f "preview.$ext" ]; then
+              echo "- \`preview.$ext\` - Theme preview image" >> release_notes.md
+            fi
+          done
+          if [ -f "mikus.jpg" ]; then
+            echo "- \`mikus.jpg\` - Theme preview image" >> release_notes.md
           fi
           echo "" >> release_notes.md
           
