@@ -107,7 +107,6 @@ export function bindEvents() {
                 // 重新加载历史数据并绘制图表
                 if (state.selectedNodeUuid) {
                     var hours = timeRangeToHours(range);
-
                     // 显示加载动画
                     var chartSections = document.querySelectorAll('.modal-charts .chart-section');
                     chartSections.forEach(function(section) {

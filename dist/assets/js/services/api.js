@@ -99,6 +99,32 @@ function mergeIntoRealtimeHistory(uuid, records) {
         }
     });
     merged.sort(function(a, b) { return new Date(a.time).getTime() - new Date(b.time).getTime(); });
+
+    // 前向填充 disk_total / ram_total
+    // /api/recent/ 返回的记录不含 total，WebSocket 的记录含 total，
+    // 合并后部分记录 disk_total=null → valueFn 返回原始字节值 → 图表失真
+    var lastDiskTotal = 0;
+    var lastRamTotal = 0;
+    var lastSwapTotal = 0;
+    for (var ri = 0; ri < merged.length; ri++) {
+        var rec = merged[ri];
+        if (rec.disk_total && rec.disk_total > 0) {
+            lastDiskTotal = rec.disk_total;
+        } else if (lastDiskTotal > 0) {
+            rec.disk_total = lastDiskTotal;
+        }
+        if (rec.ram_total && rec.ram_total > 0) {
+            lastRamTotal = rec.ram_total;
+        } else if (lastRamTotal > 0) {
+            rec.ram_total = lastRamTotal;
+        }
+        if (rec.swap_total && rec.swap_total > 0) {
+            lastSwapTotal = rec.swap_total;
+        } else if (lastSwapTotal > 0) {
+            rec.swap_total = lastSwapTotal;
+        }
+    }
+
     if (merged.length > 600) merged = merged.slice(merged.length - 600);
     state.realtimeHistory[uuid] = merged;
     state.historyDataHours[uuid] = 0;
@@ -128,7 +154,6 @@ export function loadRecentRecordsFallback(uuid, cacheKey, fallbackHours) {
         // 保留最近 150 条（与 komari-web length=30*5 一致）
         rawRecords = rawRecords.slice(-150);
         var records = flattenRecentRecords(rawRecords);
-
         if (cacheKey) {
             state.historyData[uuid] = records;
             if (fallbackHours !== undefined) state.historyDataHours[uuid] = fallbackHours;
@@ -197,13 +222,21 @@ export function loadNodeHistory(uuid, hours) {
         return Promise.resolve();
     }
 
+    // komari 1.3.0+: memory.total, disk.total, swap.total 已废弃
+    // 改为从节点信息中获取 mem_total/disk_total/swap_total 填充
     var metricKeys = [
         'cpu.usage', 'load.average',
-        'memory.used', 'memory.total', 'swap.used',
-        'disk.used', 'disk.total',
+        'memory.used', 'swap.used',
+        'disk.used',
         'net.in.rate', 'net.out.rate', 'net.total.down', 'net.total.up',
         'process.count', 'connections.tcp', 'connections.udp'
     ];
+
+    // 从节点信息获取 total 值（1.3.0 不再存储为独立指标）
+    var node = state.nodes.find(function(n) { return n.uuid === uuid; });
+    var nodeMemTotal = node ? (node.mem_total || 0) : 0;
+    var nodeDiskTotal = node ? (node.disk_total || 0) : 0;
+    var nodeSwapTotal = node ? (node.swap_total || 0) : 0;
 
     return state.rpc.call(RPC_METHODS.queryMetrics, {
         metric_keys: metricKeys,
@@ -232,14 +265,10 @@ export function loadNodeHistory(uuid, hours) {
                     recordsMap[time].load = point.value;
                 } else if (metricKey === 'memory.used') {
                     recordsMap[time].ram = point.value;
-                } else if (metricKey === 'memory.total') {
-                    recordsMap[time].ram_total = point.value;
                 } else if (metricKey === 'swap.used') {
                     recordsMap[time].swap = point.value;
                 } else if (metricKey === 'disk.used') {
                     recordsMap[time].disk = point.value;
-                } else if (metricKey === 'disk.total') {
-                    recordsMap[time].disk_total = point.value;
                 } else if (metricKey === 'net.in.rate') {
                     recordsMap[time].net_in = point.value;
                 } else if (metricKey === 'net.out.rate') {
@@ -263,22 +292,18 @@ export function loadNodeHistory(uuid, hours) {
             return new Date(a.time) - new Date(b.time);
         });
 
-        // 前向填充 disk_total 和 ram_total
-        // queryMetrics 降采样后各指标时间点不一定对齐，
-        // 导致部分记录缺失 disk_total/ram_total，使百分比计算失败
-        var lastDiskTotal = 0;
-        var lastRamTotal = 0;
+        // 用节点信息填充 ram_total / disk_total / swap_total
+        // 1.3.0 不再将 total 作为独立指标存储
         for (var ri = 0; ri < records.length; ri++) {
             var rec = records[ri];
-            if (rec.disk_total && rec.disk_total > 0) {
-                lastDiskTotal = rec.disk_total;
-            } else if (lastDiskTotal > 0) {
-                rec.disk_total = lastDiskTotal;
+            if (!rec.ram_total && nodeMemTotal > 0) {
+                rec.ram_total = nodeMemTotal;
             }
-            if (rec.ram_total && rec.ram_total > 0) {
-                lastRamTotal = rec.ram_total;
-            } else if (lastRamTotal > 0) {
-                rec.ram_total = lastRamTotal;
+            if (!rec.disk_total && nodeDiskTotal > 0) {
+                rec.disk_total = nodeDiskTotal;
+            }
+            if (!rec.swap_total && nodeSwapTotal > 0) {
+                rec.swap_total = nodeSwapTotal;
             }
         }
 
