@@ -18,12 +18,12 @@ export function formatBytes(bytes, decimals) {
     if (bytes === null || bytes === undefined) return '-';
     if (bytes === 0) return '0 B';
 
-    var units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'];
-    var k = 1024;
-    var i = Math.floor(Math.log(bytes) / Math.log(k));
+    const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'];
+    const k = 1024;
+    let i = Math.floor(Math.log(bytes) / Math.log(k));
     i = Math.min(i, units.length - 1);
 
-    var value = bytes / Math.pow(k, i);
+    let value = bytes / Math.pow(k, i);
 
     if (value >= 1000 && i < units.length - 1) {
         i++;
@@ -34,14 +34,14 @@ export function formatBytes(bytes, decimals) {
         decimals = (i >= 3) ? 1 : 0;
     }
 
-    var dm = decimals < 0 ? 0 : decimals;
+    const dm = decimals < 0 ? 0 : decimals;
 
     if (dm > 0 && value !== Math.floor(value)) {
-        var multiplier = Math.pow(10, dm);
+        const multiplier = Math.pow(10, dm);
         value = Math.floor(value * multiplier) / multiplier;
     }
 
-    var result = value.toFixed(dm).replace(/\.?0+$/, '') + ' ' + units[i];
+    const result = value.toFixed(dm).replace(/\.?0+$/, '') + ' ' + units[i];
     return result;
 }
 
@@ -53,8 +53,8 @@ export function formatBytes(bytes, decimals) {
 export function formatSpeed(bytesPerSec) {
     if (bytesPerSec === null || bytesPerSec === undefined) return '-';
     if (bytesPerSec === 0) return '0B/s';
-    var units = ['B', 'K', 'M', 'G'];
-    var i = Math.floor(Math.log(bytesPerSec) / Math.log(1024));
+    const units = ['B', 'K', 'M', 'G'];
+    let i = Math.floor(Math.log(bytesPerSec) / Math.log(1024));
     i = Math.min(i, units.length - 1);
     return (bytesPerSec / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + units[i] + '/s';
 }
@@ -68,7 +68,7 @@ export function formatSpeed(bytesPerSec) {
 export function formatAxisSpeed(bytesPerSec, maxVal) {
     if (bytesPerSec === 0) return '0';
     if (maxVal === undefined) maxVal = bytesPerSec;
-    var unitIdx = 0;
+    let unitIdx = 0;
     if (maxVal >= 1024 * 1024 * 1024) {
         unitIdx = 3;
     } else if (maxVal >= 1024 * 1024) {
@@ -76,7 +76,7 @@ export function formatAxisSpeed(bytesPerSec, maxVal) {
     } else if (maxVal >= 1024) {
         unitIdx = 1;
     }
-    var value = bytesPerSec / Math.pow(1024, unitIdx);
+    const value = bytesPerSec / Math.pow(1024, unitIdx);
     if (unitIdx === 0) return Math.round(value).toString();
     return value.toFixed(value >= 100 ? 0 : 1);
 }
@@ -124,9 +124,9 @@ export function getCountAxisUnit(maxVal) {
  */
 export function formatUptime(seconds) {
     if (!seconds || seconds <= 0) return '-';
-    var d = Math.floor(seconds / 86400);
-    var h = Math.floor((seconds % 86400) / 3600);
-    var m = Math.floor((seconds % 3600) / 60);
+    const d = Math.floor(seconds / 86400);
+    const h = Math.floor((seconds % 86400) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
 
     if (d > 0 && h > 0) return d + t('days') + ' ' + h + t('hours');
     if (d > 0) return d + t('days');
@@ -143,14 +143,14 @@ export function formatUptime(seconds) {
  */
 export function formatExpiry(expiredAt) {
     if (!expiredAt) return null;
-    var expiry = new Date(expiredAt);
+    const expiry = new Date(expiredAt);
     if (isNaN(expiry.getTime())) return null;
-    var now = new Date();
-    var diff = expiry - now;
+    const now = new Date();
+    const diff = expiry - now;
     if (diff < 0) return { text: t('expired'), level: 'expired', days: -1 };
 
-    var days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    var hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
 
     if (days > 365) return { text: t('long_term'), level: 'normal', days: days, isLongTerm: true };
     if (days > 30) return { text: days + t('days'), level: 'normal', days: days };
@@ -172,7 +172,7 @@ export function formatPrice(price, currency, billingCycle) {
     if (price === 0) return '';
     if (!currency || !billingCycle) return 'N/A';
 
-    var cycleStr = billingCycle + t('days');
+    let cycleStr = billingCycle + t('days');
     if (billingCycle < 0) {
         return currency + price.toFixed(2);
     } else if (billingCycle === 30 || billingCycle === 31) {
@@ -221,7 +221,7 @@ export function formatPing(latency) {
  */
 export function formatOS(os) {
     if (!os) return { name: '-', icon: 'unknown' };
-    var osLower = os.toLowerCase();
+    const osLower = os.toLowerCase();
     if (osLower.indexOf('windows') !== -1) return { name: 'Windows', icon: 'windows' };
     if (osLower.indexOf('ubuntu') !== -1) return { name: 'Ubuntu', icon: 'ubuntu' };
     if (osLower.indexOf('debian') !== -1) return { name: 'Debian', icon: 'debian' };
@@ -255,6 +255,6 @@ export function formatOS(os) {
     if (osLower.indexOf('astar') !== -1) return { name: 'Astar', icon: 'astar' };
     if (osLower.indexOf('alibaba') !== -1 || osLower.indexOf('aliyun') !== -1) return { name: 'Alibaba', icon: 'alibaba' };
     if (osLower.indexOf('linux') !== -1) return { name: 'Linux', icon: 'linux' };
-    var parts = os.split(/[\s\-_]/);
+    const parts = os.split(/[\s\-_]/);
     return { name: parts[0] || os, icon: 'unknown' };
 }

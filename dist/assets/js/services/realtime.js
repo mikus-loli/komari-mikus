@@ -29,11 +29,12 @@ export function setRenderFunctions(drawCharts, renderAll) {
 export function handleRpcResult(result) {
     if (!result) return;
 
-    var onlineNodes = [];
-    var realtimeData = {};
+    const onlineNodes = [];
+    const realtimeData = {};
 
     Object.keys(result).forEach(function (uuid) {
-        var status = result[uuid];
+        const status = result[uuid];
+        if (!status || typeof status !== 'object') return;
         if (status.online) {
             onlineNodes.push(uuid);
         }
@@ -54,12 +55,12 @@ export function handleRpcResult(result) {
                 state.realtimeHistory[uuid] = [];
             }
 
-            var history = state.realtimeHistory[uuid];
-            var lastTime = history.length > 0 ? new Date(history[history.length - 1].time).getTime() : 0;
-            var currentTime = new Date(status.time).getTime();
+            const history = state.realtimeHistory[uuid];
+            const lastTime = history.length > 0 ? new Date(history[history.length - 1].time).getTime() : 0;
+            const currentTime = new Date(status.time).getTime();
 
             if (currentTime !== lastTime) {
-                var record = {
+                const record = {
                     time: status.time,
                     cpu: status.cpu,
                     ram: status.ram,

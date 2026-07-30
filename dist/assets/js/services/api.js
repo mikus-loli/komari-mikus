@@ -37,14 +37,14 @@ export function loadPublicSettings() {
 export function loadNodes() {
     return state.rpc.call(RPC_METHODS.getNodesInformation, {}, true).then(function(result) {
         if (result) {
-            var nodes = Array.isArray(result) ? result : Object.values(result);
+            const nodes = Array.isArray(result) ? result : Object.values(result);
             state.nodes = nodes.filter(function(n) { return !n.hidden; });
         }
     }).catch(function(err) {
         console.warn('common:getNodes failed, falling back:', err);
         return state.rpc.call(RPC_METHODS.getNodesInformationFallback, {}, true).then(function(result) {
             if (result) {
-                var nodes = Array.isArray(result) ? result : Object.values(result);
+                const nodes = Array.isArray(result) ? result : Object.values(result);
                 state.nodes = nodes.filter(function(n) { return !n.hidden; });
             }
         });
@@ -88,10 +88,10 @@ function flattenRecentRecords(rawRecords) {
  * 合并近期记录到 realtimeHistory（去重、排序、限600条）
  */
 function mergeIntoRealtimeHistory(uuid, records) {
-    var existing = state.realtimeHistory[uuid] || [];
-    var timeSet = {};
+    const existing = state.realtimeHistory[uuid] || [];
+    const timeSet = {};
     existing.forEach(function(r) { if (r.time) timeSet[r.time] = true; });
-    var merged = existing.slice();
+    let merged = existing.slice();
     records.forEach(function(r) {
         if (r.time && !timeSet[r.time]) {
             merged.push(r);
@@ -103,11 +103,11 @@ function mergeIntoRealtimeHistory(uuid, records) {
     // 前向填充 disk_total / ram_total
     // /api/recent/ 返回的记录不含 total，WebSocket 的记录含 total，
     // 合并后部分记录 disk_total=null → valueFn 返回原始字节值 → 图表失真
-    var lastDiskTotal = 0;
-    var lastRamTotal = 0;
-    var lastSwapTotal = 0;
-    for (var ri = 0; ri < merged.length; ri++) {
-        var rec = merged[ri];
+    let lastDiskTotal = 0;
+    let lastRamTotal = 0;
+    let lastSwapTotal = 0;
+    for (let ri = 0; ri < merged.length; ri++) {
+        const rec = merged[ri];
         if (rec.disk_total && rec.disk_total > 0) {
             lastDiskTotal = rec.disk_total;
         } else if (lastDiskTotal > 0) {
@@ -147,13 +147,13 @@ export function loadRecentRecordsFallback(uuid, cacheKey, fallbackHours) {
         return res.json();
     })
     .then(function(data) {
-        var rawRecords = (data && data.data) ? data.data : [];
+        let rawRecords = (data && data.data) ? data.data : [];
         if (!Array.isArray(rawRecords) || rawRecords.length === 0) {
             throw new Error('No recent records from /api/recent/');
         }
         // 保留最近 150 条（与 komari-web length=30*5 一致）
         rawRecords = rawRecords.slice(-150);
-        var records = flattenRecentRecords(rawRecords);
+        const records = flattenRecentRecords(rawRecords);
         if (cacheKey) {
             state.historyData[uuid] = records;
             if (fallbackHours !== undefined) state.historyDataHours[uuid] = fallbackHours;
@@ -167,9 +167,9 @@ export function loadRecentRecordsFallback(uuid, cacheKey, fallbackHours) {
         console.warn('/api/recent/ failed, falling back to RPC:', err);
         return state.rpc.call(RPC_METHODS.getClientRecentRecords, { uuid: uuid })
             .then(function(result) {
-                var records = Array.isArray(result) ? result : (result && result.records ? result.records : null);
+                const records = Array.isArray(result) ? result : (result && result.records ? result.records : null);
                 if (records && records.length > 0) {
-                    var trimmedRecords = trimRecords(records, 600);
+                    const trimmedRecords = trimRecords(records, 600);
                     if (cacheKey) {
                         state.historyData[uuid] = trimmedRecords;
                         if (fallbackHours !== undefined) state.historyDataHours[uuid] = fallbackHours;
@@ -184,9 +184,9 @@ export function loadRecentRecordsFallback(uuid, cacheKey, fallbackHours) {
         console.warn('RPC getClientRecentRecords failed, trying fallback:', err);
         return state.rpc.call(RPC_METHODS.getClientRecentRecordsFallback, { uuid: uuid })
             .then(function(fallback) {
-                var records = fallback && fallback.records ? fallback.records : [];
+                const records = fallback && fallback.records ? fallback.records : [];
                 if (records.length > 0) {
-                    var trimmedRecords = trimRecords(records, 600);
+                    const trimmedRecords = trimRecords(records, 600);
                     if (cacheKey) {
                         state.historyData[uuid] = trimmedRecords;
                         if (fallbackHours !== undefined) state.historyDataHours[uuid] = fallbackHours;
@@ -214,8 +214,8 @@ export function loadNodeHistory(uuid, hours) {
 
     hours = hours || 24;
 
-    var cacheKey = uuid + '-' + hours;
-    var cachedData = getCachedData(historyCache, cacheKey);
+    const cacheKey = uuid + '-' + hours;
+    const cachedData = getCachedData(historyCache, cacheKey);
     if (cachedData) {
         state.historyData[uuid] = cachedData;
         state.historyDataHours[uuid] = hours;
@@ -224,7 +224,7 @@ export function loadNodeHistory(uuid, hours) {
 
     // komari 1.3.0+: memory.total, disk.total, swap.total 已废弃
     // 改为从节点信息中获取 mem_total/disk_total/swap_total 填充
-    var metricKeys = [
+    const metricKeys = [
         'cpu.usage', 'load.average',
         'memory.used', 'swap.used',
         'disk.used',
@@ -233,10 +233,10 @@ export function loadNodeHistory(uuid, hours) {
     ];
 
     // 从节点信息获取 total 值（1.3.0 不再存储为独立指标）
-    var node = state.nodes.find(function(n) { return n.uuid === uuid; });
-    var nodeMemTotal = node ? (node.mem_total || 0) : 0;
-    var nodeDiskTotal = node ? (node.disk_total || 0) : 0;
-    var nodeSwapTotal = node ? (node.swap_total || 0) : 0;
+    const node = state.nodes.find(function(n) { return n.uuid === uuid; });
+    const nodeMemTotal = node ? (node.mem_total || 0) : 0;
+    const nodeDiskTotal = node ? (node.disk_total || 0) : 0;
+    const nodeSwapTotal = node ? (node.swap_total || 0) : 0;
 
     return state.rpc.call(RPC_METHODS.queryMetrics, {
         metric_keys: metricKeys,
@@ -247,15 +247,15 @@ export function loadNodeHistory(uuid, hours) {
         aggregation: 'avg',
         fill_empty: false
     }, true).then(function(result) {
-        var recordsMap = {};
-        var series = result && result.series ? result.series : [];
+        const recordsMap = {};
+        const series = result && result.series ? result.series : [];
 
         series.forEach(function(s) {
-            var metricKey = s.metric_key || s.key;
-            var points = s.points || [];
+            const metricKey = s.metric_key || s.key;
+            const points = s.points || [];
 
             points.forEach(function(point) {
-                var time = point.time;
+                const time = point.time;
                 if (!recordsMap[time]) {
                     recordsMap[time] = { time: time };
                 }
@@ -287,15 +287,15 @@ export function loadNodeHistory(uuid, hours) {
             });
         });
 
-        var records = Object.values(recordsMap);
+        const records = Object.values(recordsMap);
         records.sort(function(a, b) {
             return new Date(a.time) - new Date(b.time);
         });
 
         // 用节点信息填充 ram_total / disk_total / swap_total
         // 1.3.0 不再将 total 作为独立指标存储
-        for (var ri = 0; ri < records.length; ri++) {
-            var rec = records[ri];
+        for (let ri = 0; ri < records.length; ri++) {
+            const rec = records[ri];
             if (!rec.ram_total && nodeMemTotal > 0) {
                 rec.ram_total = nodeMemTotal;
             }
@@ -329,15 +329,15 @@ export function loadNodeHistory(uuid, hours) {
 export function loadPingHistory(uuid, hours) {
     if (hours === 0) hours = 4; // 延迟图表不支持实时模式，默认 4h
 
-    var cacheKey = uuid + '-' + hours;
-    var cachedData = getCachedData(pingCache, cacheKey);
+    const cacheKey = uuid + '-' + hours;
+    const cachedData = getCachedData(pingCache, cacheKey);
     if (cachedData) {
         state.pingData[uuid] = cachedData;
         state.pingDataHours[uuid] = hours;
         return Promise.resolve();
     }
 
-    var metricRequest = state.rpc.call(RPC_METHODS.queryMetrics, {
+    const metricRequest = state.rpc.call(RPC_METHODS.queryMetrics, {
         metric_keys: ['ping.latency_ms'],
         entity_id: uuid,
         hours: hours,
@@ -347,9 +347,9 @@ export function loadPingHistory(uuid, hours) {
         fill_empty: false
     }, true);
 
-    var taskRequest = state.rpc.call(RPC_METHODS.getPublicPingTasks, {}, true).catch(function() { return []; });
+    const taskRequest = state.rpc.call(RPC_METHODS.getPublicPingTasks, {}, true).catch(function() { return []; });
 
-    var statsRequest = state.rpc.call(RPC_METHODS.getPingMetricStats, {
+    const statsRequest = state.rpc.call(RPC_METHODS.getPingMetricStats, {
         entity_id: uuid,
         hours: hours,
         max_points: 600
@@ -357,14 +357,14 @@ export function loadPingHistory(uuid, hours) {
 
     return Promise.all([metricRequest, taskRequest, statsRequest])
         .then(function(results) {
-            var metricResult = results[0];
-            var taskList = results[1];
-            var statsResult = results[2];
+            const metricResult = results[0];
+            const taskList = results[1];
+            const statsResult = results[2];
 
-            var taskMap = {};
+            const taskMap = {};
             if (Array.isArray(taskList)) {
                 taskList.forEach(function(task) {
-                    var taskId = String(task.id);
+                    const taskId = String(task.id);
                     taskMap[taskId] = {
                         id: task.id,
                         name: task.name || (t('task') + ' #' + task.id),
@@ -373,21 +373,21 @@ export function loadPingHistory(uuid, hours) {
                 });
             }
 
-            var statsMap = {};
+            const statsMap = {};
             if (statsResult && Array.isArray(statsResult.stats)) {
                 statsResult.stats.forEach(function(stat) {
-                    var key = stat.task_id;
+                    const key = stat.task_id;
                     statsMap[key] = stat;
                 });
             }
 
-            var records = [];
-            var series = metricResult && metricResult.series ? metricResult.series : [];
+            const records = [];
+            const series = metricResult && metricResult.series ? metricResult.series : [];
 
             series.forEach(function(s) {
-                var tags = s.tags || s.tag || {};
-                var taskId = tags.task_id;
-                var points = s.points || [];
+                const tags = s.tags || s.tag || {};
+                const taskId = tags.task_id;
+                const points = s.points || [];
 
                 points.forEach(function(point) {
                     if (typeof point.value === 'number' && point.value >= 0) {
@@ -406,7 +406,7 @@ export function loadPingHistory(uuid, hours) {
 
             Object.keys(taskMap).forEach(function(taskId) {
                 if (statsMap[taskId]) {
-                    var stat = statsMap[taskId];
+                    const stat = statsMap[taskId];
                     taskMap[taskId].loss = stat.loss;
                     taskMap[taskId].min = stat.min;
                     taskMap[taskId].max = stat.max;
@@ -414,9 +414,9 @@ export function loadPingHistory(uuid, hours) {
                 }
             });
 
-            var tasks = Object.keys(taskMap).map(function(k) { return taskMap[k]; });
+            const tasks = Object.keys(taskMap).map(function(k) { return taskMap[k]; });
 
-            var pingData = {
+            const pingData = {
                 records: records,
                 tasks: tasks
             };
@@ -435,7 +435,7 @@ export function loadPingHistory(uuid, hours) {
  * @returns {Promise}
  */
 export function loadAllPingData() {
-    var promises = state.nodes.map(function(node) {
+    const promises = state.nodes.map(function(node) {
         return loadPingHistory(node.uuid, 1);
     });
     return Promise.all(promises);
@@ -450,16 +450,16 @@ export function enrichPingTasksFromRPC(uuid, renderCallback) {
     state.rpc.call(RPC_METHODS.getPublicPingTasks, {})
         .then(function(tasks) {
             if (!tasks || !Array.isArray(tasks)) return;
-            var pingInfo = state.pingData[uuid];
+            const pingInfo = state.pingData[uuid];
             if (!pingInfo) return;
 
-            var taskNameMap = {};
+            const taskNameMap = {};
             tasks.forEach(function(task) {
                 taskNameMap[task.id] = task;
             });
 
             pingInfo.tasks.forEach(function(task) {
-                var rpcTask = taskNameMap[task.id];
+                const rpcTask = taskNameMap[task.id];
                 if (rpcTask) {
                     if (rpcTask.name) task.name = rpcTask.name;
                     if (rpcTask.interval) task.interval = rpcTask.interval;
@@ -467,7 +467,7 @@ export function enrichPingTasksFromRPC(uuid, renderCallback) {
                 }
             });
 
-            var cacheKey = uuid + '-1';
+            const cacheKey = uuid + '-1';
             setCachedData(pingCache, cacheKey, pingInfo);
 
             if (renderCallback) renderCallback(uuid);
@@ -493,10 +493,10 @@ export function fetchPingTaskNames(uuid, renderCallback) {
     })
     .then(function(res) {
         if (res.status === 'success' && res.data && res.data.tasks) {
-            var pingInfo = state.pingData[uuid];
+            const pingInfo = state.pingData[uuid];
             if (!pingInfo) return;
 
-            var taskNameMap = {};
+            const taskNameMap = {};
             res.data.tasks.forEach(function(task) {
                 taskNameMap[task.id] = task.name;
             });
@@ -505,7 +505,7 @@ export function fetchPingTaskNames(uuid, renderCallback) {
                 if (taskNameMap[task.id]) {
                     task.name = taskNameMap[task.id];
                 }
-                var apiTask = res.data.tasks.find(function(t) { return t.id === task.id; });
+                const apiTask = res.data.tasks.find(function(t) { return t.id === task.id; });
                 if (apiTask) {
                     task.interval = apiTask.interval;
                     task.loss = apiTask.loss;

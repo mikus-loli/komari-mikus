@@ -19,9 +19,9 @@ let preloaderTimer = null;
  * 更新顶部时间显示和问候语
  */
 export function updateTime() {
-    var now = new Date();
-    var hours = now.getHours();
-    var greeting = '';
+    const now = new Date();
+    const hours = now.getHours();
+    let greeting = '';
 
     if (hours >= 5 && hours < 12) {
         greeting = i18n[state.currentLang] && i18n[state.currentLang].good_morning ? i18n[state.currentLang].good_morning : '早上好';
@@ -31,18 +31,18 @@ export function updateTime() {
         greeting = i18n[state.currentLang] && i18n[state.currentLang].good_evening ? i18n[state.currentLang].good_evening : '晚上好';
     }
 
-    var greetingEl = document.getElementById('greetingText');
+    const greetingEl = document.getElementById('greetingText');
     if (greetingEl) greetingEl.textContent = greeting;
 
     updateGreetingSubtitle();
 
-    var dateOptions = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
-    var dateStr = now.toLocaleDateString(state.currentLang === 'zh-CN' ? 'zh-CN' : 'en-US', dateOptions);
-    var dateEl = document.getElementById('currentDate');
+    const dateOptions = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+    const dateStr = now.toLocaleDateString(state.currentLang === 'zh-CN' ? 'zh-CN' : 'en-US', dateOptions);
+    const dateEl = document.getElementById('currentDate');
     if (dateEl) dateEl.textContent = dateStr;
 
-    var timeStr = now.toLocaleTimeString(state.currentLang === 'zh-CN' ? 'zh-CN' : 'en-US', { hour12: false });
-    var timeEl = document.getElementById('currentTime');
+    const timeStr = now.toLocaleTimeString(state.currentLang === 'zh-CN' ? 'zh-CN' : 'en-US', { hour12: false });
+    const timeEl = document.getElementById('currentTime');
     if (timeEl) timeEl.textContent = timeStr;
 }
 
@@ -50,15 +50,15 @@ export function updateTime() {
  * 根据节点在线状态更新欢迎区副标题
  */
 export function updateGreetingSubtitle() {
-    var subtitleEl = document.querySelector('.greeting-subtitle');
+    const subtitleEl = document.querySelector('.greeting-subtitle');
     if (!subtitleEl) return;
 
-    var total = state.nodes.length;
-    var online = state.onlineNodes.length;
-    var offline = total - online;
+    const total = state.nodes.length;
+    const online = state.onlineNodes.length;
+    const offline = total - online;
 
-    var isZh = state.currentLang === 'zh-CN';
-    var message = '';
+    const isZh = state.currentLang === 'zh-CN';
+    let message = '';
 
     if (total === 0) {
         message = isZh ? '欢迎回来，正在加载数据...' : 'Welcome back, loading data...';
@@ -85,9 +85,9 @@ export function updateGreetingSubtitle() {
  * @param {string} [statusText] - 状态文字
  */
 export function updatePreloader(progress, statusText) {
-    var fillEl = document.getElementById('progressFill');
-    var textEl = document.getElementById('progressText');
-    var statusEl = document.getElementById('preloaderStatus');
+    const fillEl = document.getElementById('progressFill');
+    const textEl = document.getElementById('progressText');
+    const statusEl = document.getElementById('preloaderStatus');
     if (fillEl) fillEl.style.width = progress + '%';
     if (textEl) textEl.textContent = Math.round(progress) + '%';
     if (statusEl && statusText) statusEl.textContent = statusText;
@@ -98,9 +98,9 @@ export function updatePreloader(progress, statusText) {
  * 隐藏预加载器
  */
 export function hidePreloader() {
-    var preloader = document.getElementById('preloader');
+    const preloader = document.getElementById('preloader');
     if (!preloader) return;
-    var completeText = state.currentLang === 'zh-CN' ? '加载完成' : 'Loading complete';
+    const completeText = state.currentLang === 'zh-CN' ? '加载完成' : 'Loading complete';
     updatePreloader(100, completeText);
     setTimeout(function () {
         preloader.classList.add('fade-out');
@@ -114,20 +114,20 @@ export function hidePreloader() {
  * 启动预加载器进度模拟
  */
 export function startPreloaderSimulation() {
-    var stages = [
+    const stages = [
         { target: 20, text: state.currentLang === 'zh-CN' ? '正在加载样式...' : 'Loading styles...' },
         { target: 40, text: state.currentLang === 'zh-CN' ? '正在获取配置...' : 'Fetching config...' },
         { target: 60, text: state.currentLang === 'zh-CN' ? '正在加载节点...' : 'Loading nodes...' },
         { target: 80, text: state.currentLang === 'zh-CN' ? '正在连接服务...' : 'Connecting service...' },
         { target: 90, text: state.currentLang === 'zh-CN' ? '正在初始化...' : 'Initializing...' }
     ];
-    var stageIndex = 0;
+    let stageIndex = 0;
     preloaderTimer = setInterval(function () {
         if (stageIndex >= stages.length) {
             clearInterval(preloaderTimer);
             return;
         }
-        var stage = stages[stageIndex];
+        const stage = stages[stageIndex];
         if (preloaderProgress < stage.target) {
             updatePreloader(preloaderProgress + 1, stage.text);
         } else {

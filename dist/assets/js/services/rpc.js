@@ -30,7 +30,7 @@ export class RPC2Client {
     }
 
     connect() {
-        var self = this;
+        const self = this;
         if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
             return;
         }
@@ -51,7 +51,7 @@ export class RPC2Client {
 
         this.ws.onmessage = function(event) {
             try {
-                var msg = JSON.parse(event.data);
+                const msg = JSON.parse(event.data);
                 self.handleMessage(msg);
             } catch (e) {}
         };
@@ -69,10 +69,10 @@ export class RPC2Client {
     }
 
     scheduleReconnect() {
-        var self = this;
+        const self = this;
         if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
 
-        var delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), this.maxReconnectDelay);
+        const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), this.maxReconnectDelay);
         this.reconnectAttempts++;
 
         this.reconnectTimer = setTimeout(function() {
@@ -82,7 +82,7 @@ export class RPC2Client {
 
     handleMessage(msg) {
         if (msg.id && this.pendingCalls[msg.id]) {
-            var callback = this.pendingCalls[msg.id];
+            const callback = this.pendingCalls[msg.id];
             clearTimeout(callback.timer);
             delete this.pendingCalls[msg.id];
 
@@ -99,18 +99,18 @@ export class RPC2Client {
     }
 
     call(method, params, useHttpFallback) {
-        var self = this;
-        var id = ++this.rpcId;
+        const self = this;
+        const id = ++this.rpcId;
 
         return new Promise(function(resolve, reject) {
-            var callObj = {
+            const callObj = {
                 jsonrpc: '2.0',
                 method: method,
                 params: params || {},
                 id: id
             };
 
-            var timer = setTimeout(function() {
+            const timer = setTimeout(function() {
                 delete self.pendingCalls[id];
                 if (useHttpFallback) {
                     self.httpCall(method, params).then(resolve).catch(reject);
@@ -136,7 +136,7 @@ export class RPC2Client {
     }
 
     httpCall(method, params) {
-        var body = JSON.stringify({
+        const body = JSON.stringify({
             jsonrpc: '2.0',
             method: method,
             params: params || {},
@@ -161,7 +161,7 @@ export class RPC2Client {
         if (callback) this.pollCallback = callback;
         if (this.pollInterval) clearInterval(this.pollInterval);
 
-        var self = this;
+        const self = this;
         this.pollInterval = setInterval(function() {
             if (self.ws && self.ws.readyState === WebSocket.OPEN) {
                 self.call(self.pollMethod, {}, false).then(function(result) {
@@ -198,9 +198,9 @@ export class RPC2Client {
  * @param {Function} handleRpcResult - 实时数据处理回调
  */
 export function initRPC2Client(handleRpcResult) {
-    var proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    var wsUrl = proto + '//' + window.location.host + '/api/rpc2';
-    var httpUrl = window.location.origin + '/api/rpc2';
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = proto + '//' + window.location.host + '/api/rpc2';
+    const httpUrl = window.location.origin + '/api/rpc2';
 
     state.rpc = new RPC2Client({
         wsUrl: wsUrl,

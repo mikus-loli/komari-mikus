@@ -52,36 +52,36 @@ export function initChartObserver() {
     state.chartObserver = new IntersectionObserver(function(entries) {
         entries.forEach(function(entry) {
             if (entry.isIntersecting) {
-                var canvas = entry.target;
-                var chartId = canvas.id;
-                var uuid = state.selectedNodeUuid;
+                const canvas = entry.target;
+                const chartId = canvas.id;
+                const uuid = state.selectedNodeUuid;
 
                 if (uuid && !state.chartsDrawn[uuid + '_' + chartId]) {
                     canvas.classList.remove('chart-loading');
                     if (chartId === 'latencyChart') {
-                        var pingInfo = state.pingData[uuid];
+                        const pingInfo = state.pingData[uuid];
                         if (pingInfo) {
                             drawLatencyChart('latencyChart', pingInfo.records, pingInfo.tasks);
                             state.chartsDrawn[uuid + '_' + chartId] = true;
-                            var latencyContainer = document.querySelector('.latency-chart-container');
+                            const latencyContainer = document.querySelector('.latency-chart-container');
                             if (latencyContainer) latencyContainer.classList.remove('loading');
                         }
                     } else {
-                        var dataHours = state.historyDataHours[uuid] !== undefined
+                        const dataHours = state.historyDataHours[uuid] !== undefined
                             ? state.historyDataHours[uuid]
                             : timeRangeToHours(state.historyTimeRange);
                         // 实时模式使用 realtimeHistory，历史模式使用 historyData
-                        var records;
+                        let records;
                         if (dataHours === 0) {
                             records = state.realtimeHistory[uuid] || [];
                         } else {
                             records = state.historyData[uuid] || [];
                         }
                         if (records.length > 0) {
-                            var node = state.nodes.find(function(n) { return n.uuid === uuid; });
-                            var liveData = state.realtimeData[uuid];
-                            var chartConfigs = getChartConfigs(node, liveData);
-                            var config = chartConfigs.find(function(c) { return c.canvasId === chartId; });
+                            const node = state.nodes.find(function(n) { return n.uuid === uuid; });
+                            const liveData = state.realtimeData[uuid];
+                            const chartConfigs = getChartConfigs(node, liveData);
+                            const config = chartConfigs.find(function(c) { return c.canvasId === chartId; });
                             if (config) {
                                 renderChartByConfig(config, records, dataHours);
                             } else {
@@ -89,7 +89,7 @@ export function initChartObserver() {
                                     drawLineChart('cpuChart', records, function (r) { return r.cpu; }, 0, 100, '#e8668a', 'CPU %', dataHours);
                                 } else if (chartId === 'ramChart') {
                                     drawLineChart('ramChart', records, function (r) {
-                                        var ramVal = r.ram;
+                                        const ramVal = r.ram;
                                         if (ramVal === null || ramVal === undefined) return null;
                                         if (ramVal > 100 && r.ram_total > 0) {
                                             return (ramVal / r.ram_total) * 100;
@@ -103,7 +103,7 @@ export function initChartObserver() {
                             state.chartsDrawn[uuid + '_' + chartId] = true;
                         }
                         // 概览图表渲染完成或无数据时，均移除该区域的加载动画
-                        var section = canvas.closest('.chart-section');
+                        const section = canvas.closest('.chart-section');
                         if (section) section.classList.remove('loading');
                     }
                 }
@@ -123,24 +123,24 @@ export function openNodeModal(uuid) {
     state.selectedNodeUuid = uuid;
     state.chartsDrawn = {};
 
-    var node = state.nodes.find(function (n) { return n.uuid === uuid; });
+    const node = state.nodes.find(function (n) { return n.uuid === uuid; });
     if (!node) return;
 
-    var rt = state.realtimeData[uuid] || {};
-    var els = getModalElements();
+    const rt = state.realtimeData[uuid] || {};
+    const els = getModalElements();
 
     if (els.nodeName) els.nodeName.textContent = node.name;
 
     // 清空所有 canvas 并显示加载动画，避免新节点加载时短暂显示旧图表
     [els.cpuChart, els.ramChart, els.networkChart, els.diskChart, els.processChart, els.connectionsChart].forEach(function(canvas) {
         if (canvas) {
-            var ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
     });
-    var chartSections = document.querySelectorAll('.modal-charts .chart-section');
+    const chartSections = document.querySelectorAll('.modal-charts .chart-section');
     chartSections.forEach(function(section) { section.classList.add('loading'); });
-    var latencyContainer = document.querySelector('.latency-chart-container');
+    const latencyContainer = document.querySelector('.latency-chart-container');
     if (latencyContainer) latencyContainer.classList.add('loading');
 
     updateTimeRangeButtons();
@@ -150,14 +150,13 @@ export function openNodeModal(uuid) {
 
     if (els.overlay) {
         els.overlay.classList.add('active');
-        var scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+        const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
         if (scrollbarWidth > 0) {
             document.body.style.paddingRight = scrollbarWidth + 'px';
         }
         document.body.style.overflow = 'hidden';
     }
 
-    var chartSections = document.querySelectorAll('.modal-charts .chart-section');
     chartSections.forEach(function(section) {
         section.style.animation = 'none';
         void section.offsetHeight;
@@ -166,8 +165,8 @@ export function openNodeModal(uuid) {
 
     initChartObserver();
 
-    var historyHours = timeRangeToHours(state.historyTimeRange);
-    var pingHours = timeRangeToHours(state.pingTimeRange);
+    const historyHours = timeRangeToHours(state.historyTimeRange);
+    const pingHours = timeRangeToHours(state.pingTimeRange);
 
     Promise.all([
         loadNodeHistory(uuid, historyHours),
@@ -186,7 +185,7 @@ export function openNodeModal(uuid) {
         document.querySelectorAll('.modal-charts .chart-section').forEach(function(section) {
             section.classList.remove('loading');
         });
-        var latencyContainer = document.querySelector('.latency-chart-container');
+        const latencyContainer = document.querySelector('.latency-chart-container');
         if (latencyContainer) latencyContainer.classList.remove('loading');
     });
 }
@@ -195,18 +194,18 @@ export function openNodeModal(uuid) {
  * 更新时间范围按钮的激活状态
  */
 export function updateTimeRangeButtons() {
-    var overviewTimeRange = document.getElementById('overviewTimeRange');
+    const overviewTimeRange = document.getElementById('overviewTimeRange');
     if (overviewTimeRange) {
         overviewTimeRange.querySelectorAll('.time-range-btn').forEach(function (btn) {
-            var range = btn.getAttribute('data-range');
+            const range = btn.getAttribute('data-range');
             btn.classList.toggle('active', range === state.historyTimeRange);
         });
     }
 
-    var pingTimeRange = document.getElementById('pingTimeRange');
+    const pingTimeRange = document.getElementById('pingTimeRange');
     if (pingTimeRange) {
         pingTimeRange.querySelectorAll('.time-range-btn').forEach(function (btn) {
-            var range = btn.getAttribute('data-range');
+            const range = btn.getAttribute('data-range');
             btn.classList.toggle('active', range === state.pingTimeRange);
         });
     }
@@ -219,26 +218,26 @@ export function updateTimeRangeButtons() {
  * @param {string} uuid - 节点 UUID
  */
 export function renderOverviewPage(node, rt, uuid) {
-    var els = getModalElements();
-    var infoEl = els.modalInfo;
+    const els = getModalElements();
+    const infoEl = els.modalInfo;
     if (!infoEl) return;
 
-    var ramUsed = rt.ram ? rt.ram.used : null;
-    var ramTotal = rt.ram ? rt.ram.total : node.mem_total || 0;
-    var diskUsed = rt.disk ? rt.disk.used : null;
-    var diskTotal = rt.disk ? rt.disk.total : node.disk_total || 0;
-    var swapUsed = rt.swap ? rt.swap.used : null;
-    var swapTotal = rt.swap ? rt.swap.total : node.swap_total || 0;
-    var load1 = rt.load ? rt.load.load1 : null;
-    var load5 = rt.load ? rt.load.load5 : null;
-    var load15 = rt.load ? rt.load.load15 : null;
-    var process = rt.process || 0;
-    var tcpConn = rt.connections ? rt.connections.tcp : 0;
-    var udpConn = rt.connections ? rt.connections.udp : 0;
-    var netTotalUp = rt.network ? rt.network.totalUp : 0;
-    var netTotalDown = rt.network ? rt.network.totalDown : 0;
+    const ramUsed = rt.ram ? rt.ram.used : null;
+    const ramTotal = rt.ram ? rt.ram.total : node.mem_total || 0;
+    const diskUsed = rt.disk ? rt.disk.used : null;
+    const diskTotal = rt.disk ? rt.disk.total : node.disk_total || 0;
+    const swapUsed = rt.swap ? rt.swap.used : null;
+    const swapTotal = rt.swap ? rt.swap.total : node.swap_total || 0;
+    const load1 = rt.load ? rt.load.load1 : null;
+    const load5 = rt.load ? rt.load.load5 : null;
+    const load15 = rt.load ? rt.load.load15 : null;
+    const process = rt.process || 0;
+    const tcpConn = rt.connections ? rt.connections.tcp : 0;
+    const udpConn = rt.connections ? rt.connections.udp : 0;
+    const netTotalUp = rt.network ? rt.network.totalUp : 0;
+    const netTotalDown = rt.network ? rt.network.totalDown : 0;
 
-    var items = [
+    const items = [
         buildInfoItem(t('os_info'), node.os || '-'),
         buildInfoItem(t('cpu_model'), node.cpu_name || '-'),
         buildInfoItem(t('arch'), node.arch || '-'),
@@ -261,12 +260,12 @@ export function renderOverviewPage(node, rt, uuid) {
  * @param {string} uuid - 节点 UUID
  */
 export function renderLatencyPage(uuid) {
-    var pingInfo = state.pingData[uuid];
-    var els = getModalElements();
-    var summaryEl = els.latencySummary;
-    var tasksEl = els.latencyTasks;
-    var legendEl = els.latencyLegend;
-    var chartEl = els.latencyChart;
+    const pingInfo = state.pingData[uuid];
+    const els = getModalElements();
+    const summaryEl = els.latencySummary;
+    const tasksEl = els.latencyTasks;
+    const legendEl = els.latencyLegend;
+    const chartEl = els.latencyChart;
 
     if (!pingInfo || !pingInfo.tasks || pingInfo.tasks.length === 0) {
         if (summaryEl) summaryEl.innerHTML = '';
@@ -275,19 +274,19 @@ export function renderLatencyPage(uuid) {
             tasksEl.innerHTML = '<div class="latency-empty">' + t('latency_not_configured') + '</div>';
         }
         if (chartEl) {
-            var ctx = chartEl.getContext('2d');
+            const ctx = chartEl.getContext('2d');
             ctx.clearRect(0, 0, chartEl.width, chartEl.height);
         }
         return;
     }
 
     if (summaryEl && pingInfo.records && pingInfo.records.length > 0) {
-        var allValues = pingInfo.records.map(function (r) { return r.value; }).filter(function (v) { return v !== null && v !== undefined && v >= 0; });
-        var minPing = allValues.length > 0 ? Math.min.apply(null, allValues) : null;
-        var maxPing = allValues.length > 0 ? Math.max.apply(null, allValues) : null;
-        var avgPing = allValues.length > 0 ? allValues.reduce(function (a, b) { return a + b; }, 0) / allValues.length : null;
+        const allValues = pingInfo.records.map(function (r) { return r.value; }).filter(function (v) { return v !== null && v !== undefined && v >= 0; });
+        const minPing = allValues.length > 0 ? Math.min.apply(null, allValues) : null;
+        const maxPing = allValues.length > 0 ? Math.max.apply(null, allValues) : null;
+        const avgPing = allValues.length > 0 ? allValues.reduce(function (a, b) { return a + b; }, 0) / allValues.length : null;
 
-        var summaryItems = [
+        const summaryItems = [
             '<div class="latency-stat"><div class="latency-stat-value level-' + getPingLevel(minPing) + '">' + formatPing(minPing) + '</div><div class="latency-stat-label">' + t('min_ping') + '</div></div>',
             '<div class="latency-stat"><div class="latency-stat-value level-' + getPingLevel(maxPing) + '">' + formatPing(maxPing) + '</div><div class="latency-stat-label">' + t('max_ping') + '</div></div>',
             '<div class="latency-stat"><div class="latency-stat-value level-' + getPingLevel(avgPing) + '">' + formatPing(avgPing) + '</div><div class="latency-stat-label">' + t('avg_latency') + '</div></div>'
@@ -296,11 +295,11 @@ export function renderLatencyPage(uuid) {
     }
 
     if (tasksEl && pingInfo.tasks && pingInfo.tasks.length > 0) {
-        var taskItems = ['<div class="latency-tasks-title">' + t('tasks') + '</div>'];
+        const taskItems = ['<div class="latency-tasks-title">' + t('tasks') + '</div>'];
         pingInfo.tasks.forEach(function (task, idx) {
-            var taskPing = getTaskLatestPing(uuid, task.id);
-            var level = getPingLevel(taskPing);
-            var color = PING_COLORS[idx % PING_COLORS.length];
+            const taskPing = getTaskLatestPing(uuid, task.id);
+            const level = getPingLevel(taskPing);
+            const color = PING_COLORS[idx % PING_COLORS.length];
             taskItems.push(
                 '<div class="latency-task-card" style="border-left-color: ' + color + '">' +
                 '<span class="latency-task-name">' + escapeHtml(task.name) + '</span>' +
@@ -314,8 +313,8 @@ export function renderLatencyPage(uuid) {
     }
 
     if (legendEl && pingInfo.tasks && pingInfo.tasks.length > 0) {
-        var legendItems = pingInfo.tasks.map(function (task, idx) {
-            var color = PING_COLORS[idx % PING_COLORS.length];
+        const legendItems = pingInfo.tasks.map(function (task, idx) {
+            const color = PING_COLORS[idx % PING_COLORS.length];
             return '<div class="latency-legend-item"><span class="latency-legend-color" style="background: ' + color + '"></span>' + escapeHtml(task.name) + '</div>';
         });
         legendEl.innerHTML = legendItems.join('');
@@ -327,15 +326,15 @@ export function renderLatencyPage(uuid) {
  * @param {string} pageName - 页面名称 'overview' 或 'latency'
  */
 export function switchModalPage(pageName) {
-    var pages = document.querySelectorAll('.modal-page');
-    var tabs = document.querySelectorAll('.modal-tab');
+    const pages = document.querySelectorAll('.modal-page');
+    const tabs = document.querySelectorAll('.modal-tab');
 
     pages.forEach(function (page) {
         if (page.id === 'page' + pageName.charAt(0).toUpperCase() + pageName.slice(1)) {
             page.classList.remove('slide-out');
             page.classList.add('active');
 
-            var animatedElements = page.querySelectorAll('.modal-info-item, .chart-section, .latency-stat, .latency-task-card, .latency-chart-container');
+            const animatedElements = page.querySelectorAll('.modal-info-item, .chart-section, .latency-stat, .latency-task-card, .latency-chart-container');
             animatedElements.forEach(function(el) {
                 el.style.animation = 'none';
                 void el.offsetHeight;
@@ -351,7 +350,7 @@ export function switchModalPage(pageName) {
     });
 
     if (pageName === 'latency' && state.selectedNodeUuid) {
-        var els = getModalElements();
+        const els = getModalElements();
         if (els.latencyChart) {
             state.chartObserver.observe(els.latencyChart);
         }
@@ -366,7 +365,7 @@ export function switchModalPage(pageName) {
  * @returns {string} HTML
  */
 function buildInfoItem(label, value, nowrap) {
-    var cls = nowrap ? 'modal-info-value modal-info-value-nowrap' : 'modal-info-value';
+    const cls = nowrap ? 'modal-info-value modal-info-value-nowrap' : 'modal-info-value';
     return '<div class="modal-info-item"><div class="modal-info-label">' + escapeHtml(label) + '</div><div class="' + cls + '">' + escapeHtml(value) + '</div></div>';
 }
 
@@ -374,7 +373,7 @@ function buildInfoItem(label, value, nowrap) {
  * 关闭模态框
  */
 export function closeModal() {
-    var els = getModalElements();
+    const els = getModalElements();
     if (els.overlay && els.overlay.classList.contains('active')) {
         els.overlay.classList.add('closing');
 
@@ -422,25 +421,25 @@ export function closeModal() {
  * 包含鼠标拖拽 + 触摸拖拽 + 惯性滚动 + 拖拽手柄下拉关闭
  */
 export function initModalDragScroll() {
-    var modal = document.getElementById('nodeModal');
-    var scrollIndicator = document.getElementById('modalScrollIndicator');
+    const modal = document.getElementById('nodeModal');
+    const scrollIndicator = document.getElementById('modalScrollIndicator');
     if (!modal) return;
 
-    var isDragging = false;
-    var startY = 0;
-    var scrollTop = 0;
-    var lastY = 0;
-    var velocity = 0;
-    var animationFrame = null;
+    let isDragging = false;
+    let startY = 0;
+    let scrollTop = 0;
+    let lastY = 0;
+    let velocity = 0;
+    let animationFrame = null;
 
     function updateScrollIndicator() {
         if (!scrollIndicator) return;
-        var scrollHeight = modal.scrollHeight - modal.clientHeight;
+        const scrollHeight = modal.scrollHeight - modal.clientHeight;
         if (scrollHeight <= 0) {
             scrollIndicator.classList.remove('visible');
             return;
         }
-        var progress = modal.scrollTop / scrollHeight;
+        const progress = modal.scrollTop / scrollHeight;
         scrollIndicator.style.setProperty('--scroll-progress', progress);
         scrollIndicator.classList.add('visible');
     }
@@ -482,8 +481,8 @@ export function initModalDragScroll() {
     function onMouseMove(e) {
         if (!isDragging) return;
 
-        var deltaY = startY - e.clientY;
-        var currentY = e.clientY;
+        const deltaY = startY - e.clientY;
+        const currentY = e.clientY;
         velocity = lastY - currentY;
         lastY = currentY;
 
@@ -514,8 +513,8 @@ export function initModalDragScroll() {
         updateScrollIndicator();
     }, { passive: true });
 
-    var touchStartY = 0;
-    var touchStartScrollTop = 0;
+    let touchStartY = 0;
+    let touchStartScrollTop = 0;
 
     modal.addEventListener('touchstart', function(e) {
         if (e.touches.length === 1) {
@@ -526,8 +525,8 @@ export function initModalDragScroll() {
 
     modal.addEventListener('touchmove', function(e) {
         if (e.touches.length === 1) {
-            var touchY = e.touches[0].clientY;
-            var deltaY = touchStartY - touchY;
+            const touchY = e.touches[0].clientY;
+            const deltaY = touchStartY - touchY;
             modal.scrollTop = touchStartScrollTop + deltaY;
             updateScrollIndicator();
         }
@@ -537,12 +536,12 @@ export function initModalDragScroll() {
         updateScrollIndicator();
     }, { passive: true });
 
-    var dragHandle = document.getElementById('modalDragHandle');
+    const dragHandle = document.getElementById('modalDragHandle');
     if (dragHandle) {
-        var handleStartY = 0;
-        var handleStartTop = 0;
-        var isHandleDragging = false;
-        var modalStartHeight = 0;
+        let handleStartY = 0;
+        let handleStartTop = 0;
+        let isHandleDragging = false;
+        let modalStartHeight = 0;
 
         dragHandle.addEventListener('touchstart', function(e) {
             if (e.touches.length === 1) {
@@ -557,12 +556,12 @@ export function initModalDragScroll() {
         dragHandle.addEventListener('touchmove', function(e) {
             if (!isHandleDragging || e.touches.length !== 1) return;
 
-            var currentY = e.touches[0].clientY;
-            var deltaY = currentY - handleStartY;
+            const currentY = e.touches[0].clientY;
+            const deltaY = currentY - handleStartY;
 
             if (deltaY > 0 && modal.scrollTop === 0) {
                 e.preventDefault();
-                var newHeight = Math.max(modalStartHeight - deltaY, 100);
+                const newHeight = Math.max(modalStartHeight - deltaY, 100);
                 modal.style.maxHeight = newHeight + 'px';
                 modal.style.transform = 'translateY(' + (deltaY * 0.5) + 'px)';
                 modal.style.opacity = Math.max(1 - deltaY / 300, 0.3);
@@ -575,8 +574,8 @@ export function initModalDragScroll() {
             isHandleDragging = false;
             modal.style.transition = '';
 
-            var currentY = e.changedTouches[0].clientY;
-            var deltaY = currentY - handleStartY;
+            const currentY = e.changedTouches[0].clientY;
+            const deltaY = currentY - handleStartY;
 
             if (deltaY > 100 && modal.scrollTop === 0) {
                 closeModal();
@@ -588,7 +587,7 @@ export function initModalDragScroll() {
         }, { passive: true });
     }
 
-    var observer = new MutationObserver(function() {
+    const observer = new MutationObserver(function() {
         setTimeout(updateScrollIndicator, 100);
     });
 
