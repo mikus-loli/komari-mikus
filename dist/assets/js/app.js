@@ -19,7 +19,7 @@ import { initTheme, initView, applyThemeSettings } from './ui/theme.js';
 import { initLang } from './i18n/index.js';
 import { renderGroupFilter, renderAll } from './ui/nodes.js';
 import { bindEvents } from './ui/events.js';
-import { drawCharts } from './ui/charts.js';
+import { drawCharts } from './ui/charts/index.js';
 
 /**
  * 应用初始化

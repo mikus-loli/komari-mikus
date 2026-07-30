@@ -166,8 +166,8 @@ export class RPC2Client {
             if (self.ws && self.ws.readyState === WebSocket.OPEN) {
                 self.call(self.pollMethod, {}, false).then(function(result) {
                     if (self.pollCallback) self.pollCallback(result);
-                }).catch(function(err) {
-                    console.warn('RPC poll call failed:', err);
+                }).catch(function() {
+                    /* 轮询失败为瞬时故障，下次间隔自动重试，无需日志 */
                 });
             }
         }, RPC_POLL_INTERVAL_MS);

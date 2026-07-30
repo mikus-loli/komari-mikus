@@ -45,16 +45,16 @@
                         <circle cx="11" cy="11" r="8"/>
                         <path d="m21 21-4.35-4.35"/>
                     </svg>
-                    <input type="text" id="searchInput" placeholder="Search nodes..." autocomplete="off">
+                    <input type="text" id="searchInput" placeholder="Search nodes..." autocomplete="off" aria-label="搜索节点">
                 </div>
                 <div class="view-toggle">
-                    <button class="view-btn active" data-view="grid" title="Grid View">
+                    <button class="view-btn active" data-view="grid" title="Grid View" role="switch" aria-pressed="true">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
                             <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
                         </svg>
                     </button>
-                    <button class="view-btn" data-view="table" title="Table View">
+                    <button class="view-btn" data-view="table" title="Table View" role="switch" aria-pressed="false">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/>
                             <line x1="3" y1="18" x2="21" y2="18"/>
@@ -143,13 +143,13 @@
             </div>
         </main>
 
-        <div class="modal-overlay" id="modalOverlay">
-            <div class="modal" id="nodeModal">
+        <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true">
+            <div class="modal" id="nodeModal" tabindex="-1">
                 <div class="modal-scroll-indicator" id="modalScrollIndicator"></div>
                 <div class="modal-drag-handle" id="modalDragHandle"></div>
                 <div class="modal-header">
                     <h2 id="modalNodeName"></h2>
-                    <button class="modal-close" id="modalClose">&times;</button>
+                    <button class="modal-close" id="modalClose" aria-label="关闭">&times;</button>
                 </div>
                 <div class="modal-tabs">
                     <button class="modal-tab active" data-tab="overview" data-i18n="overview">Overview</button>

@@ -9,7 +9,7 @@ import { state } from '../core/state.js';
 import { toggleTheme, toggleLang, setView, applyBackgroundSettings } from './theme.js';
 import { renderAll } from './nodes.js';
 import { closeModal, switchModalPage, initModalDragScroll, renderLatencyPage } from './modal.js';
-import { drawCharts, drawLatencyChart } from './charts.js';
+import { drawCharts, drawLatencyChart } from './charts/index.js';
 import { isMobileDevice } from '../utils/helpers.js';
 import { timeRangeToHours } from '../utils/time.js';
 import { loadNodeHistory, loadPingHistory } from '../services/api.js';

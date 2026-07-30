@@ -103,7 +103,9 @@ export function applyView() {
     }
 
     btns.forEach(function (btn) {
-        btn.classList.toggle('active', btn.getAttribute('data-view') === state.currentView);
+        const isActive = btn.getAttribute('data-view') === state.currentView;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
 }
 

@@ -45,6 +45,25 @@
     --sakura-2: #ff8fa3;
     --sakura-3: #e8668a;
     --sakura-4: #c94064;
+    /* Chart series colors */
+    --chart-cpu: #F38181;
+    --chart-ram: #FCE38A;
+    --chart-network-down: #5BB85B;
+    --chart-network-up: #95E1D3;
+    --chart-disk: #AA96DA;
+    --chart-process: #FCBAD3;
+    --chart-connections: #6C9CE9;
+    --chart-connections-udp: #F4A261;
+    /* Chart UI colors */
+    --chart-grid: rgba(0,0,0,0.04);
+    --chart-text: rgba(0,0,0,0.4);
+    --chart-bg: rgba(0,0,0,0.01);
+    --chart-empty-text: rgba(0,0,0,0.3);
+    --chart-dot-center: #fff;
+    --chart-loss-line: rgba(220,50,50,0.5);
+    --chart-hint-text: rgba(0,0,0,0.5);
+    --chart-latency-grid: rgba(0,0,0,0.06);
+    --chart-latency-text: rgba(0,0,0,0.35);
 }
 
 .custom-background {
@@ -248,6 +267,25 @@
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
     --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.4);
     --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.2);
+    /* Chart series colors */
+    --chart-cpu: #ff6b6b;
+    --chart-ram: #4ade80;
+    --chart-network-down: #5ec492;
+    --chart-network-up: #7ab3f7;
+    --chart-disk: #a78bfa;
+    --chart-process: #f472b6;
+    --chart-connections: #60a5fa;
+    --chart-connections-udp: #fb923c;
+    /* Chart UI colors */
+    --chart-grid: rgba(255,255,255,0.06);
+    --chart-text: rgba(255,255,255,0.5);
+    --chart-bg: rgba(255,255,255,0.02);
+    --chart-empty-text: rgba(255,255,255,0.3);
+    --chart-dot-center: #1a1a2e;
+    --chart-loss-line: rgba(255,100,100,0.6);
+    --chart-hint-text: rgba(255,255,255,0.5);
+    --chart-latency-grid: rgba(255,255,255,0.08);
+    --chart-latency-text: rgba(255,255,255,0.4);
 }
 
 body.has-custom-background {

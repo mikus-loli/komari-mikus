@@ -12,7 +12,7 @@ import { formatBytes, formatUptime, formatPing } from '../utils/format.js';
 import { timeRangeToHours } from '../utils/time.js';
 import { escapeHtml, getPingLevel, getTaskLatestPing } from '../utils/helpers.js';
 import { loadNodeHistory, loadPingHistory } from '../services/api.js';
-import { drawCharts, drawLatencyChart, renderChartByConfig, getChartConfigs, drawLineChart, drawNetworkChart } from './charts.js';
+import { drawCharts, drawLatencyChart, renderChartByConfig, getChartConfigs, drawLineChart, drawNetworkChart } from './charts/index.js';
 
 /**
  * 获取模态框元素引用（带缓存）
@@ -84,8 +84,9 @@ export function initChartObserver() {
                             if (config) {
                                 renderChartByConfig(config, records, dataHours);
                             } else {
+                                const cs = getComputedStyle(document.documentElement);
                                 if (chartId === 'cpuChart') {
-                                    drawLineChart('cpuChart', records, function (r) { return r.cpu; }, 0, 100, '#e8668a', 'CPU %', dataHours);
+                                    drawLineChart('cpuChart', records, function (r) { return r.cpu; }, 0, 100, cs.getPropertyValue('--chart-cpu').trim(), 'CPU %', dataHours);
                                 } else if (chartId === 'ramChart') {
                                     drawLineChart('ramChart', records, function (r) {
                                         const ramVal = r.ram;
@@ -94,7 +95,7 @@ export function initChartObserver() {
                                             return (ramVal / r.ram_total) * 100;
                                         }
                                         return ramVal;
-                                    }, 0, 100, '#5c9ced', 'RAM %', dataHours);
+                                    }, 0, 100, cs.getPropertyValue('--chart-ram').trim(), 'RAM %', dataHours);
                                 } else if (chartId === 'networkChart') {
                                     drawNetworkChart('networkChart', records, dataHours);
                                 }
@@ -154,6 +155,11 @@ export function openNodeModal(uuid) {
             document.body.style.paddingRight = scrollbarWidth + 'px';
         }
         document.body.style.overflow = 'hidden';
+    }
+
+    // 将焦点移到模态框内（无障碍焦点管理）
+    if (els.modal) {
+        els.modal.focus();
     }
 
     chartSections.forEach(function(section) {
