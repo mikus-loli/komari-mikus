@@ -1,0 +1,45 @@
+name: Test
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run algorithm tests
+        run: node test/algorithms.test.mjs
+
+      - name: Check no var declarations in JS
+        run: |
+          count=$(grep -rP '\bvar\s' dist/assets/js/ --include='*.js' -l | wc -l)
+          if [ "$count" -gt 0 ]; then
+            echo "Found var declarations in:"
+            grep -rP '\bvar\s' dist/assets/js/ --include='*.js' -l
+            exit 1
+          fi
+          echo "No var declarations found"
+
+      - name: Validate required files
+        run: |
+          missing=""
+          for f in komari-theme.json dist/index.html dist/assets/style.css dist/assets/js/app.js LICENSE; do
+            if [ ! -f "$f" ]; then missing="$missing $f"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "Missing:$missing"
+            exit 1
+          fi
+          echo "All required files present"
