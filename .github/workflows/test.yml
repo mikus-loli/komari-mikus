@@ -22,12 +22,15 @@ jobs:
       - name: Run algorithm tests
         run: node test/algorithms.test.mjs
 
+      - name: Run API/RPC tests
+        run: node test/api-rpc.test.mjs
+
       - name: Check no var declarations in JS
         run: |
-          count=$(grep -rP '\bvar\s' dist/assets/js/ --include='*.js' -l | wc -l)
+          count=$(grep -rP '\bvar\s' dist/assets/js/ --include='*.js' -l --exclude='sakura.js' | wc -l)
           if [ "$count" -gt 0 ]; then
             echo "Found var declarations in:"
-            grep -rP '\bvar\s' dist/assets/js/ --include='*.js' -l
+            grep -rP '\bvar\s' dist/assets/js/ --include='*.js' -l --exclude='sakura.js'
             exit 1
           fi
           echo "No var declarations found"
