@@ -3,10 +3,10 @@
  * @description RPC2Client 类 + 初始化函数
  * @dependencies core/state.js
  * @exports RPC2Client, initRPC2Client
- * @source app.js L4-L195, L1164-L1188
  */
 
 import { state } from '../core/state.js';
+import { RPC_TIMEOUT_MS, RPC_POLL_INTERVAL_MS } from '../core/constants.js';
 
 /**
  * RPC2Client 类 - WebSocket/HTTP RPC 客户端
@@ -117,7 +117,7 @@ export class RPC2Client {
                 } else {
                     reject(new Error('RPC timeout'));
                 }
-            }, 15000);
+            }, RPC_TIMEOUT_MS);
 
             self.pendingCalls[id] = { resolve: resolve, reject: reject, timer: timer };
 
@@ -166,9 +166,11 @@ export class RPC2Client {
             if (self.ws && self.ws.readyState === WebSocket.OPEN) {
                 self.call(self.pollMethod, {}, false).then(function(result) {
                     if (self.pollCallback) self.pollCallback(result);
-                }).catch(function() {});
+                }).catch(function(err) {
+                    console.warn('RPC poll call failed:', err);
+                });
             }
-        }, 1000);
+        }, RPC_POLL_INTERVAL_MS);
     }
 
     stopPolling() {
@@ -211,9 +213,9 @@ export function initRPC2Client(handleRpcResult) {
 
     state.rpc.onDisconnect = function() {};
 
+    state.rpc.connect();
+
     state.rpc.startPolling(function(result) {
         handleRpcResult(result);
     });
-
-    state.rpc.connect();
 }

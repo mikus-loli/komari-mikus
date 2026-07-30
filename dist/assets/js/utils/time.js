@@ -3,7 +3,6 @@
  * @description 时间范围转换与格式化
  * @dependencies 无
  * @exports timeRangeToHours, formatTimeLabel, formatTooltipTime
- * @source app.js L880-L906
  */
 
 /**

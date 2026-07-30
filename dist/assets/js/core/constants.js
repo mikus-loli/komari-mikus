@@ -2,8 +2,7 @@
  * @module core/constants
  * @description 静态常量映射表
  * @dependencies 无
- * @exports RPC_METHODS, THEME_MAP, VIEW_MAP, PING_COLORS, COUNTRY_CODE_MAP
- * @source app.js L197-L211 及散落的常量定义
+ * @exports RPC_METHODS, THEME_MAP, VIEW_MAP, PING_COLORS, COUNTRY_CODE_MAP, RPC_TIMEOUT_MS, RPC_POLL_INTERVAL_MS, MAX_HISTORY_POINTS, EWMA_ALPHA_DEFAULT, CACHE_EXPIRY_MS
  */
 
 /** RPC 方法名映射 */
@@ -63,3 +62,18 @@ export const COUNTRY_CODE_MAP = {
     '荷兰': 'NL', 'Netherlands': 'NL',
     '土耳其': 'TR', 'Turkey': 'TR'
 };
+
+/** RPC 调用超时时间（毫秒） */
+export const RPC_TIMEOUT_MS = 15000;
+
+/** RPC 轮询间隔（毫秒） */
+export const RPC_POLL_INTERVAL_MS = 1000;
+
+/** 历史数据最大保留点数 */
+export const MAX_HISTORY_POINTS = 600;
+
+/** EWMA 平滑因子默认值 */
+export const EWMA_ALPHA_DEFAULT = 0.3;
+
+/** 缓存有效期（毫秒） */
+export const CACHE_EXPIRY_MS = 60000;

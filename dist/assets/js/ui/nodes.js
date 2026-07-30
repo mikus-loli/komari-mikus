@@ -3,7 +3,6 @@
  * @description 节点列表渲染（网格视图 + 表格视图 + 统计栏 + 分组过滤）
  * @dependencies core/state.js, i18n/index.js, utils/format.js, utils/helpers.js, utils/color.js, ui/preloader.js, ui/modal.js
  * @exports renderAll, renderGrid, renderTable, renderStatsBar, renderGroupFilter, getFilteredNodes, getGroups, calculateNodeMetrics
- * @source app.js L1924-L2507
  */
 
 import { state } from '../core/state.js';

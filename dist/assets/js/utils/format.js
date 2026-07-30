@@ -3,7 +3,6 @@
  * @description 数据格式化纯函数
  * @dependencies i18n/index.js
  * @exports formatBytes, formatSpeed, formatPercent, formatAxisSpeed, getSpeedAxisUnit, formatAxisCount, getCountAxisUnit, formatUptime, formatExpiry, formatPrice, formatPing, formatOS
- * @source app.js L967-L1152
  */
 
 import { t } from '../i18n/index.js';

@@ -3,7 +3,6 @@
  * @description 所有数据处理算法（EWMA, LTTB, 插值, 峰值检测, pipeline）
  * @dependencies core/state.js, utils/helpers.js
  * @exports applyEWMA, lttbDownsampleRecords, createNullTemplate, fillMissingTimePoints, interpolateNullsLinear, cutPeakValues, processDataPipeline
- * @source app.js L431-L878
  */
 
 import { state } from '../core/state.js';

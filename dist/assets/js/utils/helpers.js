@@ -3,7 +3,6 @@
  * @description 通用辅助函数
  * @dependencies core/state.js, core/constants.js, i18n/index.js
  * @exports escapeHtml, parseTagInfo, getGreeting, resetAnimation, isMobileDevice, getUsageLevel, trimRecords, getMaxDataPoints, getCountryCode, getCountryFlag, getCountryFlagUrl, parseFlagEmoji, getLatestPing, getPingTasks, getTaskLatestPing, getPingLevel, getShortOs, getApiBase, getWsUrl
- * @source app.js 各处辅助函数
  */
 
 import { state } from '../core/state.js';

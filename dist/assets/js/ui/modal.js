@@ -3,7 +3,6 @@
  * @description 模态框管理（打开/关闭/切换 Tab/图表观察器/拖拽滚动/概览页/延迟页渲染）
  * @dependencies core/state.js, core/constants.js, i18n/index.js, utils/format.js, utils/time.js, utils/helpers.js, services/api.js, ui/charts.js
  * @exports openNodeModal, closeModal, switchModalPage, initChartObserver, renderOverviewPage, renderLatencyPage, getModalElements, updateTimeRangeButtons, initModalDragScroll
- * @source app.js L2509-L2876, L4555-L4730
  */
 
 import { state } from '../core/state.js';

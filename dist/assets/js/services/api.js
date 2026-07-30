@@ -3,11 +3,10 @@
  * @description 所有数据加载 API
  * @dependencies core/state.js, core/constants.js, services/rpc.js, utils/helpers.js, i18n/index.js
  * @exports loadPublicSettings, loadNodes, loadNodeHistory, loadRecentRecordsFallback, loadPingHistory, loadAllPingData, enrichPingTasksFromRPC, fetchPingTaskNames
- * @source app.js L1190-L1537
  */
 
 import { state, historyCache, pingCache, getCachedData, setCachedData } from '../core/state.js';
-import { RPC_METHODS } from '../core/constants.js';
+import { RPC_METHODS, MAX_HISTORY_POINTS } from '../core/constants.js';
 import { trimRecords, getApiBase } from '../utils/helpers.js';
 import { t } from '../i18n/index.js';
 
@@ -125,7 +124,7 @@ function mergeIntoRealtimeHistory(uuid, records) {
         }
     }
 
-    if (merged.length > 600) merged = merged.slice(merged.length - 600);
+    if (merged.length > MAX_HISTORY_POINTS) merged = merged.slice(merged.length - MAX_HISTORY_POINTS);
     state.realtimeHistory[uuid] = merged;
     state.historyDataHours[uuid] = 0;
 }
@@ -169,7 +168,7 @@ export function loadRecentRecordsFallback(uuid, cacheKey, fallbackHours) {
             .then(function(result) {
                 const records = Array.isArray(result) ? result : (result && result.records ? result.records : null);
                 if (records && records.length > 0) {
-                    const trimmedRecords = trimRecords(records, 600);
+                    const trimmedRecords = trimRecords(records, MAX_HISTORY_POINTS);
                     if (cacheKey) {
                         state.historyData[uuid] = trimmedRecords;
                         if (fallbackHours !== undefined) state.historyDataHours[uuid] = fallbackHours;
@@ -186,7 +185,7 @@ export function loadRecentRecordsFallback(uuid, cacheKey, fallbackHours) {
             .then(function(fallback) {
                 const records = fallback && fallback.records ? fallback.records : [];
                 if (records.length > 0) {
-                    const trimmedRecords = trimRecords(records, 600);
+                    const trimmedRecords = trimRecords(records, MAX_HISTORY_POINTS);
                     if (cacheKey) {
                         state.historyData[uuid] = trimmedRecords;
                         if (fallbackHours !== undefined) state.historyDataHours[uuid] = fallbackHours;
@@ -197,7 +196,9 @@ export function loadRecentRecordsFallback(uuid, cacheKey, fallbackHours) {
                 }
             });
     })
-    .catch(function() {});
+    .catch(function(err) {
+        console.warn('All record loading methods failed:', err);
+    });
 }
 
 /**
@@ -243,7 +244,7 @@ export function loadNodeHistory(uuid, hours) {
         entity_id: uuid,
         hours: hours,
         downsample: true,
-        max_points: 600,
+        max_points: MAX_HISTORY_POINTS,
         aggregation: 'avg',
         fill_empty: false
     }, true).then(function(result) {
@@ -342,7 +343,7 @@ export function loadPingHistory(uuid, hours) {
         entity_id: uuid,
         hours: hours,
         downsample: true,
-        max_points: 600,
+        max_points: MAX_HISTORY_POINTS,
         aggregation: 'avg',
         fill_empty: false
     }, true);
@@ -352,7 +353,7 @@ export function loadPingHistory(uuid, hours) {
     const statsRequest = state.rpc.call(RPC_METHODS.getPingMetricStats, {
         entity_id: uuid,
         hours: hours,
-        max_points: 600
+        max_points: MAX_HISTORY_POINTS
     }, true).catch(function() { return null; });
 
     return Promise.all([metricRequest, taskRequest, statsRequest])
@@ -514,5 +515,7 @@ export function fetchPingTaskNames(uuid, renderCallback) {
 
             if (renderCallback) renderCallback(uuid);
         }
-    }).catch(function() {});
+    }).catch(function(err) {
+        console.warn('fetchPingTaskNames failed:', err);
+    });
 }

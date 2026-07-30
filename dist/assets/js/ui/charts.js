@@ -3,7 +3,6 @@
  * @description 所有 Canvas 图表渲染（概览图表配置驱动 + 延迟图表多任务 + 网络图表 + tooltip 交互）
  * @dependencies core/state.js, i18n/index.js, utils/format.js, utils/time.js, utils/helpers.js, utils/color.js, algorithms/index.js
  * @exports renderChartByConfig, drawCharts, drawLatencyChart, drawMultiTaskPingChart, drawLineChart, drawNetworkChart, getChartConfigs, createMouseMoveHandler, createTouchMoveHandler, updateNetworkLegend
- * @source app.js L2761-L2789, L2877-L4230
  */
 
 import { state } from '../core/state.js';

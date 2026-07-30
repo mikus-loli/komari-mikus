@@ -3,7 +3,6 @@
  * @description 全局事件绑定（主题/语言/视图切换、搜索、模态框、Tab、键盘、时间范围、延迟平滑、窗口 resize）
  * @dependencies core/state.js, ui/theme.js, ui/nodes.js, ui/modal.js, ui/charts.js, utils/helpers.js, utils/time.js, services/api.js
  * @exports bindEvents
- * @source app.js L4376-L4553
  */
 
 import { state } from '../core/state.js';

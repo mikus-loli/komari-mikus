@@ -3,7 +3,6 @@
  * @description 国际化字典 + 翻译函数 + 语言初始化
  * @dependencies core/state.js
  * @exports t, initLang, applyLang, i18n
- * @source app.js L213-L378
  */
 
 import { state } from '../core/state.js';

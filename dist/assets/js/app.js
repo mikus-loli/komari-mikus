@@ -2,7 +2,6 @@
  * @module app
  * @description 应用主入口 - 初始化编排
  * @dependencies services/rpc, services/realtime, services/api, ui/preloader, ui/theme, ui/nodes, ui/events, ui/charts, i18n/index
- * @source app.js L4845-L4897
  */
 
 import { initRPC2Client } from './services/rpc.js';
