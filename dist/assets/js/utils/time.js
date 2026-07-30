@@ -3,6 +3,7 @@
  * @description 时间范围转换与格式化
  * @dependencies 无
  * @exports timeRangeToHours, formatTimeLabel, formatTooltipTime
+ * @source app.js L880-L906
  */
 
 /**
@@ -45,8 +46,8 @@ export function formatTimeLabel(time, hours) {
  * @returns {string} 格式化后的时间字符串
  */
 export function formatTooltipTime(time, hours) {
-    const dateStr = (time.getMonth() + 1).toString().padStart(2, '0') + '-' + time.getDate().toString().padStart(2, '0');
-    const timeStr = time.getHours().toString().padStart(2, '0') + ':' + time.getMinutes().toString().padStart(2, '0');
+    var dateStr = (time.getMonth() + 1).toString().padStart(2, '0') + '-' + time.getDate().toString().padStart(2, '0');
+    var timeStr = time.getHours().toString().padStart(2, '0') + ':' + time.getMinutes().toString().padStart(2, '0');
     if (hours <= 4) {
         return timeStr;
     }

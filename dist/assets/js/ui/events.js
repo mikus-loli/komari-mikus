@@ -3,6 +3,7 @@
  * @description 全局事件绑定（主题/语言/视图切换、搜索、模态框、Tab、键盘、时间范围、延迟平滑、窗口 resize）
  * @dependencies core/state.js, ui/theme.js, ui/nodes.js, ui/modal.js, ui/charts.js, utils/helpers.js, utils/time.js, services/api.js
  * @exports bindEvents
+ * @source app.js L4376-L4553
  */
 
 import { state } from '../core/state.js';
@@ -20,12 +21,12 @@ import { loadNodeHistory, loadPingHistory } from '../services/api.js';
  * 延迟平滑按钮、概要/延迟图表时间范围选择、模态框拖拽滚动、窗口 resize
  */
 export function bindEvents() {
-    const themeToggle = document.getElementById('themeToggle');
+    var themeToggle = document.getElementById('themeToggle');
     if (themeToggle) {
         themeToggle.addEventListener('click', toggleTheme);
     }
 
-    const langToggle = document.getElementById('langToggle');
+    var langToggle = document.getElementById('langToggle');
     if (langToggle) {
         langToggle.addEventListener('click', toggleLang);
     }
@@ -36,12 +37,12 @@ export function bindEvents() {
         });
     });
 
-    const searchInput = document.getElementById('searchInput');
+    var searchInput = document.getElementById('searchInput');
     if (searchInput) {
-        let searchTimer = null;
+        var searchTimer = null;
         searchInput.addEventListener('input', function () {
             clearTimeout(searchTimer);
-            const val = this.value;
+            var val = this.value;
             searchTimer = setTimeout(function () {
                 state.searchQuery = val;
                 renderAll();
@@ -49,12 +50,12 @@ export function bindEvents() {
         });
     }
 
-    const modalClose = document.getElementById('modalClose');
+    var modalClose = document.getElementById('modalClose');
     if (modalClose) {
         modalClose.addEventListener('click', closeModal);
     }
 
-    const modalOverlay = document.getElementById('modalOverlay');
+    var modalOverlay = document.getElementById('modalOverlay');
     if (modalOverlay) {
         modalOverlay.addEventListener('click', function (e) {
             if (e.target === this) closeModal();
@@ -63,7 +64,7 @@ export function bindEvents() {
 
     document.querySelectorAll('.modal-tab').forEach(function (tab) {
         tab.addEventListener('click', function () {
-            const pageName = this.getAttribute('data-tab');
+            var pageName = this.getAttribute('data-tab');
             switchModalPage(pageName);
         });
     });
@@ -73,7 +74,7 @@ export function bindEvents() {
     });
 
     // 延迟趋势图表平滑按钮
-    const latencySmoothBtn = document.getElementById('latencySmoothBtn');
+    var latencySmoothBtn = document.getElementById('latencySmoothBtn');
     if (latencySmoothBtn) {
         latencySmoothBtn.addEventListener('click', function () {
             state.latencyChartSmooth = !state.latencyChartSmooth;
@@ -81,7 +82,7 @@ export function bindEvents() {
 
             // 重新绘制延迟图表
             if (state.selectedNodeUuid && state.pingData[state.selectedNodeUuid]) {
-                const pingInfo = state.pingData[state.selectedNodeUuid];
+                var pingInfo = state.pingData[state.selectedNodeUuid];
                 if (pingInfo && pingInfo.records && pingInfo.tasks) {
                     drawLatencyChart('latencyChart', pingInfo.records, pingInfo.tasks);
                 }
@@ -90,11 +91,11 @@ export function bindEvents() {
     }
 
     // 概要图表时间范围选择
-    const overviewTimeRange = document.getElementById('overviewTimeRange');
+    var overviewTimeRange = document.getElementById('overviewTimeRange');
     if (overviewTimeRange) {
         overviewTimeRange.querySelectorAll('.time-range-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {
-                const range = this.getAttribute('data-range');
+                var range = this.getAttribute('data-range');
                 state.historyTimeRange = range;
 
                 // 更新按钮激活状态
@@ -105,9 +106,9 @@ export function bindEvents() {
 
                 // 重新加载历史数据并绘制图表
                 if (state.selectedNodeUuid) {
-                    const hours = timeRangeToHours(range);
+                    var hours = timeRangeToHours(range);
                     // 显示加载动画
-                    const chartSections = document.querySelectorAll('.modal-charts .chart-section');
+                    var chartSections = document.querySelectorAll('.modal-charts .chart-section');
                     chartSections.forEach(function(section) {
                         section.classList.add('loading');
                     });
@@ -138,11 +139,11 @@ export function bindEvents() {
     }
 
     // 延迟图表时间范围选择
-    const pingTimeRange = document.getElementById('pingTimeRange');
+    var pingTimeRange = document.getElementById('pingTimeRange');
     if (pingTimeRange) {
         pingTimeRange.querySelectorAll('.time-range-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {
-                const range = this.getAttribute('data-range');
+                var range = this.getAttribute('data-range');
                 state.pingTimeRange = range;
 
                 // 更新按钮激活状态
@@ -159,15 +160,15 @@ export function bindEvents() {
                     }
 
                     // 显示加载动画
-                    const latencyChartContainer = document.querySelector('.latency-chart-container');
+                    var latencyChartContainer = document.querySelector('.latency-chart-container');
                     if (latencyChartContainer) {
                         latencyChartContainer.classList.add('loading');
                     }
 
-                    const hours = timeRangeToHours(range);
+                    var hours = timeRangeToHours(range);
                     loadPingHistory(state.selectedNodeUuid, hours).then(function () {
                         // 重置延迟页面动画
-                        const latencyAnimated = document.querySelectorAll('#pageLatency .latency-stat, #pageLatency .latency-task-card, #pageLatency .latency-chart-container');
+                        var latencyAnimated = document.querySelectorAll('#pageLatency .latency-stat, #pageLatency .latency-task-card, #pageLatency .latency-chart-container');
                         latencyAnimated.forEach(function(el) {
                             el.style.animation = 'none';
                             void el.offsetHeight;
@@ -177,7 +178,7 @@ export function bindEvents() {
                         renderLatencyPage(state.selectedNodeUuid);
 
                         // 直接绘制延迟图表（不依赖 IntersectionObserver）
-                        const pingInfo = state.pingData[state.selectedNodeUuid];
+                        var pingInfo = state.pingData[state.selectedNodeUuid];
                         if (pingInfo && pingInfo.records && pingInfo.tasks) {
                             drawLatencyChart('latencyChart', pingInfo.records, pingInfo.tasks);
                             state.chartsDrawn[state.selectedNodeUuid + '_latencyChart'] = true;
@@ -201,9 +202,9 @@ export function bindEvents() {
     initModalDragScroll();
 
     // 响应式防抖优化（参考 PurCarte 的 debounce=50）
-    let resizeTimer = null;
-    let chartResizeTimer = null;
-    let lastIsMobile = isMobileDevice();
+    var resizeTimer = null;
+    var chartResizeTimer = null;
+    var lastIsMobile = isMobileDevice();
 
     window.addEventListener('resize', function () {
         // 图表重绘防抖：延迟 50ms 后执行，避免频繁重绘
@@ -217,7 +218,7 @@ export function bindEvents() {
         // 移动设备检测防抖：延迟 100ms 后执行
         if (resizeTimer) clearTimeout(resizeTimer);
         resizeTimer = setTimeout(function() {
-            const currentIsMobile = isMobileDevice();
+            var currentIsMobile = isMobileDevice();
             if (currentIsMobile !== lastIsMobile) {
                 lastIsMobile = currentIsMobile;
                 applyBackgroundSettings();

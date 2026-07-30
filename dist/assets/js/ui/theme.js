@@ -3,6 +3,7 @@
  * @description 主题切换、视图切换、语言切换、主题设置应用（footer/mascot/background/sakura）
  * @dependencies core/state.js, core/constants.js, i18n/index.js, ui/preloader.js, ui/nodes.js, utils/helpers.js
  * @exports initTheme, applyTheme, toggleTheme, toggleLang, initView, applyView, setView, applyThemeSettings, applyBackgroundSettings, applySakura
+ * @source app.js L1816-L1922, L4232-L4374
  */
 
 import { state } from '../core/state.js';
@@ -16,15 +17,15 @@ import { isMobileDevice } from '../utils/helpers.js';
  * 初始化主题（读取 localStorage 或配置默认值，监听系统主题变化）
  */
 export function initTheme() {
-    const saved = localStorage.getItem('appearance');
-    const configDefault = state.themeSettings.default_theme;
-    let preferred = 'system';
+    var saved = localStorage.getItem('appearance');
+    var configDefault = state.themeSettings.default_theme;
+    var preferred = 'system';
 
     if (configDefault) {
         preferred = THEME_MAP[configDefault] || configDefault;
     }
 
-    let theme = saved || preferred;
+    var theme = saved || preferred;
     if (theme === 'system') {
         theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
@@ -33,7 +34,7 @@ export function initTheme() {
     applyTheme(theme);
 
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
-        const saved = localStorage.getItem('appearance');
+        var saved = localStorage.getItem('appearance');
         if (!saved || saved === 'system') {
             applyTheme(e.matches ? 'dark' : 'light');
         }
@@ -47,8 +48,8 @@ export function initTheme() {
 export function applyTheme(theme) {
     state.currentTheme = theme;
     document.documentElement.setAttribute('data-theme', theme);
-    const themeColor = theme === 'dark' ? '#0f0a15' : '#f8f6f9';
-    const meta = document.querySelector('meta[name="theme-color"]');
+    var themeColor = theme === 'dark' ? '#0f0a15' : '#f8f6f9';
+    var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', themeColor);
 }
 
@@ -56,7 +57,7 @@ export function applyTheme(theme) {
  * 切换主题（明暗互换）
  */
 export function toggleTheme() {
-    const next = state.currentTheme === 'dark' ? 'light' : 'dark';
+    var next = state.currentTheme === 'dark' ? 'light' : 'dark';
     applyTheme(next);
     localStorage.setItem('appearance', next);
 }
@@ -75,9 +76,9 @@ export function toggleLang() {
  * 初始化视图模式（读取 localStorage 或配置默认值）
  */
 export function initView() {
-    const saved = localStorage.getItem('nodeViewMode');
-    const configDefault = state.themeSettings.default_view;
-    const mappedDefault = configDefault ? (VIEW_MAP[configDefault] || configDefault) : 'grid';
+    var saved = localStorage.getItem('nodeViewMode');
+    var configDefault = state.themeSettings.default_view;
+    var mappedDefault = configDefault ? (VIEW_MAP[configDefault] || configDefault) : 'grid';
     state.currentView = saved || mappedDefault;
     applyView();
 }
@@ -86,9 +87,9 @@ export function initView() {
  * 应用视图模式到页面（网格/表格）
  */
 export function applyView() {
-    const grid = document.getElementById('nodesGrid');
-    const table = document.getElementById('nodesTableContainer');
-    const btns = document.querySelectorAll('.view-btn');
+    var grid = document.getElementById('nodesGrid');
+    var table = document.getElementById('nodesTableContainer');
+    var btns = document.querySelectorAll('.view-btn');
 
     if (state.currentView === 'grid') {
         if (grid) grid.style.display = '';
@@ -103,9 +104,7 @@ export function applyView() {
     }
 
     btns.forEach(function (btn) {
-        const isActive = btn.getAttribute('data-view') === state.currentView;
-        btn.classList.toggle('active', isActive);
-        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        btn.classList.toggle('active', btn.getAttribute('data-view') === state.currentView);
     });
 }
 
@@ -123,14 +122,14 @@ export function setView(view) {
  * 应用主题设置（footer/mascot/preloader/background/sakura）
  */
 export function applyThemeSettings() {
-    const customFooter = state.themeSettings.custom_footer;
-    const footerEl = document.getElementById('customFooter');
+    var customFooter = state.themeSettings.custom_footer;
+    var footerEl = document.getElementById('customFooter');
     if (footerEl && customFooter) {
         footerEl.textContent = customFooter;
     }
 
-    const iconBounce = state.themeSettings.icon_bounce !== false;
-    const greetingIcon = document.querySelector('.greeting-icon');
+    var iconBounce = state.themeSettings.icon_bounce !== false;
+    var greetingIcon = document.querySelector('.greeting-icon');
     if (greetingIcon) {
         if (!iconBounce) {
             greetingIcon.classList.add('no-bounce');
@@ -138,9 +137,9 @@ export function applyThemeSettings() {
             greetingIcon.classList.remove('no-bounce');
         }
 
-        const mascotEnabled = state.themeSettings.mascot_enabled !== false;
-        const mascotUrl = state.themeSettings.mascot_url || '';
-        const welcomeGreeting = document.querySelector('.welcome-greeting');
+        var mascotEnabled = state.themeSettings.mascot_enabled !== false;
+        var mascotUrl = state.themeSettings.mascot_url || '';
+        var welcomeGreeting = document.querySelector('.welcome-greeting');
         if (!mascotEnabled) {
             greetingIcon.style.display = 'none';
             if (welcomeGreeting) welcomeGreeting.classList.add('no-mascot');
@@ -153,9 +152,9 @@ export function applyThemeSettings() {
         }
     }
 
-    const preloaderEnabled = state.themeSettings.preloader_enabled !== false;
+    var preloaderEnabled = state.themeSettings.preloader_enabled !== false;
     if (!preloaderEnabled) {
-        const preloader = document.getElementById('preloader');
+        var preloader = document.getElementById('preloader');
         if (preloader) {
             preloader.classList.add('hidden');
             clearPreloaderTimer();
@@ -170,17 +169,17 @@ export function applyThemeSettings() {
  * 应用背景设置（图片/视频，区分 PC/移动端）
  */
 export function applyBackgroundSettings() {
-    const isMobile = isMobileDevice();
-    const prefix = isMobile ? 'mobile_' : 'pc_';
+    var isMobile = isMobileDevice();
+    var prefix = isMobile ? 'mobile_' : 'pc_';
 
-    let bgUrl = state.themeSettings[prefix + 'background_url'];
+    var bgUrl = state.themeSettings[prefix + 'background_url'];
     if (bgUrl === undefined || bgUrl === null) {
         bgUrl = state.themeSettings.background_url || '';
     }
 
-    const bgType = bgUrl ? 'custom' : 'none';
+    var bgType = bgUrl ? 'custom' : 'none';
 
-    const root = document.documentElement;
+    var root = document.documentElement;
     root.style.setProperty('--custom-card-alpha', '0.85');
 
     if (bgType !== 'none') {
@@ -189,7 +188,7 @@ export function applyBackgroundSettings() {
         document.body.classList.remove('has-custom-background');
     }
 
-    let bgContainer = document.getElementById('customBackground');
+    var bgContainer = document.getElementById('customBackground');
     if (!bgContainer) {
         bgContainer = document.createElement('div');
         bgContainer.id = 'customBackground';
@@ -197,7 +196,7 @@ export function applyBackgroundSettings() {
         document.body.insertBefore(bgContainer, document.body.firstChild);
     }
 
-    const existingVideo = bgContainer.querySelector('video');
+    var existingVideo = bgContainer.querySelector('video');
     if (existingVideo) {
         existingVideo.pause();
         existingVideo.remove();
@@ -209,18 +208,18 @@ export function applyBackgroundSettings() {
     if (bgType === 'none') {
         bgContainer.classList.add('hidden');
     } else if (bgType === 'custom' && bgUrl) {
-        const isVideo = /\.(webm|mp4|ogg|mov)(\?.*)?$/i.test(bgUrl);
+        var isVideo = /\.(webm|mp4|ogg|mov)(\?.*)?$/i.test(bgUrl);
 
         if (isVideo) {
             bgContainer.classList.remove('hidden');
-            const video = document.createElement('video');
+            var video = document.createElement('video');
             video.autoplay = true;
             video.loop = true;
             video.muted = true;
             video.playsInline = true;
             video.src = bgUrl;
             bgContainer.appendChild(video);
-            video.play().catch(function() { /* autoplay blocked by browser policy */ });
+            video.play().catch(function() {});
         } else {
             bgContainer.classList.remove('hidden');
             bgContainer.style.backgroundImage = 'url(' + bgUrl + ')';
@@ -234,21 +233,21 @@ export function applyBackgroundSettings() {
  * 应用樱花特效（根据配置动态加载/移除 sakura.js）
  */
 export function applySakura() {
-    const sakuraEnabled = state.themeSettings.sakura_enabled !== false;
-    const sakuraScript = document.getElementById('sakura-script');
+    var sakuraEnabled = state.themeSettings.sakura_enabled !== false;
+    var sakuraScript = document.getElementById('sakura-script');
 
     if (sakuraEnabled && !sakuraScript) {
-        const style = document.createElement('style');
+        var style = document.createElement('style');
         style.id = 'sakura-style';
         style.textContent = '#sakura-canvas, canvas[id*="sakura"] { z-index: 99999 !important; pointer-events: none !important; position: fixed !important; top: 0 !important; left: 0 !important; }';
         document.head.appendChild(style);
 
-        const script = document.createElement('script');
+        var script = document.createElement('script');
         script.id = 'sakura-script';
         script.type = 'text/javascript';
-        script.src = 'https://static.mikus.ink/%E6%A8%B1%E8%8A%B1/sakura.js';
+        script.src = './assets/js/sakura.js';
         script.onload = function() {
-            const canvas = document.querySelector('canvas[style*="fixed"]');
+            var canvas = document.querySelector('canvas[style*="fixed"]');
             if (canvas) {
                 canvas.id = canvas.id || 'sakura-canvas';
                 canvas.style.zIndex = '99999';
@@ -258,9 +257,9 @@ export function applySakura() {
         document.body.appendChild(script);
     } else if (!sakuraEnabled && sakuraScript) {
         sakuraScript.remove();
-        const sakuraStyle = document.getElementById('sakura-style');
+        var sakuraStyle = document.getElementById('sakura-style');
         if (sakuraStyle) sakuraStyle.remove();
-        let sakuraCanvas = document.getElementById('sakura-canvas');
+        var sakuraCanvas = document.getElementById('sakura-canvas');
         if (!sakuraCanvas) sakuraCanvas = document.querySelector('canvas[style*="fixed"]');
         if (sakuraCanvas) sakuraCanvas.remove();
     }

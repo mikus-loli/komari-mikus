@@ -33,10 +33,6 @@ export function drawNetworkChart(canvasId, records, hours) {
     const cs = getComputedStyle(document.documentElement);
     const gridColor = cs.getPropertyValue('--chart-grid').trim();
     const textColor = cs.getPropertyValue('--chart-text').trim();
-    const bgColor = cs.getPropertyValue('--chart-bg').trim();
-
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(padding.left, padding.top, chartW, chartH);
 
     const upValues = records.map(function (r) { return r.net_out || 0; });
     const downValues = records.map(function (r) { return r.net_in || 0; });

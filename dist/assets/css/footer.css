@@ -1,0 +1,33 @@
+.footer {
+    text-align: center;
+    padding: 20px 24px;
+    font-size: 0.82rem;
+    color: var(--text-tertiary);
+    background: transparent;
+    border-top: 1px solid var(--border-light);
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* ==================== Custom background overrides ==================== */
+
+body.has-custom-background .footer {
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-top-color: rgba(var(--border-color-rgb), 0.3);
+}
+
+/* ==================== Responsive ==================== */
+
+@media (max-width: 768px) {
+    .footer {
+        padding: 16px 12px;
+        font-size: 0.72rem;
+        flex-direction: column;
+        gap: 4px;
+        text-align: center;
+    }
+}

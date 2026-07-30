@@ -83,10 +83,6 @@ export function renderChartByConfig(config, records, hours) {
     const cs = getComputedStyle(document.documentElement);
     const gridColor = cs.getPropertyValue('--chart-grid').trim();
     const textColor = cs.getPropertyValue('--chart-text').trim();
-    const bgColor = cs.getPropertyValue('--chart-bg').trim();
-
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(padding.left, padding.top, chartW, chartH);
 
     // 绘制网格线（批量路径，减少 draw call）
     ctx.beginPath();

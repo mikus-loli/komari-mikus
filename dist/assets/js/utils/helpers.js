@@ -3,6 +3,7 @@
  * @description 通用辅助函数
  * @dependencies core/state.js, core/constants.js, i18n/index.js
  * @exports escapeHtml, parseTagInfo, getGreeting, resetAnimation, isMobileDevice, getUsageLevel, trimRecords, getMaxDataPoints, getCountryCode, getCountryFlag, getCountryFlagUrl, parseFlagEmoji, getLatestPing, getPingTasks, getTaskLatestPing, getPingLevel, getShortOs, getApiBase, getWsUrl
+ * @source app.js 各处辅助函数
  */
 
 import { state } from '../core/state.js';
@@ -25,14 +26,14 @@ export function escapeHtml(str) {
  * @returns {Object} 标签信息对象
  */
 export function parseTagInfo(tag) {
-    let tagText = tag.trim();
-    let tagClass = '';
-    const colorMatch = tagText.match(/<(\w+)>$/);
+    var tagText = tag.trim();
+    var tagClass = '';
+    var colorMatch = tagText.match(/<(\w+)>$/);
 
     if (colorMatch) {
         tagText = tagText.replace(/<\w+>$/, '').trim();
-        const color = colorMatch[1].toLowerCase();
-        const validColors = ['green', 'red', 'blue', 'yellow', 'orange', 'purple', 'pink', 'cyan', 'gray', 'success', 'danger', 'warning', 'info'];
+        var color = colorMatch[1].toLowerCase();
+        var validColors = ['green', 'red', 'blue', 'yellow', 'orange', 'purple', 'pink', 'cyan', 'gray', 'success', 'danger', 'warning', 'info'];
         if (validColors.indexOf(color) !== -1) {
             tagClass = ' tag-' + color;
         }
@@ -49,7 +50,7 @@ export function parseTagInfo(tag) {
  * @returns {string} 问候语
  */
 export function getGreeting() {
-    const hours = new Date().getHours();
+    var hours = new Date().getHours();
     if (hours >= 5 && hours < 12) {
         return i18n[state.currentLang] && i18n[state.currentLang].good_morning ? i18n[state.currentLang].good_morning : '早上好';
     } else if (hours >= 12 && hours < 18) {
@@ -107,7 +108,8 @@ export function trimRecords(records, maxCount) {
  */
 export function getMaxDataPoints(hours) {
     if (hours <= 4) return 600;
-    return 600;
+    if (hours <= 24) return 600;
+    return 800;
 }
 
 /**
@@ -118,9 +120,9 @@ export function getMaxDataPoints(hours) {
 export function parseFlagEmoji(emoji) {
     if (!emoji || emoji.length < 2) return null;
 
-    const codePoints = [];
-    for (let i = 0; i < emoji.length; i++) {
-        const cp = emoji.codePointAt(i);
+    var codePoints = [];
+    for (var i = 0; i < emoji.length; i++) {
+        var cp = emoji.codePointAt(i);
         if (cp >= 0x1F1E6 && cp <= 0x1F1FF) {
             codePoints.push(cp);
             if (cp > 0xFFFF) i++;
@@ -128,8 +130,8 @@ export function parseFlagEmoji(emoji) {
     }
 
     if (codePoints.length >= 2) {
-        const letter1 = String.fromCharCode(codePoints[0] - 0x1F1E6 + 65);
-        const letter2 = String.fromCharCode(codePoints[1] - 0x1F1E6 + 65);
+        var letter1 = String.fromCharCode(codePoints[0] - 0x1F1E6 + 65);
+        var letter2 = String.fromCharCode(codePoints[1] - 0x1F1E6 + 65);
         return (letter1 + letter2).toLowerCase();
     }
 
@@ -144,11 +146,11 @@ export function parseFlagEmoji(emoji) {
 export function getCountryCode(region) {
     if (!region) return null;
 
-    const code = region.toLowerCase().trim();
+    var code = region.toLowerCase().trim();
 
     if (COUNTRY_CODE_MAP[code]) return COUNTRY_CODE_MAP[code];
 
-    for (let key in COUNTRY_CODE_MAP) {
+    for (var key in COUNTRY_CODE_MAP) {
         if (code.indexOf(key) !== -1) {
             return COUNTRY_CODE_MAP[key];
         }
@@ -158,7 +160,7 @@ export function getCountryCode(region) {
         return region.toLowerCase();
     }
 
-    const emojiCode = parseFlagEmoji(region);
+    var emojiCode = parseFlagEmoji(region);
     if (emojiCode) return emojiCode;
 
     return null;
@@ -180,7 +182,7 @@ export function getCountryFlagUrl(countryCode) {
  * @returns {string|null} 国旗 URL
  */
 export function getCountryFlag(region) {
-    const code = getCountryCode(region);
+    var code = getCountryCode(region);
     if (!code) return null;
     return getCountryFlagUrl(code);
 }
@@ -191,19 +193,19 @@ export function getCountryFlag(region) {
  * @returns {number|null} 平均延迟值
  */
 export function getLatestPing(uuid) {
-    const pingInfo = state.pingData[uuid];
+    var pingInfo = state.pingData[uuid];
     if (!pingInfo || !pingInfo.records || pingInfo.records.length === 0) {
         return null;
     }
-    const taskValues = {};
+    var taskValues = {};
     pingInfo.records.forEach(function (r) {
         if (!taskValues[r.task_id]) {
             taskValues[r.task_id] = r.value;
         }
     });
-    const values = Object.values(taskValues).filter(function (v) { return v !== null && v !== undefined; });
+    var values = Object.values(taskValues).filter(function (v) { return v !== null && v !== undefined; });
     if (values.length === 0) return null;
-    const sum = values.reduce(function (a, b) { return a + b; }, 0);
+    var sum = values.reduce(function (a, b) { return a + b; }, 0);
     return sum / values.length;
 }
 
@@ -213,7 +215,7 @@ export function getLatestPing(uuid) {
  * @returns {Array} 任务数组
  */
 export function getPingTasks(uuid) {
-    const pingInfo = state.pingData[uuid];
+    var pingInfo = state.pingData[uuid];
     if (!pingInfo || !pingInfo.tasks) return [];
     return pingInfo.tasks;
 }
@@ -225,10 +227,10 @@ export function getPingTasks(uuid) {
  * @returns {number|null} 延迟值
  */
 export function getTaskLatestPing(uuid, taskId) {
-    const pingInfo = state.pingData[uuid];
+    var pingInfo = state.pingData[uuid];
     if (!pingInfo || !pingInfo.records) return null;
-    const targetTaskId = String(taskId);
-    for (let i = pingInfo.records.length - 1; i >= 0; i--) {
+    var targetTaskId = String(taskId);
+    for (var i = pingInfo.records.length - 1; i >= 0; i--) {
         if (String(pingInfo.records[i].task_id) === targetTaskId) {
             return pingInfo.records[i].value;
         }
@@ -256,7 +258,7 @@ export function getPingLevel(pingMs) {
  */
 export function getShortOs(os) {
     if (!os) return '-';
-    const osLower = os.toLowerCase();
+    var osLower = os.toLowerCase();
     if (osLower.indexOf('debian') !== -1) return 'Debian';
     if (osLower.indexOf('ubuntu') !== -1) return 'Ubuntu';
     if (osLower.indexOf('centos') !== -1) return 'CentOS';
@@ -272,7 +274,7 @@ export function getShortOs(os) {
     if (osLower.indexOf('raspbian') !== -1) return 'Raspbian';
     if (osLower.indexOf('oracle') !== -1) return 'Oracle';
     if (osLower.indexOf('red hat') !== -1 || osLower.indexOf('rhel') !== -1) return 'RHEL';
-    const parts = os.split(' ');
+    var parts = os.split(' ');
     return parts[0] || os.substring(0, 12);
 }
 
@@ -289,6 +291,6 @@ export function getApiBase() {
  * @returns {string} WebSocket URL
  */
 export function getWsUrl() {
-    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    var proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     return proto + '//' + window.location.host + '/api/rpc2';
 }

@@ -45,25 +45,23 @@
     --sakura-2: #ff8fa3;
     --sakura-3: #e8668a;
     --sakura-4: #c94064;
-    /* Chart series colors */
-    --chart-cpu: #F38181;
-    --chart-ram: #FCE38A;
-    --chart-network-down: #5BB85B;
-    --chart-network-up: #95E1D3;
-    --chart-disk: #AA96DA;
-    --chart-process: #FCBAD3;
-    --chart-connections: #6C9CE9;
-    --chart-connections-udp: #F4A261;
-    /* Chart UI colors */
-    --chart-grid: rgba(0,0,0,0.04);
-    --chart-text: rgba(0,0,0,0.4);
-    --chart-bg: rgba(0,0,0,0.01);
-    --chart-empty-text: rgba(0,0,0,0.3);
-    --chart-dot-center: #fff;
-    --chart-loss-line: rgba(220,50,50,0.5);
-    --chart-hint-text: rgba(0,0,0,0.5);
-    --chart-latency-grid: rgba(0,0,0,0.06);
-    --chart-latency-text: rgba(0,0,0,0.35);
+    --chart-cpu: #e8668a;
+    --chart-ram: #4caf7d;
+    --chart-network-down: #5c9ced;
+    --chart-network-up: #f5a623;
+    --chart-disk: #7ab3f7;
+    --chart-process: #ff8fa3;
+    --chart-connections: #a78bfa;
+    --chart-connections-udp: #34d399;
+    --chart-bg: #faf8fc;
+    --chart-grid: #ede6f3;
+    --chart-text: #9b8aad;
+    --chart-empty-text: #c4b8d0;
+    --chart-latency-grid: #ede6f3;
+    --chart-latency-text: #9b8aad;
+    --chart-loss-line: #f5a623;
+    --chart-hint-text: rgba(155, 138, 173, 0.6);
+    --chart-dot-center: #ffffff;
 }
 
 .custom-background {
@@ -267,25 +265,23 @@
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
     --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.4);
     --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.2);
-    /* Chart series colors */
-    --chart-cpu: #ff6b6b;
-    --chart-ram: #4ade80;
-    --chart-network-down: #5ec492;
-    --chart-network-up: #7ab3f7;
-    --chart-disk: #a78bfa;
-    --chart-process: #f472b6;
-    --chart-connections: #60a5fa;
-    --chart-connections-udp: #fb923c;
-    /* Chart UI colors */
-    --chart-grid: rgba(255,255,255,0.06);
-    --chart-text: rgba(255,255,255,0.5);
-    --chart-bg: rgba(255,255,255,0.02);
-    --chart-empty-text: rgba(255,255,255,0.3);
-    --chart-dot-center: #1a1a2e;
-    --chart-loss-line: rgba(255,100,100,0.6);
-    --chart-hint-text: rgba(255,255,255,0.5);
-    --chart-latency-grid: rgba(255,255,255,0.08);
-    --chart-latency-text: rgba(255,255,255,0.4);
+    --chart-cpu: #ff8fa3;
+    --chart-ram: #5ec492;
+    --chart-network-down: #7ab3f7;
+    --chart-network-up: #f5b84a;
+    --chart-disk: #93bbfd;
+    --chart-process: #ffb7c5;
+    --chart-connections: #c4b5fd;
+    --chart-connections-udp: #6ee7b7;
+    --chart-bg: #1a1225;
+    --chart-grid: #2d2040;
+    --chart-text: #7a6b8a;
+    --chart-empty-text: #4a3d5c;
+    --chart-latency-grid: #2d2040;
+    --chart-latency-text: #7a6b8a;
+    --chart-loss-line: #f5b84a;
+    --chart-hint-text: rgba(122, 107, 138, 0.6);
+    --chart-dot-center: #1e1530;
 }
 
 body.has-custom-background {

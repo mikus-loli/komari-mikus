@@ -1,9 +1,10 @@
 /**
  * @module app
  * @description 应用主入口 - 初始化编排
- * @dependencies services/rpc, services/realtime, services/api, ui/preloader, ui/theme, ui/nodes, ui/events, ui/charts, i18n/index
+ * @dependencies core/error-boundary, services/rpc, services/realtime, services/api, ui/preloader, ui/theme, ui/nodes, ui/events, ui/charts, i18n/index
  */
 
+import { initErrorBoundary } from './core/error-boundary.js';
 import { initRPC2Client } from './services/rpc.js';
 import { handleRpcResult, setRenderFunctions } from './services/realtime.js';
 import { loadPublicSettings, loadNodes, loadAllPingData } from './services/api.js';
@@ -26,6 +27,7 @@ import { drawCharts } from './ui/charts/index.js';
  * 编排预加载器、RPC 连接、配置加载、节点渲染、事件绑定等流程
  */
 function init() {
+    initErrorBoundary();
     startPreloaderSimulation();
     updateTime();
     setInterval(updateTime, 1000);
@@ -34,7 +36,7 @@ function init() {
         item.classList.add('animate-in');
     });
 
-    const groupFilter = document.querySelector('.stats-bar .group-filter');
+    var groupFilter = document.querySelector('.stats-bar .group-filter');
     if (groupFilter) groupFilter.classList.add('animate-in');
 
     initRPC2Client(handleRpcResult);
@@ -61,7 +63,7 @@ function init() {
     }).catch(function (err) {
         console.error('Init failed:', err);
         clearPreloaderTimer();
-        const statusEl = document.getElementById('preloaderStatus');
+        var statusEl = document.getElementById('preloaderStatus');
         if (statusEl) {
             statusEl.textContent = '加载失败，正在重试...';
             statusEl.classList.add('error');

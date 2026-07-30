@@ -3,6 +3,7 @@
  * @description 国际化字典 + 翻译函数 + 语言初始化
  * @dependencies core/state.js
  * @exports t, initLang, applyLang, i18n
+ * @source app.js L213-L378
  */
 
 import { state } from '../core/state.js';
@@ -187,8 +188,8 @@ export const i18n = {
  * @returns {string} 翻译后的文本
  */
 export function t(key) {
-    const lang = state.currentLang || 'zh-CN';
-    const dict = i18n[lang] || i18n['zh-CN'];
+    var lang = state.currentLang || 'zh-CN';
+    var dict = i18n[lang] || i18n['zh-CN'];
     return dict[key] || key;
 }
 
@@ -197,11 +198,11 @@ export function t(key) {
  * 优先级：localStorage('i18nextLng') > 浏览器语言 > 默认 'zh-CN'
  */
 export function initLang() {
-    const saved = localStorage.getItem('i18nextLng');
+    var saved = localStorage.getItem('i18nextLng');
     if (saved && i18n[saved]) {
         state.currentLang = saved;
     } else {
-        const browserLang = navigator.language || navigator.userLanguage || 'zh-CN';
+        var browserLang = navigator.language || navigator.userLanguage || 'zh-CN';
         if (browserLang.startsWith('zh')) {
             state.currentLang = 'zh-CN';
         } else {
@@ -218,14 +219,14 @@ export function initLang() {
 export function applyLang() {
     document.documentElement.lang = state.currentLang;
     document.querySelectorAll('[data-i18n]').forEach(function(el) {
-        const key = el.getAttribute('data-i18n');
+        var key = el.getAttribute('data-i18n');
         el.textContent = t(key);
     });
     document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el) {
-        const key = el.getAttribute('data-i18n-placeholder');
+        var key = el.getAttribute('data-i18n-placeholder');
         el.placeholder = t(key);
     });
-    const searchInput = document.getElementById('searchInput');
+    var searchInput = document.getElementById('searchInput');
     if (searchInput) {
         searchInput.placeholder = t('search_placeholder');
     }
