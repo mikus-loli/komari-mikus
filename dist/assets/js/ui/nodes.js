@@ -18,9 +18,9 @@ import { openNodeModal } from './modal.js';
  * @returns {Object} 分组名 → 节点数映射
  */
 export function getGroups() {
-    var groups = {};
+    const groups = {};
     state.nodes.forEach(function (node) {
-        var g = node.group || '';
+        const g = node.group || '';
         if (!groups[g]) groups[g] = 0;
         groups[g]++;
     });
@@ -31,21 +31,21 @@ export function getGroups() {
  * 渲染分组过滤器按钮
  */
 export function renderGroupFilter() {
-    var container = document.getElementById('groupFilter');
+    const container = document.getElementById('groupFilter');
     if (!container) return;
 
-    var groups = getGroups();
-    var savedGroup = localStorage.getItem('nodeSelectedGroup');
+    const groups = getGroups();
+    const savedGroup = localStorage.getItem('nodeSelectedGroup');
     if (savedGroup !== null && savedGroup !== undefined) {
         state.currentGroup = savedGroup;
     }
 
-    var html = '<button class="filter-btn' + (state.currentGroup === 'all' ? ' active' : '') + '" data-group="all">' + t('all') + '</button>';
+    let html = '<button class="filter-btn' + (state.currentGroup === 'all' ? ' active' : '') + '" data-group="all">' + t('all') + '</button>';
 
-    var keys = Object.keys(groups).sort();
+    const keys = Object.keys(groups).sort();
     keys.forEach(function (g) {
-        var label = g || t('ungrouped');
-        var isActive = state.currentGroup === g;
+        const label = g || t('ungrouped');
+        const isActive = state.currentGroup === g;
         html += '<button class="filter-btn' + (isActive ? ' active' : '') + '" data-group="' + escapeHtml(g) + '">' + escapeHtml(label) + '</button>';
     });
 
@@ -53,7 +53,7 @@ export function renderGroupFilter() {
 
     container.querySelectorAll('.filter-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
-            var group = this.getAttribute('data-group');
+            const group = this.getAttribute('data-group');
             state.currentGroup = group;
             localStorage.setItem('nodeSelectedGroup', group);
             renderGroupFilter();
@@ -67,7 +67,7 @@ export function renderGroupFilter() {
  * @returns {Array} 过滤并排序后的节点数组
  */
 export function getFilteredNodes() {
-    var nodes = state.nodes;
+    let nodes = state.nodes;
 
     if (state.currentGroup !== 'all') {
         nodes = nodes.filter(function (n) {
@@ -76,7 +76,7 @@ export function getFilteredNodes() {
     }
 
     if (state.searchQuery) {
-        var q = state.searchQuery.toLowerCase();
+        const q = state.searchQuery.toLowerCase();
         nodes = nodes.filter(function (n) {
             return n.name.toLowerCase().indexOf(q) !== -1 ||
                 (n.os || '').toLowerCase().indexOf(q) !== -1 ||
@@ -86,8 +86,8 @@ export function getFilteredNodes() {
     }
 
     nodes.sort(function (a, b) {
-        var aOnline = state.onlineNodes.indexOf(a.uuid) !== -1;
-        var bOnline = state.onlineNodes.indexOf(b.uuid) !== -1;
+        const aOnline = state.onlineNodes.indexOf(a.uuid) !== -1;
+        const bOnline = state.onlineNodes.indexOf(b.uuid) !== -1;
         if (aOnline !== bOnline) return aOnline ? -1 : 1;
         return (a.weight || 0) - (b.weight || 0);
     });
@@ -99,15 +99,15 @@ export function getFilteredNodes() {
  * 渲染统计栏（节点数、在线数、离线数、总流量）
  */
 export function renderStatsBar() {
-    var filtered = getFilteredNodes();
-    var online = 0;
-    var totalTrafficUp = 0;
-    var totalTrafficDown = 0;
+    const filtered = getFilteredNodes();
+    let online = 0;
+    let totalTrafficUp = 0;
+    let totalTrafficDown = 0;
 
     filtered.forEach(function (n) {
         if (state.onlineNodes.indexOf(n.uuid) !== -1) {
             online++;
-            var rt = state.realtimeData[n.uuid] || {};
+            const rt = state.realtimeData[n.uuid] || {};
             if (rt.network) {
                 totalTrafficUp += rt.network.totalUp || 0;
                 totalTrafficDown += rt.network.totalDown || 0;
@@ -115,10 +115,10 @@ export function renderStatsBar() {
         }
     });
 
-    var totalEl = document.getElementById('totalNodes');
-    var onlineEl = document.getElementById('onlineNodes');
-    var offlineEl = document.getElementById('offlineNodes');
-    var trafficTextEl = document.getElementById('trafficText');
+    const totalEl = document.getElementById('totalNodes');
+    const onlineEl = document.getElementById('onlineNodes');
+    const offlineEl = document.getElementById('offlineNodes');
+    const trafficTextEl = document.getElementById('trafficText');
 
     if (totalEl) totalEl.textContent = filtered.length;
     if (onlineEl) onlineEl.textContent = online;
@@ -137,30 +137,30 @@ export function renderStatsBar() {
  * @returns {Object} 指标数据对象
  */
 export function calculateNodeMetrics(node) {
-    var rt = state.realtimeData[node.uuid] || {};
+    const rt = state.realtimeData[node.uuid] || {};
 
-    var cpuUsage = rt.cpu ? rt.cpu.usage : null;
-    var ramUsed = rt.ram ? rt.ram.used : null;
-    var ramTotal = rt.ram ? rt.ram.total : node.mem_total || 0;
-    var ramPercent = (ramUsed !== null && ramTotal > 0) ? (ramUsed / ramTotal * 100) : null;
-    var diskUsed = rt.disk ? rt.disk.used : null;
-    var diskTotal = rt.disk ? rt.disk.total : node.disk_total || 0;
-    var diskPercent = (diskUsed !== null && diskTotal > 0) ? (diskUsed / diskTotal * 100) : null;
-    var swapUsed = rt.swap ? rt.swap.used : 0;
-    var swapTotal = rt.swap ? rt.swap.total : node.swap_total || 0;
-    var swapPercent = swapTotal > 0 ? (swapUsed / swapTotal * 100) : 0;
-    var netUp = rt.network ? rt.network.up : 0;
-    var netDown = rt.network ? rt.network.down : 0;
-    var netTotalUp = rt.network ? rt.network.totalUp : 0;
-    var netTotalDown = rt.network ? rt.network.totalDown : 0;
-    var uptime = rt.uptime || 0;
-    var pingMs = getLatestPing(node.uuid);
-    var load1 = rt.load ? rt.load.load1 : null;
+    const cpuUsage = rt.cpu ? rt.cpu.usage : null;
+    const ramUsed = rt.ram ? rt.ram.used : null;
+    const ramTotal = rt.ram ? rt.ram.total : node.mem_total || 0;
+    const ramPercent = (ramUsed !== null && ramTotal > 0) ? (ramUsed / ramTotal * 100) : null;
+    const diskUsed = rt.disk ? rt.disk.used : null;
+    const diskTotal = rt.disk ? rt.disk.total : node.disk_total || 0;
+    const diskPercent = (diskUsed !== null && diskTotal > 0) ? (diskUsed / diskTotal * 100) : null;
+    const swapUsed = rt.swap ? rt.swap.used : 0;
+    const swapTotal = rt.swap ? rt.swap.total : node.swap_total || 0;
+    const swapPercent = swapTotal > 0 ? (swapUsed / swapTotal * 100) : 0;
+    const netUp = rt.network ? rt.network.up : 0;
+    const netDown = rt.network ? rt.network.down : 0;
+    const netTotalUp = rt.network ? rt.network.totalUp : 0;
+    const netTotalDown = rt.network ? rt.network.totalDown : 0;
+    const uptime = rt.uptime || 0;
+    const pingMs = getLatestPing(node.uuid);
+    const load1 = rt.load ? rt.load.load1 : null;
 
-    var trafficLimit = node.traffic_limit || 0;
-    var trafficLimitType = node.traffic_limit_type || 'max';
+    const trafficLimit = node.traffic_limit || 0;
+    const trafficLimitType = node.traffic_limit_type || 'max';
 
-    var usedTraffic = 0;
+    let usedTraffic = 0;
     if (trafficLimit > 0) {
         switch (trafficLimitType) {
             case 'up':
@@ -181,7 +181,7 @@ export function calculateNodeMetrics(node) {
         }
     }
 
-    var remainingTraffic = trafficLimit > 0 ? Math.max(0, trafficLimit - usedTraffic) : 0;
+    const remainingTraffic = trafficLimit > 0 ? Math.max(0, trafficLimit - usedTraffic) : 0;
 
     return {
         isOnline: state.onlineNodes.indexOf(node.uuid) !== -1,
@@ -220,8 +220,8 @@ export function calculateNodeMetrics(node) {
  * @returns {string} HTML
  */
 function renderMetricBar(label, value, level) {
-    var displayValue = value !== null ? formatPercent(value) : '-';
-    var width = value !== null ? Math.min(value, 100) : 0;
+    const displayValue = value !== null ? formatPercent(value) : '-';
+    const width = value !== null ? Math.min(value, 100) : 0;
 
     return '<div class="metric">' +
            '<div class="metric-label">' + escapeHtml(label) + '</div>' +
@@ -237,7 +237,7 @@ function renderMetricBar(label, value, level) {
  * @returns {string} HTML
  */
 function renderNodeCardHeader(node, metrics) {
-    var html = '<div class="node-card-header">';
+    let html = '<div class="node-card-header">';
 
     if (metrics.flagUrl) {
         html += '<span class="node-card-flag" style="background-image: url(\'' + metrics.flagUrl + '\')" title="' + escapeHtml(node.region || '') + '"></span>';
@@ -254,10 +254,10 @@ function renderNodeCardHeader(node, metrics) {
     html += '<span class="node-card-os"><span class="os-icon os-icon-' + metrics.osInfo.icon + '"></span>' + escapeHtml(metrics.osInfo.name) + '</span>';
 
     if (node.tags) {
-        var tags = node.tags.split(';').filter(function(t) { return t.trim(); });
-        var maxTags = 2;
+        const tags = node.tags.split(';').filter(function(t) { return t.trim(); });
+        const maxTags = 2;
         tags.slice(0, maxTags).forEach(function(tag) {
-            var tagInfo = parseTagInfo(tag);
+            const tagInfo = parseTagInfo(tag);
             html += '<span class="node-api-tag' + tagInfo.className + '">' + escapeHtml(tagInfo.text) + '</span>';
         });
     }
@@ -275,7 +275,7 @@ function renderNodeCardHeader(node, metrics) {
  * @returns {string} HTML
  */
 function renderNodeMetrics(metrics) {
-    var html = '';
+    let html = '';
 
     html += renderMetricBar('CPU', metrics.cpuUsage, metrics.cpuLevel);
     html += renderMetricBar('RAM', metrics.ramPercent, metrics.ramLevel);
@@ -305,11 +305,11 @@ function renderNodeMetrics(metrics) {
  * @returns {string} HTML
  */
 function renderNodeCardFooter(node, metrics, showUptime, showNetwork, showTrafficTags) {
-    var html = '<div class="node-card-footer">';
+    let html = '<div class="node-card-footer">';
 
-    var priceText = formatPrice(node.price, node.currency, node.billing_cycle);
-    var uptimeText = formatUptime(metrics.uptime);
-    var expiry = formatExpiry(node.expired_at);
+    const priceText = formatPrice(node.price, node.currency, node.billing_cycle);
+    const uptimeText = formatUptime(metrics.uptime);
+    const expiry = formatExpiry(node.expired_at);
 
     html += '<span class="node-info-row">';
 
@@ -365,7 +365,7 @@ function renderNodeCardFooter(node, metrics, showUptime, showNetwork, showTraffi
  * @returns {string} HTML
  */
 function renderNodeCard(node, metrics, showUptime, showNetwork, showPing, showTrafficTags) {
-    var html = '';
+    let html = '';
 
     html += '<div class="node-card' + (metrics.isOnline ? '' : ' offline') + (state.initialRender ? ' animate-in' : '') + '" data-uuid="' + node.uuid + '">';
     html += renderNodeCardHeader(node, metrics);
@@ -385,7 +385,7 @@ function renderNodeCard(node, metrics, showUptime, showNetwork, showPing, showTr
 function bindNodeCardEvents(container) {
     container.querySelectorAll('.node-card').forEach(function (card) {
         card.addEventListener('click', function () {
-            var uuid = this.getAttribute('data-uuid');
+            const uuid = this.getAttribute('data-uuid');
             openNodeModal(uuid);
         });
     });
@@ -395,24 +395,24 @@ function bindNodeCardEvents(container) {
  * 渲染网格视图
  */
 export function renderGrid() {
-    var container = document.getElementById('nodesGrid');
+    const container = document.getElementById('nodesGrid');
     if (!container) return;
 
-    var nodes = getFilteredNodes();
+    const nodes = getFilteredNodes();
 
     if (nodes.length === 0) {
         container.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 15h8M9 9h.01M15 9h.01"/></svg><p>' + t('no_nodes') + '</p></div>';
         return;
     }
 
-    var showUptime = state.themeSettings.show_uptime !== false;
-    var showNetwork = state.themeSettings.show_network_speed !== false;
-    var showPing = state.themeSettings.show_ping !== false;
-    var showTrafficTags = state.themeSettings.show_traffic_tags !== false;
+    const showUptime = state.themeSettings.show_uptime !== false;
+    const showNetwork = state.themeSettings.show_network_speed !== false;
+    const showPing = state.themeSettings.show_ping !== false;
+    const showTrafficTags = state.themeSettings.show_traffic_tags !== false;
 
-    var html = '';
+    let html = '';
     nodes.forEach(function (node) {
-        var metrics = calculateNodeMetrics(node);
+        const metrics = calculateNodeMetrics(node);
         html += renderNodeCard(node, metrics, showUptime, showNetwork, showPing, showTrafficTags);
     });
 
@@ -424,22 +424,22 @@ export function renderGrid() {
  * 渲染表格视图
  */
 export function renderTable() {
-    var container = document.getElementById('nodesTableBody');
+    const container = document.getElementById('nodesTableBody');
     if (!container) return;
 
-    var nodes = getFilteredNodes();
+    const nodes = getFilteredNodes();
 
     if (nodes.length === 0) {
         container.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 15h8M9 9h.01M15 9h.01"/></svg><p>' + t('no_nodes') + '</p></div>';
         return;
     }
 
-    var showNetwork = state.themeSettings.show_network_speed !== false;
-    var showTrafficTags = state.themeSettings.show_traffic_tags !== false;
+    const showNetwork = state.themeSettings.show_network_speed !== false;
+    const showTrafficTags = state.themeSettings.show_traffic_tags !== false;
 
-    var html = '<div class="table-cards">';
+    let html = '<div class="table-cards">';
     nodes.forEach(function (node) {
-        var metrics = calculateNodeMetrics(node);
+        const metrics = calculateNodeMetrics(node);
         html += renderTableCard(node, metrics, showNetwork, showTrafficTags);
     });
     html += '</div>';
@@ -457,7 +457,7 @@ export function renderTable() {
  * @returns {string} HTML
  */
 function renderTableCard(node, metrics, showNetwork, showTrafficTags) {
-    var html = '';
+    let html = '';
 
     html += '<div class="table-card' + (metrics.isOnline ? '' : ' offline') + '" data-uuid="' + node.uuid + '">';
     html += renderTableCardHeader(node, metrics);
@@ -477,7 +477,7 @@ function renderTableCard(node, metrics, showNetwork, showTrafficTags) {
  * @returns {string} HTML
  */
 function renderTableCardHeader(node, metrics) {
-    var html = '<div class="table-card-header">';
+    let html = '<div class="table-card-header">';
     html += '<div class="table-card-name-wrap">';
     html += '<span class="table-card-status' + (metrics.isOnline ? '' : ' offline') + '"></span>';
     html += '<span class="table-card-flag-wrap">';
@@ -489,15 +489,15 @@ function renderTableCardHeader(node, metrics) {
     html += '</div>';
     html += '<div class="table-card-info">';
 
-    var expiry = formatExpiry(node.expired_at);
+    const expiry = formatExpiry(node.expired_at);
     if (expiry || node.price) {
-        var priceText = '';
+        let priceText = '';
         if (node.price == '-1') {
             priceText = t('free') || '免费';
         } else if (node.price) {
-            var currency = node.currency || '¥';
-            var cycle = node.billing_cycle;
-            var cycleText = '';
+            const currency = node.currency || '¥';
+            const cycle = node.billing_cycle;
+            let cycleText = '';
             if (cycle) {
                 if (cycle === 30 || cycle === 31) {
                     cycleText = '/月';
@@ -541,9 +541,9 @@ function renderTableCardHeader(node, metrics) {
  * @returns {string} HTML
  */
 function renderTableCardMetrics(node, metrics, showNetwork) {
-    var html = '';
+    let html = '';
 
-    var osInfo = metrics.osInfo;
+    const osInfo = metrics.osInfo;
     html += '<div class="table-card-metric table-card-system">';
     html += '<span class="table-card-metric-label">' + t('system') + '</span>';
     html += '<span class="table-card-metric-value"><span class="os-icon os-icon-' + osInfo.icon + '"></span>' + escapeHtml(osInfo.name) + '</span>';
@@ -592,18 +592,18 @@ function renderTableCardMetrics(node, metrics, showNetwork) {
  * @returns {string} HTML
  */
 function renderTableCardTags(node, metrics, showTrafficTags) {
-    var hasIpv4 = node.ipv4 && typeof node.ipv4 === 'string' && node.ipv4.trim() !== '';
-    var hasIpv6 = node.ipv6 && typeof node.ipv6 === 'string' && node.ipv6.trim() !== '';
-    var hasIpTags = hasIpv4 || hasIpv6;
-    var hasTags = node.tags && node.tags.split(';').filter(function(t) { return t.trim(); }).length > 0;
-    var hasTraffic = showTrafficTags && (metrics.netTotalUp > 0 || metrics.netTotalDown > 0);
-    var hasRemainingTraffic = metrics.trafficLimit > 0;
+    const hasIpv4 = node.ipv4 && typeof node.ipv4 === 'string' && node.ipv4.trim() !== '';
+    const hasIpv6 = node.ipv6 && typeof node.ipv6 === 'string' && node.ipv6.trim() !== '';
+    const hasIpTags = hasIpv4 || hasIpv6;
+    const hasTags = node.tags && node.tags.split(';').filter(function(t) { return t.trim(); }).length > 0;
+    const hasTraffic = showTrafficTags && (metrics.netTotalUp > 0 || metrics.netTotalDown > 0);
+    const hasRemainingTraffic = metrics.trafficLimit > 0;
 
     if (!hasIpTags && !hasTags && !hasTraffic && !hasRemainingTraffic) {
         return '';
     }
 
-    var html = '<div class="table-card-metric table-card-metric-tags">';
+    let html = '<div class="table-card-metric table-card-metric-tags">';
     html += '<div class="table-card-tags">';
 
     if (hasIpv4) {
@@ -619,9 +619,9 @@ function renderTableCardTags(node, metrics, showTrafficTags) {
     }
 
     if (node.tags) {
-        var tags = node.tags.split(';').filter(function(t) { return t.trim(); });
+        const tags = node.tags.split(';').filter(function(t) { return t.trim(); });
         tags.forEach(function(tag) {
-            var tagInfo = parseTagInfo(tag);
+            const tagInfo = parseTagInfo(tag);
             html += '<span class="table-card-tag' + tagInfo.className + '">' + escapeHtml(tagInfo.text) + '</span>';
         });
     }
@@ -643,7 +643,7 @@ function renderTableCardTags(node, metrics, showTrafficTags) {
 function bindTableCardEvents(container) {
     container.querySelectorAll('.table-card[data-uuid]').forEach(function (card) {
         card.addEventListener('click', function () {
-            var uuid = this.getAttribute('data-uuid');
+            const uuid = this.getAttribute('data-uuid');
             openNodeModal(uuid);
         });
     });

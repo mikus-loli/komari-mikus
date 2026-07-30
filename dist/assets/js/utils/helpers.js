@@ -26,14 +26,14 @@ export function escapeHtml(str) {
  * @returns {Object} 标签信息对象
  */
 export function parseTagInfo(tag) {
-    var tagText = tag.trim();
-    var tagClass = '';
-    var colorMatch = tagText.match(/<(\w+)>$/);
+    let tagText = tag.trim();
+    let tagClass = '';
+    const colorMatch = tagText.match(/<(\w+)>$/);
 
     if (colorMatch) {
         tagText = tagText.replace(/<\w+>$/, '').trim();
-        var color = colorMatch[1].toLowerCase();
-        var validColors = ['green', 'red', 'blue', 'yellow', 'orange', 'purple', 'pink', 'cyan', 'gray', 'success', 'danger', 'warning', 'info'];
+        const color = colorMatch[1].toLowerCase();
+        const validColors = ['green', 'red', 'blue', 'yellow', 'orange', 'purple', 'pink', 'cyan', 'gray', 'success', 'danger', 'warning', 'info'];
         if (validColors.indexOf(color) !== -1) {
             tagClass = ' tag-' + color;
         }
@@ -50,7 +50,7 @@ export function parseTagInfo(tag) {
  * @returns {string} 问候语
  */
 export function getGreeting() {
-    var hours = new Date().getHours();
+    const hours = new Date().getHours();
     if (hours >= 5 && hours < 12) {
         return i18n[state.currentLang] && i18n[state.currentLang].good_morning ? i18n[state.currentLang].good_morning : '早上好';
     } else if (hours >= 12 && hours < 18) {
@@ -120,9 +120,9 @@ export function getMaxDataPoints(hours) {
 export function parseFlagEmoji(emoji) {
     if (!emoji || emoji.length < 2) return null;
 
-    var codePoints = [];
-    for (var i = 0; i < emoji.length; i++) {
-        var cp = emoji.codePointAt(i);
+    const codePoints = [];
+    for (let i = 0; i < emoji.length; i++) {
+        const cp = emoji.codePointAt(i);
         if (cp >= 0x1F1E6 && cp <= 0x1F1FF) {
             codePoints.push(cp);
             if (cp > 0xFFFF) i++;
@@ -130,8 +130,8 @@ export function parseFlagEmoji(emoji) {
     }
 
     if (codePoints.length >= 2) {
-        var letter1 = String.fromCharCode(codePoints[0] - 0x1F1E6 + 65);
-        var letter2 = String.fromCharCode(codePoints[1] - 0x1F1E6 + 65);
+        const letter1 = String.fromCharCode(codePoints[0] - 0x1F1E6 + 65);
+        const letter2 = String.fromCharCode(codePoints[1] - 0x1F1E6 + 65);
         return (letter1 + letter2).toLowerCase();
     }
 
@@ -146,11 +146,11 @@ export function parseFlagEmoji(emoji) {
 export function getCountryCode(region) {
     if (!region) return null;
 
-    var code = region.toLowerCase().trim();
+    const code = region.toLowerCase().trim();
 
     if (COUNTRY_CODE_MAP[code]) return COUNTRY_CODE_MAP[code];
 
-    for (var key in COUNTRY_CODE_MAP) {
+    for (let key in COUNTRY_CODE_MAP) {
         if (code.indexOf(key) !== -1) {
             return COUNTRY_CODE_MAP[key];
         }
@@ -160,7 +160,7 @@ export function getCountryCode(region) {
         return region.toLowerCase();
     }
 
-    var emojiCode = parseFlagEmoji(region);
+    const emojiCode = parseFlagEmoji(region);
     if (emojiCode) return emojiCode;
 
     return null;
@@ -182,7 +182,7 @@ export function getCountryFlagUrl(countryCode) {
  * @returns {string|null} 国旗 URL
  */
 export function getCountryFlag(region) {
-    var code = getCountryCode(region);
+    const code = getCountryCode(region);
     if (!code) return null;
     return getCountryFlagUrl(code);
 }
@@ -193,19 +193,19 @@ export function getCountryFlag(region) {
  * @returns {number|null} 平均延迟值
  */
 export function getLatestPing(uuid) {
-    var pingInfo = state.pingData[uuid];
+    const pingInfo = state.pingData[uuid];
     if (!pingInfo || !pingInfo.records || pingInfo.records.length === 0) {
         return null;
     }
-    var taskValues = {};
+    const taskValues = {};
     pingInfo.records.forEach(function (r) {
         if (!taskValues[r.task_id]) {
             taskValues[r.task_id] = r.value;
         }
     });
-    var values = Object.values(taskValues).filter(function (v) { return v !== null && v !== undefined; });
+    const values = Object.values(taskValues).filter(function (v) { return v !== null && v !== undefined; });
     if (values.length === 0) return null;
-    var sum = values.reduce(function (a, b) { return a + b; }, 0);
+    const sum = values.reduce(function (a, b) { return a + b; }, 0);
     return sum / values.length;
 }
 
@@ -215,7 +215,7 @@ export function getLatestPing(uuid) {
  * @returns {Array} 任务数组
  */
 export function getPingTasks(uuid) {
-    var pingInfo = state.pingData[uuid];
+    const pingInfo = state.pingData[uuid];
     if (!pingInfo || !pingInfo.tasks) return [];
     return pingInfo.tasks;
 }
@@ -227,10 +227,10 @@ export function getPingTasks(uuid) {
  * @returns {number|null} 延迟值
  */
 export function getTaskLatestPing(uuid, taskId) {
-    var pingInfo = state.pingData[uuid];
+    const pingInfo = state.pingData[uuid];
     if (!pingInfo || !pingInfo.records) return null;
-    var targetTaskId = String(taskId);
-    for (var i = pingInfo.records.length - 1; i >= 0; i--) {
+    const targetTaskId = String(taskId);
+    for (let i = pingInfo.records.length - 1; i >= 0; i--) {
         if (String(pingInfo.records[i].task_id) === targetTaskId) {
             return pingInfo.records[i].value;
         }
@@ -258,7 +258,7 @@ export function getPingLevel(pingMs) {
  */
 export function getShortOs(os) {
     if (!os) return '-';
-    var osLower = os.toLowerCase();
+    const osLower = os.toLowerCase();
     if (osLower.indexOf('debian') !== -1) return 'Debian';
     if (osLower.indexOf('ubuntu') !== -1) return 'Ubuntu';
     if (osLower.indexOf('centos') !== -1) return 'CentOS';
@@ -274,7 +274,7 @@ export function getShortOs(os) {
     if (osLower.indexOf('raspbian') !== -1) return 'Raspbian';
     if (osLower.indexOf('oracle') !== -1) return 'Oracle';
     if (osLower.indexOf('red hat') !== -1 || osLower.indexOf('rhel') !== -1) return 'RHEL';
-    var parts = os.split(' ');
+    const parts = os.split(' ');
     return parts[0] || os.substring(0, 12);
 }
 
@@ -291,6 +291,6 @@ export function getApiBase() {
  * @returns {string} WebSocket URL
  */
 export function getWsUrl() {
-    var proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     return proto + '//' + window.location.host + '/api/rpc2';
 }

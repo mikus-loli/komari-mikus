@@ -6,16 +6,16 @@
  */
 
 /** toast 容器（懒创建） */
-var toastContainer = null;
+let toastContainer = null;
 
 /** toast 计数器，用于防抖 */
-var toastCount = 0;
+let toastCount = 0;
 
 /** toast 最大同时显示数 */
-var MAX_TOASTS = 3;
+const MAX_TOASTS = 3;
 
 /** toast 自动消失时间（毫秒） */
-var TOAST_DURATION = 5000;
+const TOAST_DURATION = 5000;
 
 /**
  * 创建 toast 容器（仅首次调用时创建）
@@ -41,8 +41,8 @@ export function showErrorToast(message, level) {
     toastCount++;
     if (toastCount > MAX_TOASTS) return;
 
-    var isError = level !== 'warn';
-    var toast = document.createElement('div');
+    const isError = level !== 'warn';
+    const toast = document.createElement('div');
     toast.setAttribute('role', 'alert');
     toast.style.cssText = 'pointer-events:auto;padding:10px 14px;border-radius:6px;font-size:13px;line-height:1.4;color:#fff;backdrop-filter:blur(8px);box-shadow:0 2px 8px rgba(0,0,0,0.2);opacity:0;transform:translateX(20px);transition:opacity 0.3s,transform 0.3s;word-break:break-word;' +
         (isError ? 'background:rgba(220,53,69,0.9);' : 'background:rgba(255,159,64,0.9);');
@@ -57,7 +57,7 @@ export function showErrorToast(message, level) {
     });
 
     // 自动消失
-    var timer = setTimeout(function() {
+    const timer = setTimeout(function() {
         dismissToast(toast);
     }, TOAST_DURATION);
 
@@ -108,7 +108,7 @@ function extractMessage(reason) {
  */
 export function initErrorBoundary() {
     window.addEventListener('unhandledrejection', function(event) {
-        var msg = extractMessage(event.reason);
+        const msg = extractMessage(event.reason);
         console.error('[ErrorBoundary] Unhandled rejection:', event.reason);
         showErrorToast(msg, 'error');
     });
@@ -117,7 +117,7 @@ export function initErrorBoundary() {
         if (event.target && (event.target.tagName === 'IMG' || event.target.tagName === 'SCRIPT' || event.target.tagName === 'LINK')) {
             return;
         }
-        var msg = event.message || 'Runtime error';
+        const msg = event.message || 'Runtime error';
         console.error('[ErrorBoundary] Runtime error:', event.error);
         showErrorToast(msg, 'error');
     }, true);

@@ -16,7 +16,7 @@ let _cachedFontFamilyTime = 0;
  * @returns {string} 字体名称
  */
 export function getCachedFontFamily() {
-    var now = Date.now();
+    const now = Date.now();
     if (!_cachedFontFamily || now - _cachedFontFamilyTime > 5000) {
         _cachedFontFamily = getComputedStyle(document.body).fontFamily;
         _cachedFontFamilyTime = now;
@@ -31,9 +31,9 @@ export function getCachedFontFamily() {
  * @returns {string} 颜色字符串
  */
 export function generateOKLCHColor(index, total) {
-    var hue = (index * (360 / total)) % 360;
-    var oklchColor = 'oklch(0.7 0.2 ' + hue + ' / 0.8)';
-    var hslFallback = 'hsl(' + hue + ', 50%, 60%)';
+    const hue = (index * (360 / total)) % 360;
+    const oklchColor = 'oklch(0.7 0.2 ' + hue + ' / 0.8)';
+    const hslFallback = 'hsl(' + hue + ', 50%, 60%)';
 
     if (typeof window !== 'undefined' && window.CSS && CSS.supports('color', oklchColor)) {
         return oklchColor;

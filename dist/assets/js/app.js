@@ -36,7 +36,7 @@ function init() {
         item.classList.add('animate-in');
     });
 
-    var groupFilter = document.querySelector('.stats-bar .group-filter');
+    const groupFilter = document.querySelector('.stats-bar .group-filter');
     if (groupFilter) groupFilter.classList.add('animate-in');
 
     initRPC2Client(handleRpcResult);
@@ -63,7 +63,7 @@ function init() {
     }).catch(function (err) {
         console.error('Init failed:', err);
         clearPreloaderTimer();
-        var statusEl = document.getElementById('preloaderStatus');
+        const statusEl = document.getElementById('preloaderStatus');
         if (statusEl) {
             statusEl.textContent = '加载失败，正在重试...';
             statusEl.classList.add('error');
