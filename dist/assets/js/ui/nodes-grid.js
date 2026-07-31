@@ -160,11 +160,10 @@ function renderNodeCardFooter(node, metrics, showUptime, showNetwork, showTraffi
  * @param {Object} metrics - 指标数据
  * @param {boolean} showUptime - 是否显示运行时间
  * @param {boolean} showNetwork - 是否显示网速
- * @param {boolean} showPing - 是否显示延迟
  * @param {boolean} showTrafficTags - 是否显示流量标签
  * @returns {string} HTML
  */
-function renderNodeCard(node, metrics, showUptime, showNetwork, showPing, showTrafficTags) {
+function renderNodeCard(node, metrics, showUptime, showNetwork, showTrafficTags) {
     let html = '';
 
     html += '<div class="node-card' + (metrics.isOnline ? '' : ' offline') + (state.initialRender ? ' animate-in' : '') + '" data-uuid="' + node.uuid + '">';
@@ -207,13 +206,12 @@ export function renderGrid() {
 
     const showUptime = state.themeSettings.show_uptime !== false;
     const showNetwork = state.themeSettings.show_network_speed !== false;
-    const showPing = state.themeSettings.show_ping !== false;
     const showTrafficTags = state.themeSettings.show_traffic_tags !== false;
 
     let html = '';
     nodes.forEach(function (node) {
         const metrics = calculateNodeMetrics(node);
-        html += renderNodeCard(node, metrics, showUptime, showNetwork, showPing, showTrafficTags);
+        html += renderNodeCard(node, metrics, showUptime, showNetwork, showTrafficTags);
     });
 
     container.innerHTML = html;

@@ -108,21 +108,6 @@
                 }
             },
             {
-                "key": "show_ping",
-                "name": {
-                    "en": "Show Ping Latency",
-                    "zh-CN": "显示延迟",
-                    "ja": "Pingレイテンシを表示"
-                },
-                "type": "switch",
-                "default": true,
-                "help": {
-                    "en": "Display ping latency on node cards",
-                    "zh-CN": "在节点卡片上显示延迟信息",
-                    "ja": "ノードカードにPingレイテンシを表示"
-                }
-            },
-            {
                 "key": "icon_bounce",
                 "name": {
                     "en": "Icon Bounce Animation",

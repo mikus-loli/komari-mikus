@@ -111,7 +111,6 @@ komari-mikus/
 | `show_uptime` | switch | true | 显示运行时间 |
 | `show_network_speed` | switch | true | 显示网络速度 |
 | `show_traffic_tags` | switch | false | 显示流量标签 |
-| `show_ping` | switch | true | 显示延迟 |
 | `icon_bounce` | switch | true | 图标跳动动画 |
 | `sakura_enabled` | switch | true | 樱花飘落效果 |
 | `preloader_enabled` | switch | true | 显示加载页面 |
