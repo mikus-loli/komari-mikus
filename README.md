@@ -73,10 +73,12 @@ komari-mikus/
 │   │   │   │       ├── network.js # 网络图
 │   │   │   │       ├── latency.js # 延迟图
 │   │   │   │       ├── config.js  # 图表配置
-│   │   │   │       └── utils.js   # 图表工具
+│   │   │   │       ├── utils.js   # 图表绘制工具
+│   │   │   │       └── tooltip.js # Tooltip 交互系统
 │   │   │   ├── algorithms/    # 数据处理算法
 │   │   │   │   ├── index.js   # EWMA/LTTB/插值/峰值检测
-│   │   │   │   └── pipeline.js # 数据处理管道
+│   │   │   │   ├── pipeline.js # 数据处理管道
+│   │   │   │   └── record-transforms.js # 记录扁平化/合并/前向填充
 │   │   │   └── utils/        # 工具函数
 │   │   │       ├── helpers.js    # 聚合导出
 │   │   │       ├── html.js       # HTML 转义/标签
