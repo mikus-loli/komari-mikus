@@ -1,10 +1,6 @@
 # Dependencies
 node_modules/
 
-# npm files
-package.json
-package-lock.json
-
 # IDE
 .idea/
 .vscode/

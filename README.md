@@ -23,19 +23,19 @@
 komari-mikus/
 ├── .github/
 │   └── workflows/
-│       ├── test.yml           # CI 测试 + 代码风格检查
+│       ├── test.yml           # CI 测试（node 测试 + var 检查 + 文件存在检查）
 │       └── release.yml        # 自动化发布工作流
 ├── dist/
 │   ├── assets/
 │   │   ├── css/              # 样式模块
-│   │   │   ├── style.css     # 主样式
+│   │   │   ├── base.css      # 基础样式
+│   │   │   ├── header.css    # 头部
+│   │   │   ├── stats.css     # 统计
 │   │   │   ├── welcome.css   # 欢迎区域
-│   │   │   ├── modal.css     # 模态框
+│   │   │   ├── preloader.css # 预加载器
 │   │   │   ├── nodes.css     # 节点列表
-│   │   │   ├── charts.css    # 图表
-│   │   │   ├── theme.css     # 主题变量
-│   │   │   ├── responsive.css # 响应式
-│   │   │   └── animations.css # 动画
+│   │   │   ├── modal.css     # 模态框
+│   │   │   └── footer.css    # 页脚
 │   │   ├── flags/            # 国旗 SVG 图标（按需加载）
 │   │   ├── img/              # 图片资源
 │   │   ├── js/
@@ -62,6 +62,12 @@ komari-mikus/
 │   │   │   │   ├── preloader.js # 预加载器
 │   │   │   │   ├── theme.js   # 主题管理
 │   │   │   │   └── charts/    # 图表引擎
+│   │   │   │       ├── index.js   # 图表入口
+│   │   │   │       ├── line.js    # 折线图
+│   │   │   │       ├── network.js # 网络图
+│   │   │   │       ├── latency.js # 延迟图
+│   │   │   │       ├── config.js  # 图表配置
+│   │   │   │       └── utils.js   # 图表工具
 │   │   │   ├── algorithms/    # 数据处理算法
 │   │   │   │   ├── index.js   # EWMA/LTTB/插值/峰值检测
 │   │   │   │   └── pipeline.js # 数据处理管道
@@ -76,7 +82,6 @@ komari-mikus/
 │   │   │       ├── format.js     # 格式化
 │   │   │       ├── time.js       # 时间处理
 │   │   │       └── color.js      # 颜色计算
-│   │   └── style.css          # 主样式入口
 │   └── index.html             # 主页面
 ├── test/                      # 测试
 │   ├── algorithms.test.mjs    # 算法测试（32 用例）
@@ -93,12 +98,18 @@ komari-mikus/
 
 | 配置项 | 类型 | 默认值 | 说明 |
 |--------|------|--------|------|
-| `default_theme` | select | 跟随系统 | 默认主题（浅色/深色/跟随系统） |
-| `default_view` | select | 网格 | 默认视图（网格/表格） |
+| `default_theme` | select | system | 默认主题（light/dark/system） |
+| `default_view` | select | grid | 默认视图（grid/table） |
 | `show_uptime` | switch | true | 显示运行时间 |
 | `show_network_speed` | switch | true | 显示网络速度 |
-| `show_ping` | switch | true | 显示网络延迟 |
-| `show_connections` | switch | false | 显示连接数 |
+| `show_traffic_tags` | switch | false | 显示流量标签 |
+| `icon_bounce` | switch | true | 图标跳动动画 |
+| `sakura_enabled` | switch | true | 樱花飘落效果 |
+| `preloader_enabled` | switch | true | 显示加载页面 |
+| `mascot_enabled` | switch | true | 显示欢迎小人 |
+| `mascot_url` | string | - | 自定义小人图片URL |
+| `pc_background_url` | string | - | PC端自定义背景URL（支持图片和视频） |
+| `mobile_background_url` | string | - | 手机端自定义背景URL（支持图片和视频） |
 | `refresh_interval` | number | 2 | 刷新间隔（秒） |
 | `custom_footer` | string | - | 自定义页脚文本 |
 
