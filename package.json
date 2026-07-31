@@ -1,12 +1,15 @@
 {
   "name": "komari-mikus-theme",
-  "version": "2.0.0",
+  "version": "2.0.4",
   "type": "module",
   "private": true,
   "description": "Mikus - Komari monitoring theme with sakura aesthetics",
   "scripts": {
     "test": "node test/algorithms.test.mjs && node test/api-rpc.test.mjs",
-    "lint": "npx eslint dist/assets/js/",
-    "lint:check": "npx eslint dist/assets/js/ --max-warnings 0"
+    "lint": "eslint dist/assets/js/",
+    "lint:check": "eslint dist/assets/js/ --max-warnings 0"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0"
   }
 }

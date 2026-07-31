@@ -37,7 +37,7 @@ export class RPC2Client {
 
         try {
             this.ws = new WebSocket(this.wsUrl);
-        } catch (e) {
+        } catch (_e) {
             this.scheduleReconnect();
             return;
         }

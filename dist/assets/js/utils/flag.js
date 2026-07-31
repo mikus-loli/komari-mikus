@@ -45,7 +45,7 @@ export function getCountryCode(region) {
 
     if (COUNTRY_CODE_MAP[code]) return COUNTRY_CODE_MAP[code];
 
-    for (let key in COUNTRY_CODE_MAP) {
+    for (const key in COUNTRY_CODE_MAP) {
         if (code.indexOf(key) !== -1) {
             return COUNTRY_CODE_MAP[key];
         }

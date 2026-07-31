@@ -25,7 +25,7 @@ export function processDataPipeline(data, hours, keys, enableSmooth) {
         const minute = 60;
         const hour = minute * 60;
 
-        let stringifiedData = data.map(function(d) {
+        const stringifiedData = data.map(function(d) {
             return Object.assign({}, d, {
                 time: typeof d.time === 'number' ? new Date(d.time).toISOString() : d.time
             });

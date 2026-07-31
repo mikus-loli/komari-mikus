@@ -58,8 +58,8 @@ jobs:
             missing_files="$missing_files dist/index.html"
           fi
           
-          if [ ! -f "dist/assets/style.css" ]; then
-            missing_files="$missing_files dist/assets/style.css"
+          if [ ! -d "dist/assets/css" ]; then
+            missing_files="$missing_files dist/assets/css/"
           fi
           
           if [ ! -f "dist/assets/js/app.js" ]; then

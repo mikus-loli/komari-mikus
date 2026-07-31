@@ -60,7 +60,6 @@ export function drawMultiTaskPingChart(canvas, records, tasks, options) {
 
     // 分离正常值和丢包值
     const validValues = allValues.filter(function(v) { return v <= lossThreshold; });
-    const lossValues = allValues.filter(function(v) { return v > lossThreshold; });
 
     // 标记丢包记录（按 task_id 分组）
     const lossRecordsByTask = {};
@@ -326,27 +325,3 @@ export function drawMultiTaskPingChart(canvas, records, tasks, options) {
     }
 }
 
-function drawPingChart(canvasId, records, tasks) {
-    const canvas = document.getElementById(canvasId);
-    drawMultiTaskPingChart(canvas, records, tasks, {
-        padding: { top: 20, right: 16, bottom: 30, left: 50 },
-        timeLabels: 5,
-        timeLabelBottomOffset: 8,
-        filterFn: function (v) { return v !== null && v !== undefined && v >= 0; },
-        drawLegend: function (ctx, padding, tasks, colors, textColor) {
-            if (tasks.length > 0) {
-                ctx.font = '11px ' + getCachedFontFamily();
-                ctx.textAlign = 'left';
-                let legendX = padding.left + 10;
-                tasks.forEach(function (task, idx) {
-                    const color = colors[idx % colors.length];
-                    ctx.fillStyle = color;
-                    ctx.fillRect(legendX, padding.top + 4, 12, 3);
-                    ctx.fillStyle = textColor;
-                    ctx.fillText(task.name, legendX + 16, padding.top + 10);
-                    legendX += ctx.measureText(task.name).width + 30;
-                });
-            }
-        }
-    });
-}

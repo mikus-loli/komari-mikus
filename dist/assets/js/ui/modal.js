@@ -416,7 +416,6 @@ export function initModalDragScroll() {
     const dragHandle = document.getElementById('modalDragHandle');
     if (dragHandle) {
         let handleStartY = 0;
-        let handleStartTop = 0;
         let isHandleDragging = false;
         let modalStartHeight = 0;
 
@@ -424,7 +423,6 @@ export function initModalDragScroll() {
             if (e.touches.length === 1) {
                 isHandleDragging = true;
                 handleStartY = e.touches[0].clientY;
-                handleStartTop = modal.offsetTop;
                 modalStartHeight = modal.offsetHeight;
                 modal.style.transition = 'none';
             }

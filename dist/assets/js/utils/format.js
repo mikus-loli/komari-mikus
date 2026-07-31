@@ -168,7 +168,7 @@ export function formatExpiry(expiredAt) {
  * @returns {string} 格式化后的字符串
  */
 export function formatPrice(price, currency, billingCycle) {
-    if (price === -1) return t('free');
+    if (price === -1 || price === '-1') return t('free');
     if (price === 0) return '';
     if (!currency || !billingCycle) return 'N/A';
 

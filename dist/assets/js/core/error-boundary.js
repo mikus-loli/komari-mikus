@@ -97,7 +97,7 @@ function extractMessage(reason) {
     if (reason.message) return reason.message;
     try {
         return JSON.stringify(reason);
-    } catch (e) {
+    } catch (_e) {
         return 'Unknown error';
     }
 }

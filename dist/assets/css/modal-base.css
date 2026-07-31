@@ -1,0 +1,266 @@
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg-overlay);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+    -webkit-overflow-scrolling: touch;
+    pointer-events: none;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.modal-overlay.closing {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.modal {
+    background: var(--bg-modal);
+    border-radius: var(--radius-xl);
+    width: 100%;
+    max-width: 1200px;
+    max-height: 90vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-color);
+    will-change: transform, opacity;
+    transform: scale(0.95) translateY(20px);
+    opacity: 0;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+.modal.dragging {
+    cursor: grabbing;
+    user-select: none;
+}
+
+.modal-overlay.active .modal {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+.modal-scroll-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(to right, var(--accent), var(--accent-light, rgba(232, 102, 138, 0.5)));
+    transform-origin: left;
+    transform: scaleX(0);
+    transition: transform 0.1s ease;
+    z-index: 20;
+    pointer-events: none;
+}
+
+.modal-scroll-indicator.visible {
+    transform: scaleX(var(--scroll-progress, 0));
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    background: var(--bg-modal);
+    z-index: 10;
+}
+
+.modal-header h2 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    margin-right: 16px;
+}
+
+.modal-close {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    will-change: transform;
+}
+
+.modal-close:hover {
+    background: var(--danger-light);
+    color: var(--danger);
+    transform: rotate(90deg);
+}
+
+.modal-close:active {
+    transform: rotate(90deg) scale(0.95);
+}
+
+.modal-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 12px 20px 0;
+    background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+    border-bottom: 1px solid var(--border-color);
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    position: relative;
+}
+
+.modal-tabs::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-color) 20%, var(--border-color) 80%, transparent);
+}
+
+.modal-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.modal-tab {
+    padding: 10px 18px;
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 10px 10px 0 0;
+    font-family: var(--font-sans);
+    margin-bottom: -1px;
+    white-space: nowrap;
+    position: relative;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    letter-spacing: 0.01em;
+}
+
+.modal-tab::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 10px 10px 0 0;
+    background: var(--bg-secondary);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    z-index: -1;
+}
+
+.modal-tab::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-hover, var(--accent)));
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateX(-50%);
+    border-radius: 3px 3px 0 0;
+    box-shadow: 0 -2px 8px rgba(var(--accent-rgb, 139, 92, 246), 0.4);
+}
+
+.modal-tab:hover {
+    color: var(--text-primary);
+    transform: translateY(-1px);
+}
+
+.modal-tab:hover::before {
+    opacity: 1;
+}
+
+.modal-tab:active {
+    transform: translateY(0);
+}
+
+.modal-tab.active {
+    color: var(--accent);
+    background: var(--bg-secondary);
+    font-weight: 600;
+    text-shadow: 0 0 20px rgba(var(--accent-rgb, 139, 92, 246), 0.3);
+}
+
+.modal-tab.active::before {
+    opacity: 1;
+    background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.modal-tab.active::after,
+.modal-tab:hover::after {
+    width: calc(100% - 16px);
+}
+
+.modal-body {
+    padding: 24px;
+    position: relative;
+    -webkit-overflow-scrolling: touch;
+}
+
+.modal-page {
+    display: none;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    will-change: opacity, transform;
+}
+
+.modal-page.active {
+    display: block;
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.modal-page.slide-out {
+    opacity: 0;
+    transform: translateX(-20px);
+}
+
+/* ==================== Modal drag handle ==================== */
+
+.modal.dragging .modal-body {
+    pointer-events: none;
+}
+
+.modal-drag-handle {
+    display: none;
+    width: 40px;
+    height: 4px;
+    background: var(--border-color);
+    border-radius: 2px;
+    margin: 8px auto 0;
+    cursor: grab;
+}

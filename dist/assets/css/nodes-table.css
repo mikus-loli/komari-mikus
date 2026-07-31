@@ -1,0 +1,474 @@
+/* ==================== nodes-table-container / table-card ==================== */
+
+.nodes-table-container {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    overflow: visible;
+    box-shadow: none;
+}
+
+.nodes-table {
+    display: none;
+}
+
+#nodesTableBody {
+    width: 100%;
+}
+
+.table-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+    gap: 14px;
+    width: 100%;
+    justify-content: center;
+}
+
+.table-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 12px 16px;
+    cursor: pointer;
+    min-height: 120px;
+    transition: all var(--transition);
+    box-shadow: var(--shadow-card);
+    position: relative;
+    overflow: hidden;
+    min-width: 0;
+    gap: 8px;
+}
+
+.table-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--accent);
+}
+
+.table-card.offline {
+    opacity: 0.7;
+}
+
+.table-card-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    width: 100%;
+}
+
+.table-card-status {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 6px rgba(76, 175, 125, 0.5);
+    flex-shrink: 0;
+}
+
+.table-card-status.offline {
+    background: var(--danger);
+    box-shadow: 0 0 6px rgba(231, 76, 94, 0.5);
+}
+
+.table-card-flag-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 17px;
+}
+
+.table-card-flag {
+    width: 17px;
+    height: 12px;
+    border-radius: 2px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    image-rendering: crisp-edges;
+    flex-shrink: 0;
+}
+
+.table-card-name-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.table-card-name {
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: -0.01em;
+    text-align: center;
+}
+
+.table-card-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 0;
+}
+
+.table-card-price {
+    font-size: 0.65rem;
+    color: var(--success);
+    font-weight: 600;
+}
+
+.table-card-expiry {
+    font-size: 0.65rem;
+    color: var(--text-tertiary);
+}
+
+.table-card-expiry.level-warning {
+    color: var(--warning);
+}
+
+.table-card-expiry.level-danger {
+    color: var(--danger);
+}
+
+.table-card-expiry.level-expired {
+    color: var(--danger);
+}
+
+.table-card-metrics {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    width: 100%;
+}
+
+.table-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+}
+
+.table-card-metric-tags {
+    grid-column: 1 / -1;
+}
+
+.table-card-metric-tags .table-card-metric-label {
+    margin-bottom: 2px;
+}
+
+.table-card-tag {
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--bg-secondary);
+    color: var(--text-tertiary);
+    white-space: nowrap;
+}
+
+.table-card-tag.tag-green,
+.table-card-tag.tag-success,
+.table-card-tag.tag-upload {
+    background: rgba(76, 175, 125, 0.25);
+    color: #2e9b6a;
+}
+
+.table-card-tag.tag-red,
+.table-card-tag.tag-danger {
+    background: rgba(231, 76, 94, 0.25);
+    color: #d63041;
+}
+
+.table-card-tag.tag-blue,
+.table-card-tag.tag-info,
+.table-card-tag.tag-download {
+    background: rgba(92, 156, 237, 0.25);
+    color: #3d7dd8;
+}
+
+.table-card-tag.tag-yellow,
+.table-card-tag.tag-warning {
+    background: rgba(245, 166, 35, 0.25);
+    color: #d99a0f;
+}
+
+.table-card-tag.tag-orange {
+    background: rgba(255, 152, 0, 0.25);
+    color: #e68a00;
+}
+
+.table-card-tag.tag-purple {
+    background: rgba(156, 92, 224, 0.25);
+    color: #8a4ad5;
+}
+
+.table-card-tag.tag-pink {
+    background: rgba(232, 102, 138, 0.25);
+    color: #d64a7a;
+}
+
+.table-card-tag.tag-remaining {
+    background: rgba(156, 92, 224, 0.25);
+    color: #8a4ad5;
+}
+
+.table-card-tag.tag-cyan {
+    background: rgba(0, 188, 212, 0.25);
+    color: #00a5bb;
+}
+
+.table-card-tag.tag-gray {
+    background: rgba(128, 128, 128, 0.25);
+    color: #666666;
+}
+
+.table-card-tag.tag-ip {
+    font-weight: 600;
+    font-size: 0.55rem;
+}
+
+.table-card-tag.tag-ipv4 {
+    background: rgba(92, 156, 237, 0.25);
+    color: #3d7dd8;
+}
+
+.table-card-tag.tag-ipv6 {
+    background: rgba(156, 92, 224, 0.25);
+    color: #8a4ad5;
+}
+
+.table-card-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.table-card-metric.table-card-system .table-card-metric-value {
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.table-card-metric.table-card-system .table-card-metric-value .os-icon {
+    flex-shrink: 0;
+}
+
+.os-icon {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.os-icon-windows { background-image: url('../logo/os-windows.svg'); }
+.os-icon-ubuntu { background-image: url('../logo/os-ubuntu.svg'); }
+.os-icon-debian { background-image: url('../logo/os-debian.svg'); }
+.os-icon-centos { background-image: url('../logo/os-centos.svg'); }
+.os-icon-rhel { background-image: url('../logo/os-redhat.svg'); }
+.os-icon-fedora { background-image: url('../logo/os-fedora.svg'); }
+.os-icon-arch { background-image: url('../logo/os-arch.svg'); }
+.os-icon-suse { background-image: url('../logo/os-openSUSE.svg'); }
+.os-icon-alpine { background-image: url('../logo/os-alpine.webp'); }
+.os-icon-openwrt { background-image: url('../logo/os-openwrt.svg'); }
+.os-icon-freebsd { background-image: url('../logo/os-freebsd.svg'); }
+.os-icon-macos { background-image: url('../logo/os-macos.svg'); }
+.os-icon-android { background-image: url('../logo/linux.svg'); }
+.os-icon-linux { background-image: url('../logo/linux.svg'); }
+.os-icon-rocky { background-image: url('../logo/os-rocky.svg'); }
+.os-icon-alma { background-image: url('../logo/os-alma.svg'); }
+.os-icon-mint { background-image: url('../logo/os-mint.svg'); }
+.os-icon-manjaro { background-image: url('../logo/os-manjaro-.svg'); }
+.os-icon-gentoo { background-image: url('../logo/os-gentoo.svg'); }
+.os-icon-nix { background-image: url('../logo/os-nix.svg'); }
+.os-icon-qnap { background-image: url('../logo/os-qnap.svg'); }
+.os-icon-unraid { background-image: url('../logo/os-unraid.svg'); }
+.os-icon-armbian { background-image: url('../logo/os-armbian.svg'); }
+.os-icon-kail { background-image: url('../logo/os-kail.svg'); }
+.os-icon-huawei { background-image: url('../logo/os-huawei.svg'); }
+.os-icon-orange-pi { background-image: url('../logo/os-orange-pi.svg'); }
+.os-icon-fnos { background-image: url('../logo/os-fnos.ico'); }
+.os-icon-opencloudos { background-image: url('../logo/os-OpenCloudOS.png'); }
+.os-icon-istore { background-image: url('../logo/os-istore.png'); }
+.os-icon-proxmox { background-image: url('../logo/os-proxmox.ico'); }
+.os-icon-synology { background-image: url('../logo/os-synology.ico'); }
+.os-icon-astar { background-image: url('../logo/os-astar.png'); }
+.os-icon-alibaba { background-image: url('../logo/alibabacloud-color.svg'); }
+.os-icon-unknown { background-image: url('../logo/TablerHelp.svg'); }
+
+.table-card-metric-label {
+    font-size: 0.65rem;
+    color: var(--text-tertiary);
+}
+
+.table-card-metric-value {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.table-card-metric-bar {
+    height: 3px;
+    background: var(--bg-tertiary);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.table-card-metric-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s ease;
+    position: relative;
+}
+
+.table-card-metric-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.25), transparent);
+    border-radius: 2px 2px 0 0;
+}
+
+.table-card-metric-fill.level-excellent { background: var(--success); }
+.table-card-metric-fill.level-normal { background: var(--info); }
+.table-card-metric-fill.level-warning { background: var(--warning); }
+.table-card-metric-fill.level-danger { background: var(--danger); }
+
+.table-card-metric-value.level-excellent { color: var(--success); }
+.table-card-metric-value.level-normal { color: var(--info); }
+.table-card-metric-value.level-warning { color: var(--warning); }
+.table-card-metric-value.level-danger { color: var(--danger); }
+
+.table-card-tags {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    flex-wrap: nowrap;
+    overflow: hidden;
+}
+
+.table-card:hover .node-api-tag {
+    transform: none;
+}
+
+.table-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.table-status .node-status-dot {
+    width: 6px;
+    height: 6px;
+}
+
+.table-name {
+    font-weight: 600;
+}
+
+.table-region {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.table-flag {
+    width: 24px;
+    height: 16px;
+    border-radius: 2px;
+    object-fit: cover;
+    vertical-align: middle;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}
+
+.table-flag-placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 16px;
+    border-radius: 2px;
+    background: var(--bg-tertiary);
+    color: var(--text-tertiary);
+    font-size: 0.65rem;
+    font-weight: 600;
+}
+
+.table-metric {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.table-metric-bar {
+    width: 60px;
+    height: 4px;
+    background: var(--bg-tertiary);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.table-metric-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.6s ease;
+}
+
+.table-metric-bar-fill.level-normal { background: var(--success); }
+.table-metric-bar-fill.level-warning { background: var(--warning); }
+.table-metric-bar-fill.level-danger { background: var(--danger); }
+
+.table-metric-value {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.table-metric-value.level-normal { color: var(--success); }
+.table-metric-value.level-warning { color: var(--warning); }
+.table-metric-value.level-danger { color: var(--danger); }
+
+.table-network {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    white-space: nowrap;
+}
+
+.table-network .arrow-up,
+.table-network .arrow-down {
+    margin: 0 2px;
+}
+
+.table-ping {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.table-ping.level-normal { color: var(--success); }
+.table-ping.level-warning { color: var(--warning); }
+.table-ping.level-danger { color: var(--danger); }
+
+.table-uptime {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}

@@ -5,8 +5,6 @@ import { lttbDownsampleRecords } from '../../algorithms/index.js';
 import { formatTimeLabel, timeRangeToHours } from '../../utils/time.js';
 import { drawSmoothAreaLine, drawEmptyChart, createMouseMoveHandler, createHideHandler, createTouchMoveHandler } from './utils.js';
 import { getChartConfigs, updateNetworkLegend } from './config.js';
-import { drawLineChart } from './line.js';
-import { drawNetworkChart } from './network.js';
 import { drawMultiTaskPingChart } from './latency.js';
 
 // ==================== 延迟图表入口 ====================
@@ -209,7 +207,6 @@ export function renderChartByConfig(config, records, hours) {
     ctx.textAlign = 'center';
     ctx.font = '10px ' + getCachedFontFamily();
 
-    const dataLength = renderRecords.length;
     const firstTime = new Date(renderRecords[0].time);
     const lastTime = new Date(renderRecords[renderRecords.length - 1].time);
 

@@ -38,7 +38,7 @@ jobs:
       - name: Validate required files
         run: |
           missing=""
-          for f in komari-theme.json dist/index.html dist/assets/style.css dist/assets/js/app.js LICENSE; do
+          for f in komari-theme.json dist/index.html dist/assets/css/base.css dist/assets/js/app.js LICENSE; do
             if [ ! -f "$f" ]; then missing="$missing $f"; fi
           done
           if [ -n "$missing" ]; then

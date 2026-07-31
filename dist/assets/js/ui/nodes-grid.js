@@ -7,8 +7,8 @@
 
 import { state } from '../core/state.js';
 import { t } from '../i18n/index.js';
-import { formatBytes, formatSpeed, formatPercent, formatUptime, formatExpiry, formatPrice, formatOS } from '../utils/format.js';
-import { escapeHtml, parseTagInfo, getUsageLevel } from '../utils/helpers.js';
+import { formatBytes, formatSpeed, formatPercent, formatUptime, formatExpiry, formatPrice } from '../utils/format.js';
+import { escapeHtml, parseTagInfo } from '../utils/helpers.js';
 import { openNodeModal } from './modal.js';
 import { getFilteredNodes, calculateNodeMetrics } from './nodes.js';
 

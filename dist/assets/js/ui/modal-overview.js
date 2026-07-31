@@ -28,7 +28,7 @@ function buildInfoItem(label, value, nowrap) {
  * @param {Object} rt - 实时数据
  * @param {string} uuid - 节点 UUID
  */
-export function renderOverviewPage(node, rt, uuid) {
+export function renderOverviewPage(node, rt, _uuid) {
     const els = getModalElements();
     const infoEl = els.modalInfo;
     if (!infoEl) return;

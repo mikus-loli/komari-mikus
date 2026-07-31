@@ -1,0 +1,355 @@
+/* ==================== Latency ==================== */
+
+.latency-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.latency-stat {
+    padding: 16px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    opacity: 0;
+    animation: staggerFadeIn 0.35s ease forwards;
+}
+
+.latency-stat:nth-child(1) { animation-delay: 0.03s; }
+.latency-stat:nth-child(2) { animation-delay: 0.08s; }
+.latency-stat:nth-child(3) { animation-delay: 0.13s; }
+
+.latency-stat:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+
+.latency-stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    margin-bottom: 4px;
+    transition: color 0.2s ease;
+}
+
+.latency-stat-value.level-normal { color: var(--success); }
+.latency-stat-value.level-warning { color: var(--warning); }
+.latency-stat-value.level-danger { color: var(--danger); }
+
+.latency-stat-label {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.latency-tasks {
+    margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 10px;
+}
+
+.latency-tasks-title {
+    grid-column: 1 / -1;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    padding-left: 12px;
+}
+
+.latency-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-tertiary);
+    font-size: 0.9rem;
+}
+
+.latency-tasks-title::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 16px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-hover));
+    border-radius: 2px;
+    box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.4);
+}
+
+.latency-tasks-title::after {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    opacity: 0.6;
+    animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.latency-task-card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: 10px 12px;
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+    border-radius: var(--radius-md);
+    border-left: 4px solid var(--accent);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    gap: 6px;
+    overflow: hidden;
+    opacity: 0;
+    animation: cardSlideIn 0.35s ease forwards;
+}
+
+.latency-task-card:nth-child(1) { animation-delay: 0.02s; }
+.latency-task-card:nth-child(2) { animation-delay: 0.04s; }
+.latency-task-card:nth-child(3) { animation-delay: 0.06s; }
+.latency-task-card:nth-child(4) { animation-delay: 0.08s; }
+.latency-task-card:nth-child(5) { animation-delay: 0.10s; }
+.latency-task-card:nth-child(6) { animation-delay: 0.12s; }
+.latency-task-card:nth-child(7) { animation-delay: 0.14s; }
+.latency-task-card:nth-child(8) { animation-delay: 0.16s; }
+.latency-task-card:nth-child(9) { animation-delay: 0.18s; }
+.latency-task-card:nth-child(10) { animation-delay: 0.20s; }
+.latency-task-card:nth-child(11) { animation-delay: 0.22s; }
+.latency-task-card:nth-child(12) { animation-delay: 0.24s; }
+
+.latency-task-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(var(--accent-rgb), 0.03) 50%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.latency-task-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(var(--accent-rgb), 0.1);
+    border-left-width: 5px;
+}
+
+.latency-task-card:hover::before {
+    opacity: 1;
+}
+
+.latency-task-card:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.latency-task-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.latency-task-name::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 4px rgba(var(--accent-rgb), 0.5);
+    animation: blink-dot 1.5s ease-in-out infinite;
+    flex-shrink: 0;
+    margin-right: 6px;
+    margin-left: 2px;
+}
+
+.latency-task-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+.latency-task-ping {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 0.78rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.latency-task-ping.level-excellent {
+    color: var(--success);
+    background: rgba(76, 175, 125, 0.1);
+}
+
+.latency-task-ping.level-normal {
+    color: var(--info);
+    background: rgba(92, 156, 237, 0.1);
+}
+
+.latency-task-ping.level-warning {
+    color: var(--warning);
+    background: rgba(245, 166, 35, 0.1);
+}
+
+.latency-task-ping.level-danger {
+    color: var(--danger);
+    background: rgba(231, 76, 94, 0.1);
+}
+
+.latency-task-loss {
+    font-size: 0.68rem;
+    color: var(--text-tertiary);
+    padding: 2px 5px;
+    background: var(--bg-primary);
+    border-radius: 4px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.latency-chart-container {
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    opacity: 0;
+    animation: chartReveal 0.4s ease 0.25s forwards;
+}
+
+.latency-chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.latency-chart-header h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    padding-left: 12px;
+}
+
+.latency-chart-header h3::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 16px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-hover));
+    border-radius: 2px;
+    box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.4);
+}
+
+.latency-chart-header h3::after {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    opacity: 0.6;
+    animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.latency-legend {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    max-width: 100%;
+}
+
+.latency-chart-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.chart-smooth-btn {
+    padding: 6px 10px;
+    border: none;
+    background: rgba(var(--accent-rgb), 0.1);
+    color: var(--text-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+}
+
+.chart-smooth-btn:hover {
+    background: rgba(var(--accent-rgb), 0.2);
+    color: var(--text-primary);
+}
+
+.chart-smooth-btn.active {
+    background: rgba(var(--accent-rgb), 0.2);
+    color: var(--accent);
+    box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.3);
+}
+
+.chart-smooth-btn svg {
+    transition: transform 0.2s ease;
+}
+
+.chart-smooth-btn:hover svg {
+    transform: scale(1.1);
+}
+
+.latency-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    padding: 2px 6px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    transition: background 0.2s ease;
+}
+
+.latency-legend-item:hover {
+    background: var(--bg-tertiary);
+}
+
+.latency-legend-color {
+    width: 14px;
+    height: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+#latencyChart {
+    width: 100%;
+    height: 250px;
+    border-radius: var(--radius-sm);
+}

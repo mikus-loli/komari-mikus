@@ -6,7 +6,7 @@
  */
 
 import { state, historyCache, pingCache, getCachedData, setCachedData } from '../core/state.js';
-import { RPC_METHODS, MAX_HISTORY_POINTS } from '../core/constants.js';
+import { RPC_METHODS } from '../core/constants.js';
 import { showErrorToast } from '../core/error-boundary.js';
 import { trimRecords, getApiBase } from '../utils/helpers.js';
 import { t } from '../i18n/index.js';

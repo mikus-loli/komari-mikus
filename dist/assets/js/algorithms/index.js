@@ -206,7 +206,7 @@ export function interpolateNullsLinear(rows, keys, options) {
     const out = rows.map(function(r) { return Object.assign({}, r); });
 
     const opts = typeof options === 'number' ? { maxGapMs: options } : (options || {});
-    let maxGapMsUnified = opts.maxGapMs;
+    const maxGapMsUnified = opts.maxGapMs;
     const multiplier = opts.maxGapMultiplier || 6;
     const minCap = opts.minCapMs || 2 * 60000;
     const maxCap = opts.maxCapMs || 30 * 60000;
@@ -285,7 +285,7 @@ export function cutPeakValues(data, keys, alpha, windowSize, spikeThreshold) {
     windowSize = windowSize || 15;
     spikeThreshold = spikeThreshold || 0.3;
 
-    let result = data.map(function(d) { return Object.assign({}, d); });
+    const result = data.map(function(d) { return Object.assign({}, d); });
     const halfWindow = Math.floor(windowSize / 2);
 
     for (let ki = 0; ki < keys.length; ki++) {

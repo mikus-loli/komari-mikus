@@ -34,7 +34,7 @@ function renderTableCardHeader(node, metrics) {
     const expiry = formatExpiry(node.expired_at);
     if (expiry || node.price) {
         let priceText = '';
-        if (node.price == '-1') {
+        if (node.price === -1 || node.price === '-1') {
             priceText = t('free') || '免费';
         } else if (node.price) {
             const currency = node.currency || '¥';
