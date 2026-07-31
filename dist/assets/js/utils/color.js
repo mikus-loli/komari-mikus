@@ -3,7 +3,6 @@
  * @description 颜色生成与字体缓存
  * @dependencies 无
  * @exports generateOKLCHColor, getCachedFontFamily
- * @source app.js L437-L447, L923-L943
  */
 
 /** 模块私有变量：缓存的字体名称 */

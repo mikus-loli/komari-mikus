@@ -105,10 +105,13 @@ jobs:
           if command -v jq &> /dev/null; then
             jq --arg v "$VERSION" '.version = $v' komari-theme.json > komari-theme.json.tmp
             mv komari-theme.json.tmp komari-theme.json
+            jq --arg v "$VERSION" '.version = $v' package.json > package.json.tmp
+            mv package.json.tmp package.json
           else
             sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" komari-theme.json
+            sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" package.json
           fi
-          echo "Updated version to $VERSION in komari-theme.json"
+          echo "Updated version to $VERSION in komari-theme.json and package.json"
 
       - name: Create release package
         id: package

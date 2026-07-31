@@ -3,7 +3,6 @@
  * @description 主题切换、视图切换、语言切换、主题设置应用（footer/mascot/background/sakura）
  * @dependencies core/state.js, core/constants.js, i18n/index.js, ui/preloader.js, ui/nodes.js, utils/helpers.js
  * @exports initTheme, applyTheme, toggleTheme, toggleLang, initView, applyView, setView, applyThemeSettings, applyBackgroundSettings, applySakura
- * @source app.js L1816-L1922, L4232-L4374
  */
 
 import { state } from '../core/state.js';

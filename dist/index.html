@@ -8,8 +8,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="format-detection" content="telephone=no">
-    <title>Komari Monitor</title>
-    <meta name="description" content="A simple server monitor tool.">
+    <title>Komari Mikus</title>
+    <meta name="description" content="A modern, elegant Komari monitoring theme with sakura aesthetics.">
     <link rel="stylesheet" href="assets/css/base.css">
     <link rel="stylesheet" href="assets/css/preloader.css">
     <link rel="stylesheet" href="assets/css/header.css">
@@ -61,27 +61,27 @@
                     <input type="text" id="searchInput" placeholder="Search nodes..." autocomplete="off">
                 </div>
                 <div class="view-toggle">
-                    <button class="view-btn active" data-view="grid" title="Grid View">
+                    <button class="view-btn active" data-view="grid" title="Grid View" data-i18n-title="grid_view">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
                             <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
                         </svg>
                     </button>
-                    <button class="view-btn" data-view="table" title="Table View">
+                    <button class="view-btn" data-view="table" title="Table View" data-i18n-title="table_view">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/>
                             <line x1="3" y1="18" x2="21" y2="18"/>
                         </svg>
                     </button>
                 </div>
-                <div class="lang-toggle" id="langToggle" title="Switch Language">
+                <div class="lang-toggle" id="langToggle" title="Switch Language" data-i18n-title="switch_lang">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
                         <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
                     </svg>
                 </div>
                 <div class="header-right-end">
-                    <div class="theme-toggle" id="themeToggle" title="Toggle Theme">
+                    <div class="theme-toggle" id="themeToggle" title="Toggle Theme" data-i18n-title="toggle_theme">
                         <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/>
                             <line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
@@ -173,10 +173,10 @@
                         <div class="modal-info" id="modalInfo"></div>
                         <div class="time-range-controls" id="overviewTimeRange">
                             <div class="time-range-label" data-i18n="time_range">时间范围：</div>
-                            <button class="time-range-btn" data-range="realtime">实时</button>
-                            <button class="time-range-btn active" data-range="1h">1h</button>
-                            <button class="time-range-btn" data-range="4h">4h</button>
-                            <button class="time-range-btn" data-range="1d">1d</button>
+                            <button class="time-range-btn" data-range="realtime" data-i18n="realtime">实时</button>
+                            <button class="time-range-btn active" data-range="1h" data-i18n="1h">1h</button>
+                            <button class="time-range-btn" data-range="4h" data-i18n="4h">4h</button>
+                            <button class="time-range-btn" data-range="1d" data-i18n="1d">1d</button>
                         </div>
                         <div class="modal-charts">
                             <div class="chart-section">
@@ -214,9 +214,9 @@
                     <div class="modal-page modal-page-latency" id="pageLatency">
                         <div class="time-range-controls" id="pingTimeRange">
                             <div class="time-range-label" data-i18n="time_range">时间范围：</div>
-                            <button class="time-range-btn active" data-range="1h">1h</button>
-                            <button class="time-range-btn" data-range="4h">4h</button>
-                            <button class="time-range-btn" data-range="1d">1d</button>
+                            <button class="time-range-btn active" data-range="1h" data-i18n="1h">1h</button>
+                            <button class="time-range-btn" data-range="4h" data-i18n="4h">4h</button>
+                            <button class="time-range-btn" data-range="1d" data-i18n="1d">1d</button>
                         </div>
                         <div class="latency-summary" id="latencySummary"></div>
                         <div class="latency-tasks" id="latencyTasks"></div>

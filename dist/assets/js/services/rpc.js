@@ -3,7 +3,6 @@
  * @description RPC2Client 类 + 初始化函数
  * @dependencies core/state.js
  * @exports RPC2Client, initRPC2Client
- * @source app.js L4-L195, L1164-L1188
  */
 
 import { state } from '../core/state.js';

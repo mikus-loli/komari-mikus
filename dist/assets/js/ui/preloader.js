@@ -3,7 +3,6 @@
  * @description 预加载器进度模拟 + 时间问候更新
  * @dependencies core/state.js, i18n/index.js
  * @exports startPreloaderSimulation, updatePreloader, hidePreloader, updateTime, updateGreetingSubtitle, clearPreloaderTimer, getPreloaderProgress
- * @source app.js L4739-L4843
  */
 
 import { state } from '../core/state.js';

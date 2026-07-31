@@ -3,7 +3,6 @@
  * @description 全局状态单例 + 缓存管理
  * @dependencies 无
  * @exports state, historyCache, pingCache, getCachedData, setCachedData, CACHE_EXPIRY_MS
- * @source app.js L380-L429
  */
 
 /** 缓存有效期：60秒 */

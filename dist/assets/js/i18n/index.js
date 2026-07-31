@@ -3,7 +3,6 @@
  * @description 国际化字典 + 翻译函数 + 语言初始化
  * @dependencies core/state.js
  * @exports t, initLang, applyLang, i18n
- * @source app.js L213-L378
  */
 
 import { state } from '../core/state.js';
@@ -89,7 +88,11 @@ const zhCN = {
     year: '年',
     two_years: '两年',
     three_years: '三年',
-    five_years: '五年'
+    five_years: '五年',
+    realtime: '实时',
+    '1h': '1小时',
+    '4h': '4小时',
+    '1d': '1天'
 };
 
 /** 英文翻译字典 */
@@ -173,7 +176,11 @@ const en = {
     year: 'Year',
     two_years: '2 Years',
     three_years: '3 Years',
-    five_years: '5 Years'
+    five_years: '5 Years',
+    realtime: 'Realtime',
+    '1h': '1h',
+    '4h': '4h',
+    '1d': '1d'
 };
 
 /** 日本語翻訳辞書 */
@@ -257,7 +264,11 @@ const ja = {
     year: '年',
     two_years: '2年',
     three_years: '3年',
-    five_years: '5年'
+    five_years: '5年',
+    realtime: 'リアルタイム',
+    '1h': '1時間',
+    '4h': '4時間',
+    '1d': '1日'
 };
 
 /** 国际化字典集合 */
@@ -312,6 +323,10 @@ export function applyLang() {
     document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el) {
         const key = el.getAttribute('data-i18n-placeholder');
         el.placeholder = t(key);
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach(function(el) {
+        const key = el.getAttribute('data-i18n-title');
+        el.title = t(key);
     });
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {

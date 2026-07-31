@@ -3,7 +3,6 @@
  * @description 实时 RPC 数据处理
  * @dependencies core/state.js, ui/nodes.js, ui/charts.js
  * @exports handleRpcResult
- * @source app.js L1736-L1814
  */
 
 import { state } from '../core/state.js';
