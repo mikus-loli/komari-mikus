@@ -793,40 +793,40 @@
     background-position: center;
 }
 
-.os-icon-windows { background-image: url('logo/os-windows.svg'); }
-.os-icon-ubuntu { background-image: url('logo/os-ubuntu.svg'); }
-.os-icon-debian { background-image: url('logo/os-debian.svg'); }
-.os-icon-centos { background-image: url('logo/os-centos.svg'); }
-.os-icon-rhel { background-image: url('logo/os-redhat.svg'); }
-.os-icon-fedora { background-image: url('logo/os-fedora.svg'); }
-.os-icon-arch { background-image: url('logo/os-arch.svg'); }
-.os-icon-suse { background-image: url('logo/os-openSUSE.svg'); }
-.os-icon-alpine { background-image: url('logo/os-alpine.webp'); }
-.os-icon-openwrt { background-image: url('logo/os-openwrt.svg'); }
-.os-icon-freebsd { background-image: url('logo/os-freebsd.svg'); }
-.os-icon-macos { background-image: url('logo/os-macos.svg'); }
-.os-icon-android { background-image: url('logo/linux.svg'); }
-.os-icon-linux { background-image: url('logo/linux.svg'); }
-.os-icon-rocky { background-image: url('logo/os-rocky.svg'); }
-.os-icon-alma { background-image: url('logo/os-alma.svg'); }
-.os-icon-mint { background-image: url('logo/os-mint.svg'); }
-.os-icon-manjaro { background-image: url('logo/os-manjaro-.svg'); }
-.os-icon-gentoo { background-image: url('logo/os-gentoo.svg'); }
-.os-icon-nix { background-image: url('logo/os-nix.svg'); }
-.os-icon-qnap { background-image: url('logo/os-qnap.svg'); }
-.os-icon-unraid { background-image: url('logo/os-unraid.svg'); }
-.os-icon-armbian { background-image: url('logo/os-armbian.svg'); }
-.os-icon-kail { background-image: url('logo/os-kail.svg'); }
-.os-icon-huawei { background-image: url('logo/os-huawei.svg'); }
-.os-icon-orange-pi { background-image: url('logo/os-orange-pi.svg'); }
-.os-icon-fnos { background-image: url('logo/os-fnos.ico'); }
-.os-icon-opencloudos { background-image: url('logo/os-OpenCloudOS.png'); }
-.os-icon-istore { background-image: url('logo/os-istore.png'); }
-.os-icon-proxmox { background-image: url('logo/os-proxmox.ico'); }
-.os-icon-synology { background-image: url('logo/os-synology.ico'); }
-.os-icon-astar { background-image: url('logo/os-astar.png'); }
-.os-icon-alibaba { background-image: url('logo/alibabacloud-color.svg'); }
-.os-icon-unknown { background-image: url('logo/TablerHelp.svg'); }
+.os-icon-windows { background-image: url('../logo/os-windows.svg'); }
+.os-icon-ubuntu { background-image: url('../logo/os-ubuntu.svg'); }
+.os-icon-debian { background-image: url('../logo/os-debian.svg'); }
+.os-icon-centos { background-image: url('../logo/os-centos.svg'); }
+.os-icon-rhel { background-image: url('../logo/os-redhat.svg'); }
+.os-icon-fedora { background-image: url('../logo/os-fedora.svg'); }
+.os-icon-arch { background-image: url('../logo/os-arch.svg'); }
+.os-icon-suse { background-image: url('../logo/os-openSUSE.svg'); }
+.os-icon-alpine { background-image: url('../logo/os-alpine.webp'); }
+.os-icon-openwrt { background-image: url('../logo/os-openwrt.svg'); }
+.os-icon-freebsd { background-image: url('../logo/os-freebsd.svg'); }
+.os-icon-macos { background-image: url('../logo/os-macos.svg'); }
+.os-icon-android { background-image: url('../logo/linux.svg'); }
+.os-icon-linux { background-image: url('../logo/linux.svg'); }
+.os-icon-rocky { background-image: url('../logo/os-rocky.svg'); }
+.os-icon-alma { background-image: url('../logo/os-alma.svg'); }
+.os-icon-mint { background-image: url('../logo/os-mint.svg'); }
+.os-icon-manjaro { background-image: url('../logo/os-manjaro-.svg'); }
+.os-icon-gentoo { background-image: url('../logo/os-gentoo.svg'); }
+.os-icon-nix { background-image: url('../logo/os-nix.svg'); }
+.os-icon-qnap { background-image: url('../logo/os-qnap.svg'); }
+.os-icon-unraid { background-image: url('../logo/os-unraid.svg'); }
+.os-icon-armbian { background-image: url('../logo/os-armbian.svg'); }
+.os-icon-kail { background-image: url('../logo/os-kail.svg'); }
+.os-icon-huawei { background-image: url('../logo/os-huawei.svg'); }
+.os-icon-orange-pi { background-image: url('../logo/os-orange-pi.svg'); }
+.os-icon-fnos { background-image: url('../logo/os-fnos.ico'); }
+.os-icon-opencloudos { background-image: url('../logo/os-OpenCloudOS.png'); }
+.os-icon-istore { background-image: url('../logo/os-istore.png'); }
+.os-icon-proxmox { background-image: url('../logo/os-proxmox.ico'); }
+.os-icon-synology { background-image: url('../logo/os-synology.ico'); }
+.os-icon-astar { background-image: url('../logo/os-astar.png'); }
+.os-icon-alibaba { background-image: url('../logo/alibabacloud-color.svg'); }
+.os-icon-unknown { background-image: url('../logo/TablerHelp.svg'); }
 
 .table-card-metric-label {
     font-size: 0.65rem;

@@ -176,10 +176,95 @@ const en = {
     five_years: '5 Years'
 };
 
+/** 日本語翻訳辞書 */
+const ja = {
+    total_nodes: 'ノード数',
+    online: 'オンライン',
+    offline: 'オフライン',
+    status: 'ステータス',
+    name: '名前',
+    region: 'リージョン',
+    network: 'ネットワーク',
+    uptime: '稼働時間',
+    uptime_prefix: '稼働',
+    cpu_usage: 'CPU 使用率',
+    ram_usage: 'メモリ使用率',
+    network_traffic: 'ネットワークトラフィック',
+    disk_usage: 'ディスク使用率',
+    process_count: 'プロセス数',
+    connection_count: '接続数',
+    search_placeholder: 'ノードを検索...',
+    loading: '読み込み中...',
+    no_nodes: 'ノードデータがありません',
+    os_info: 'システム情報',
+    cpu_model: 'CPU モデル',
+    memory: 'メモリ',
+    swap: 'スワップ',
+    system: 'システム',
+    disk: 'ディスク',
+    ram: 'メモリ',
+    upload: 'アップロード',
+    download: 'ダウンロード',
+    load: '負荷',
+    processes: 'プロセス',
+    connections: '接続',
+    up: '上り',
+    down: '下り',
+    days: '日',
+    hours: '時間',
+    minutes: '分',
+    seconds: '秒',
+    all: 'すべて',
+    grid_view: 'グリッド表示',
+    table_view: 'テーブル表示',
+    toggle_theme: 'テーマ切替',
+    switch_lang: '言語切替',
+    arch: 'アーキテクチャ',
+    virtualization: '仮想化',
+    ungrouped: '未グループ化',
+    ping: 'レイテンシ',
+    ping_ms: 'ms',
+    ping_latency: 'ネットワーク遅延',
+    ping_chart: '遅延推移',
+    avg_ping: '平均遅延',
+    packet_loss: 'パケットロス率',
+    overview: '概要',
+    latency_detail: '遅延詳細',
+    min_ping: '最小遅延',
+    max_ping: '最大遅延',
+    avg_latency: '平均遅延',
+    tasks: '監視タスク',
+    time_range: '期間：',
+    good_morning: 'おはようございます',
+    good_afternoon: 'こんにちは',
+    good_evening: 'こんばんは',
+    welcome_back: 'おかえりなさい、すべて正常に稼働中です',
+    expired: '期限切れ',
+    long_term: '長期',
+    free: '無料',
+    login_required: '履歴データを表示するにはログインが必要です',
+    task: 'タスク',
+    total_upload: '総アップロード',
+    total_download: '総ダウンロード',
+    traffic_overview: 'トラフィック概要',
+    traffic_limit: 'トラフィック制限',
+    remaining_traffic: '残り',
+    remaining: '残り',
+    latency_not_configured: '管理パネルで遅延監視タスクを設定してください',
+    month: '月',
+    quarter: '四半期',
+    half_year: '半年',
+    year: '年',
+    two_years: '2年',
+    three_years: '3年',
+    five_years: '5年'
+};
+
 /** 国际化字典集合 */
 export const i18n = {
     'zh-CN': zhCN,
-    'en': en
+    'en': en,
+    'ja': ja
 };
 
 /**
@@ -205,6 +290,8 @@ export function initLang() {
         const browserLang = navigator.language || navigator.userLanguage || 'zh-CN';
         if (browserLang.startsWith('zh')) {
             state.currentLang = 'zh-CN';
+        } else if (browserLang.startsWith('ja')) {
+            state.currentLang = 'ja';
         } else {
             state.currentLang = 'en';
         }

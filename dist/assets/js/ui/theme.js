@@ -63,10 +63,12 @@ export function toggleTheme() {
 }
 
 /**
- * 切换语言（中英文互换）并重新渲染页面
+ * 切换语言（中文 → 英文 → 日本語 循环）并重新渲染页面
  */
 export function toggleLang() {
-    state.currentLang = state.currentLang === 'zh-CN' ? 'en' : 'zh-CN';
+    const langOrder = ['zh-CN', 'en', 'ja'];
+    const currentIndex = langOrder.indexOf(state.currentLang);
+    state.currentLang = langOrder[(currentIndex + 1) % langOrder.length];
     localStorage.setItem('i18nextLng', state.currentLang);
     applyLang();
     renderAll();

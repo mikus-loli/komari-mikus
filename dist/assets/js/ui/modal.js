@@ -1,19 +1,20 @@
 /**
  * @module ui/modal
- * @description 模态框管理（打开/关闭/切换 Tab/图表观察器/拖拽滚动/概览页/延迟页渲染）
- * @dependencies core/state.js, core/constants.js, i18n/index.js, utils/format.js, utils/time.js, utils/helpers.js, services/api.js, ui/charts.js
+ * @description 模态框核心管理（打开/关闭/切换 Tab/图表观察器/拖拽滚动）
+ * @dependencies core/state.js, i18n/index.js, utils/time.js, services/api.js, ui/charts.js, ui/modal-overview.js, ui/modal-latency.js
  * @exports openNodeModal, closeModal, switchModalPage, initChartObserver, renderOverviewPage, renderLatencyPage, getModalElements, updateTimeRangeButtons, initModalDragScroll
- * @source app.js L2509-L2876, L4555-L4730
  */
 
 import { state } from '../core/state.js';
-import { PING_COLORS } from '../core/constants.js';
-import { t } from '../i18n/index.js';
-import { formatBytes, formatUptime, formatPing } from '../utils/format.js';
 import { timeRangeToHours } from '../utils/time.js';
-import { escapeHtml, getPingLevel, getTaskLatestPing } from '../utils/helpers.js';
 import { loadNodeHistory, loadPingHistory } from '../services/api.js';
-import { drawCharts, drawLatencyChart, renderChartByConfig, getChartConfigs, drawLineChart, drawNetworkChart } from './charts/index.js';
+import { drawLatencyChart, renderChartByConfig, getChartConfigs, drawLineChart, drawNetworkChart } from './charts/index.js';
+import { renderOverviewPage } from './modal-overview.js';
+import { renderLatencyPage } from './modal-latency.js';
+
+// 重新导出供 events.js 等外部模块使用
+export { renderOverviewPage } from './modal-overview.js';
+export { renderLatencyPage } from './modal-latency.js';
 
 /**
  * 获取模态框元素引用（带缓存）
@@ -70,7 +71,6 @@ export function initChartObserver() {
                         const dataHours = state.historyDataHours[uuid] !== undefined
                             ? state.historyDataHours[uuid]
                             : timeRangeToHours(state.historyTimeRange);
-                        // 实时模式使用 realtimeHistory，历史模式使用 historyData
                         let records;
                         if (dataHours === 0) {
                             records = state.realtimeHistory[uuid] || [];
@@ -102,7 +102,6 @@ export function initChartObserver() {
                             }
                             state.chartsDrawn[uuid + '_' + chartId] = true;
                         }
-                        // 概览图表渲染完成或无数据时，均移除该区域的加载动画
                         const section = canvas.closest('.chart-section');
                         if (section) section.classList.remove('loading');
                     }
@@ -157,8 +156,8 @@ export function openNodeModal(uuid) {
         document.body.style.overflow = 'hidden';
     }
 
-    const chartSections = document.querySelectorAll('.modal-charts .chart-section');
-    chartSections.forEach(function(section) {
+    const animatedSections = document.querySelectorAll('.modal-charts .chart-section');
+    animatedSections.forEach(function(section) {
         section.style.animation = 'none';
         void section.offsetHeight;
         section.style.animation = '';
@@ -182,7 +181,6 @@ export function openNodeModal(uuid) {
             }
         });
     }).catch(function () {
-        // 加载失败也移除动画
         document.querySelectorAll('.modal-charts .chart-section').forEach(function(section) {
             section.classList.remove('loading');
         });
@@ -209,116 +207,6 @@ export function updateTimeRangeButtons() {
             const range = btn.getAttribute('data-range');
             btn.classList.toggle('active', range === state.pingTimeRange);
         });
-    }
-}
-
-/**
- * 渲染概览页信息区域
- * @param {Object} node - 节点对象
- * @param {Object} rt - 实时数据
- * @param {string} uuid - 节点 UUID
- */
-export function renderOverviewPage(node, rt, uuid) {
-    const els = getModalElements();
-    const infoEl = els.modalInfo;
-    if (!infoEl) return;
-
-    const ramUsed = rt.ram ? rt.ram.used : null;
-    const ramTotal = rt.ram ? rt.ram.total : node.mem_total || 0;
-    const diskUsed = rt.disk ? rt.disk.used : null;
-    const diskTotal = rt.disk ? rt.disk.total : node.disk_total || 0;
-    const swapUsed = rt.swap ? rt.swap.used : null;
-    const swapTotal = rt.swap ? rt.swap.total : node.swap_total || 0;
-    const load1 = rt.load ? rt.load.load1 : null;
-    const load5 = rt.load ? rt.load.load5 : null;
-    const load15 = rt.load ? rt.load.load15 : null;
-    const process = rt.process || 0;
-    const tcpConn = rt.connections ? rt.connections.tcp : 0;
-    const udpConn = rt.connections ? rt.connections.udp : 0;
-    const netTotalUp = rt.network ? rt.network.totalUp : 0;
-    const netTotalDown = rt.network ? rt.network.totalDown : 0;
-
-    const items = [
-        buildInfoItem(t('os_info'), node.os || '-'),
-        buildInfoItem(t('cpu_model'), node.cpu_name || '-'),
-        buildInfoItem(t('arch'), node.arch || '-'),
-        buildInfoItem(t('virtualization'), node.virtualization || '-'),
-        buildInfoItem(t('memory'), ramUsed !== null ? formatBytes(ramUsed) + ' / ' + formatBytes(ramTotal) : '- / ' + formatBytes(ramTotal)),
-        buildInfoItem(t('swap'), swapTotal > 0 ? (swapUsed !== null ? formatBytes(swapUsed) + ' / ' + formatBytes(swapTotal) : '- / ' + formatBytes(swapTotal)) : '-'),
-        buildInfoItem(t('disk'), diskUsed !== null ? formatBytes(diskUsed) + ' / ' + formatBytes(diskTotal) : '- / ' + formatBytes(diskTotal)),
-        buildInfoItem(t('load'), load1 !== null ? load1.toFixed(2) + ' / ' + (load5 !== null ? load5.toFixed(2) : '-') + ' / ' + (load15 !== null ? load15.toFixed(2) : '-') : '-'),
-        buildInfoItem(t('processes'), String(process)),
-        buildInfoItem(t('connections'), 'TCP: ' + tcpConn + ' / UDP: ' + udpConn),
-        buildInfoItem(t('uptime'), formatUptime(rt.uptime || 0)),
-        buildInfoItem(t('network'), t('up') + ': ' + formatBytes(netTotalUp) + ' / ' + t('down') + ': ' + formatBytes(netTotalDown), true)
-    ];
-
-    infoEl.innerHTML = items.join('');
-}
-
-/**
- * 渲染延迟页（摘要 + 任务列表 + 图例）
- * @param {string} uuid - 节点 UUID
- */
-export function renderLatencyPage(uuid) {
-    const pingInfo = state.pingData[uuid];
-    const els = getModalElements();
-    const summaryEl = els.latencySummary;
-    const tasksEl = els.latencyTasks;
-    const legendEl = els.latencyLegend;
-    const chartEl = els.latencyChart;
-
-    if (!pingInfo || !pingInfo.tasks || pingInfo.tasks.length === 0) {
-        if (summaryEl) summaryEl.innerHTML = '';
-        if (legendEl) legendEl.innerHTML = '';
-        if (tasksEl) {
-            tasksEl.innerHTML = '<div class="latency-empty">' + t('latency_not_configured') + '</div>';
-        }
-        if (chartEl) {
-            const ctx = chartEl.getContext('2d');
-            ctx.clearRect(0, 0, chartEl.width, chartEl.height);
-        }
-        return;
-    }
-
-    if (summaryEl && pingInfo.records && pingInfo.records.length > 0) {
-        const allValues = pingInfo.records.map(function (r) { return r.value; }).filter(function (v) { return v !== null && v !== undefined && v >= 0; });
-        const minPing = allValues.length > 0 ? Math.min.apply(null, allValues) : null;
-        const maxPing = allValues.length > 0 ? Math.max.apply(null, allValues) : null;
-        const avgPing = allValues.length > 0 ? allValues.reduce(function (a, b) { return a + b; }, 0) / allValues.length : null;
-
-        const summaryItems = [
-            '<div class="latency-stat"><div class="latency-stat-value level-' + getPingLevel(minPing) + '">' + formatPing(minPing) + '</div><div class="latency-stat-label">' + t('min_ping') + '</div></div>',
-            '<div class="latency-stat"><div class="latency-stat-value level-' + getPingLevel(maxPing) + '">' + formatPing(maxPing) + '</div><div class="latency-stat-label">' + t('max_ping') + '</div></div>',
-            '<div class="latency-stat"><div class="latency-stat-value level-' + getPingLevel(avgPing) + '">' + formatPing(avgPing) + '</div><div class="latency-stat-label">' + t('avg_latency') + '</div></div>'
-        ];
-        summaryEl.innerHTML = summaryItems.join('');
-    }
-
-    if (tasksEl && pingInfo.tasks && pingInfo.tasks.length > 0) {
-        const taskItems = ['<div class="latency-tasks-title">' + t('tasks') + '</div>'];
-        pingInfo.tasks.forEach(function (task, idx) {
-            const taskPing = getTaskLatestPing(uuid, task.id);
-            const level = getPingLevel(taskPing);
-            const color = PING_COLORS[idx % PING_COLORS.length];
-            taskItems.push(
-                '<div class="latency-task-card" style="border-left-color: ' + color + '">' +
-                '<span class="latency-task-name">' + escapeHtml(task.name) + '</span>' +
-                '<div class="latency-task-info">' +
-                '<span class="latency-task-ping level-' + level + '">' + formatPing(taskPing) + '</span>' +
-                (task.loss !== undefined ? '<span class="latency-task-loss">' + t('packet_loss') + ': ' + task.loss.toFixed(1) + '%</span>' : '') +
-                '</div></div>'
-            );
-        });
-        tasksEl.innerHTML = taskItems.join('');
-    }
-
-    if (legendEl && pingInfo.tasks && pingInfo.tasks.length > 0) {
-        const legendItems = pingInfo.tasks.map(function (task, idx) {
-            const color = PING_COLORS[idx % PING_COLORS.length];
-            return '<div class="latency-legend-item"><span class="latency-legend-color" style="background: ' + color + '"></span>' + escapeHtml(task.name) + '</div>';
-        });
-        legendEl.innerHTML = legendItems.join('');
     }
 }
 
@@ -356,18 +244,6 @@ export function switchModalPage(pageName) {
             state.chartObserver.observe(els.latencyChart);
         }
     }
-}
-
-/**
- * 构建模态框信息项 HTML
- * @param {string} label - 标签
- * @param {string} value - 值
- * @param {boolean} nowrap - 是否不换行
- * @returns {string} HTML
- */
-function buildInfoItem(label, value, nowrap) {
-    const cls = nowrap ? 'modal-info-value modal-info-value-nowrap' : 'modal-info-value';
-    return '<div class="modal-info-item"><div class="modal-info-label">' + escapeHtml(label) + '</div><div class="' + cls + '">' + escapeHtml(value) + '</div></div>';
 }
 
 /**
