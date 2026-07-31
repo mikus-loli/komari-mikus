@@ -2,13 +2,10 @@
  * @module core/state
   * @description 全局状态单例 + 缓存管理
  * @dependencies core/constants.js
- * @exports state, historyCache, pingCache, getCachedData, setCachedData, CACHE_EXPIRY_MS
+ * @exports state, historyCache, pingCache, getCachedData, setCachedData
  */
 
-import { EWMA_ALPHA_DEFAULT } from './constants.js';
-
-/** 缓存有效期：60秒 */
-export const CACHE_EXPIRY_MS = 60000;
+import { EWMA_ALPHA_DEFAULT, CACHE_EXPIRY_MS } from './constants.js';
 
 /** 历史数据缓存 */
 export const historyCache = new Map();

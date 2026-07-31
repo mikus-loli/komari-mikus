@@ -5,7 +5,7 @@
   "private": true,
   "description": "Mikus - Komari monitoring theme with sakura aesthetics",
   "scripts": {
-    "test": "node test/algorithms.test.mjs && node test/api-rpc.test.mjs",
+    "test": "node test/algorithms.test.mjs && node test/api-rpc.test.mjs && node test/realtime.test.mjs",
     "lint": "eslint dist/assets/js/",
     "lint:check": "eslint dist/assets/js/ --max-warnings 0"
   },

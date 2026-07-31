@@ -93,7 +93,8 @@ komari-mikus/
 │   └── index.html             # 主页面
 ├── test/                      # 测试
 │   ├── algorithms.test.mjs    # 算法测试（32 用例）
-│   └── api-rpc.test.mjs       # API/RPC 测试（17 用例）
+│   ├── api-rpc.test.mjs       # API/RPC 测试（21 用例）
+│   └── realtime.test.mjs      # 实时数据处理测试（8 用例）
 ├── komari-theme.json          # 主题配置
 ├── package.json               # 项目配置
 ├── eslint.config.js          # ESLint v9+ flat config

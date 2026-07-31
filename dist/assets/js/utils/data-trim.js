@@ -1,8 +1,11 @@
 /**
  * @module utils/data-trim
  * @description 数据裁剪辅助函数
+ * @dependencies core/constants.js
  * @exports trimRecords, getMaxDataPoints
  */
+
+import { MAX_HISTORY_POINTS, MAX_HISTORY_POINTS_LONG } from '../core/constants.js';
 
 /**
  * 数据裁剪：限制数据点数量
@@ -21,6 +24,6 @@ export function trimRecords(records, maxCount) {
  * @returns {number} 最大数据点数
  */
 export function getMaxDataPoints(hours) {
-    if (hours <= 24) return 600;
-    return 800;
+    if (hours <= 24) return MAX_HISTORY_POINTS;
+    return MAX_HISTORY_POINTS_LONG;
 }

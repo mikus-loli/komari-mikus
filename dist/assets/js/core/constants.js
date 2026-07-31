@@ -2,7 +2,7 @@
  * @module core/constants
  * @description 静态常量映射表
  * @dependencies 无
- * @exports RPC_METHODS, THEME_MAP, VIEW_MAP, PING_COLORS, COUNTRY_CODE_MAP, RPC_TIMEOUT_MS, RPC_POLL_INTERVAL_MS, MAX_HISTORY_POINTS, EWMA_ALPHA_DEFAULT, CACHE_EXPIRY_MS, BATCH_CONCURRENCY
+ * @exports RPC_METHODS, THEME_MAP, VIEW_MAP, PING_COLORS, COUNTRY_CODE_MAP, RPC_TIMEOUT_MS, RPC_POLL_INTERVAL_MS, MAX_HISTORY_POINTS, MAX_HISTORY_POINTS_LONG, RECENT_RECORDS_LIMIT, PING_DEFAULT_HOURS, EWMA_ALPHA_DEFAULT, CACHE_EXPIRY_MS, BATCH_CONCURRENCY
  */
 
 /** RPC 方法名映射 */
@@ -71,6 +71,15 @@ export const RPC_POLL_INTERVAL_MS = 1000;
 
 /** 历史数据最大保留点数 */
 export const MAX_HISTORY_POINTS = 600;
+
+/** 长时间范围（>24h）历史数据的最大保留点数 */
+export const MAX_HISTORY_POINTS_LONG = 800;
+
+/** /api/recent/ 接口保留的最大记录条数（与 komari-web length=30*5 一致） */
+export const RECENT_RECORDS_LIMIT = 150;
+
+/** Ping 总览默认加载小时数 */
+export const PING_DEFAULT_HOURS = 1;
 
 /** EWMA 平滑因子默认值 */
 export const EWMA_ALPHA_DEFAULT = 0.3;

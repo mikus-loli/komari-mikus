@@ -6,7 +6,7 @@
  */
 
 import { state, historyCache, pingCache, getCachedData, setCachedData } from '../core/state.js';
-import { RPC_METHODS, MAX_HISTORY_POINTS, BATCH_CONCURRENCY } from '../core/constants.js';
+import { RPC_METHODS, MAX_HISTORY_POINTS, BATCH_CONCURRENCY, RECENT_RECORDS_LIMIT, PING_DEFAULT_HOURS } from '../core/constants.js';
 import { showErrorToast } from '../core/error-boundary.js';
 import { trimRecords, getApiBase } from '../utils/helpers.js';
 import { t } from '../i18n/index.js';
@@ -63,7 +63,7 @@ export function loadNodes() {
 export { flattenRecentRecords } from '../algorithms/record-transforms.js';
 
 /**
- * 合并近期记录到 realtimeHistory（去重、排序、限600条）
+ * 合并近期记录到 realtimeHistory（去重、排序、限 MAX_HISTORY_POINTS 条）
  * 数据整形逻辑已下沉到 algorithms/record-transforms.js
  */
 function mergeIntoRealtimeHistory(uuid, records) {
@@ -96,8 +96,8 @@ export function loadRecentRecordsFallback(uuid, cacheKey, fallbackHours) {
         if (!Array.isArray(rawRecords) || rawRecords.length === 0) {
             throw new Error('No recent records from /api/recent/');
         }
-        // 保留最近 150 条（与 komari-web length=30*5 一致）
-        rawRecords = rawRecords.slice(-150);
+        // 保留最近 RECENT_RECORDS_LIMIT 条（与 komari-web length=30*5 一致）
+        rawRecords = rawRecords.slice(-RECENT_RECORDS_LIMIT);
         const records = flattenRecentRecords(rawRecords);
         if (cacheKey) {
             state.historyData[uuid] = records;
@@ -402,7 +402,7 @@ async function batchProcess(items, fn, batchSize) {
  */
 export function loadAllPingData() {
     return batchProcess(state.nodes, function(node) {
-        return loadPingHistory(node.uuid, 1);
+        return loadPingHistory(node.uuid, PING_DEFAULT_HOURS);
     }, BATCH_CONCURRENCY);
 }
 
@@ -432,7 +432,7 @@ export function enrichPingTasksFromRPC(uuid, renderCallback) {
                 }
             });
 
-            const cacheKey = uuid + '-1';
+            const cacheKey = uuid + '-' + PING_DEFAULT_HOURS;
             setCachedData(pingCache, cacheKey, pingInfo);
 
             if (renderCallback) renderCallback(uuid);

@@ -193,6 +193,53 @@ test('stopPolling clears interval', function() {
     assert.strictEqual(client.pollInterval, null);
 });
 
+test('handleMessage resolves pending call with result', function() {
+    const client = new RPC2Client({ wsUrl: '', httpUrl: '' });
+    let resolved = null;
+    let rejected = null;
+    client.pendingCalls[42] = {
+        resolve: function(v) { resolved = v; },
+        reject: function(e) { rejected = e; },
+        timer: {}
+    };
+    client.handleMessage({ id: 42, result: { cpu: 50 } });
+    assert.deepStrictEqual(resolved, { cpu: 50 });
+    assert.strictEqual(rejected, null);
+    assert.strictEqual(client.pendingCalls[42], undefined, 'pending call should be cleaned up');
+});
+
+test('handleMessage rejects pending call on error', function() {
+    const client = new RPC2Client({ wsUrl: '', httpUrl: '' });
+    let resolved = false;
+    let rejected = null;
+    client.pendingCalls[7] = {
+        resolve: function() { resolved = true; },
+        reject: function(e) { rejected = e; },
+        timer: {}
+    };
+    client.handleMessage({ id: 7, error: { code: -32601, message: 'Method not found' } });
+    assert.strictEqual(resolved, false);
+    assert.deepStrictEqual(rejected, { code: -32601, message: 'Method not found' });
+    assert.strictEqual(client.pendingCalls[7], undefined, 'pending call should be cleaned up');
+});
+
+test('handleMessage dispatches poll callback', function() {
+    const client = new RPC2Client({ wsUrl: '', httpUrl: '' });
+    let received = null;
+    client.pollCallback = function(params) { received = params; };
+    const params = { 'uuid-1': { online: true } };
+    client.handleMessage({ method: client.pollMethod, params: params });
+    assert.strictEqual(received, params);
+});
+
+test('handleMessage ignores unknown messages without throwing', function() {
+    const client = new RPC2Client({ wsUrl: '', httpUrl: '' });
+    assert.doesNotThrow(function() {
+        client.handleMessage({ id: 999, result: null }); // 无对应 pending call
+        client.handleMessage({ method: 'other:method', params: {} }); // 非 poll 方法
+    });
+});
+
 // ── Constants ─────────────────────────────────────────────────────
 
 console.log('\nConstants:');

@@ -1,6 +1,6 @@
 /**
  * @module services/realtime
- * @description 实时 RPC 数据处理
+ * @description 实时 RPC 数据处理（RAF 节流 + Page Visibility 暂停）
  * @dependencies core/state.js, core/constants.js, ui/nodes.js, ui/charts.js
  * @exports handleRpcResult
  */
@@ -12,6 +12,25 @@ import { MAX_HISTORY_POINTS } from '../core/constants.js';
 let _drawCharts = null;
 let _renderAll = null;
 
+// RAF 节流：多帧数据合并为一次渲染
+let _renderRAF = 0;
+let _chartRAF = 0;
+let _pendingChartUuid = null;
+
+// Page Visibility：不可见时暂停渲染，恢复时一次性刷新
+let _pageHidden = false;
+
+// typeof 守卫：允许在 node 测试环境中导入本模块
+if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', function() {
+        _pageHidden = document.hidden;
+        if (!_pageHidden && _renderAll) {
+            // 页面重新可见，立即刷新一次
+            _renderAll();
+        }
+    });
+}
+
 /**
  * 设置渲染函数（由 app.js 在初始化时调用）
  * @param {Function} drawCharts - 绘制图表函数
@@ -20,6 +39,34 @@ let _renderAll = null;
 export function setRenderFunctions(drawCharts, renderAll) {
     _drawCharts = drawCharts;
     _renderAll = renderAll;
+}
+
+/**
+ * 调度渲染（RAF 节流，同一帧内多次数据推送只触发一次 renderAll）
+ */
+function scheduleRender() {
+    if (_pageHidden) return;
+    if (_renderRAF) return; // 已调度，跳过
+    _renderRAF = requestAnimationFrame(function() {
+        _renderRAF = 0;
+        if (_renderAll) _renderAll();
+    });
+}
+
+/**
+ * 调度图表重绘（RAF 节流）
+ */
+function scheduleChartRedraw(uuid) {
+    _pendingChartUuid = uuid;
+    if (_pageHidden) return;
+    if (_chartRAF) return;
+    _chartRAF = requestAnimationFrame(function() {
+        _chartRAF = 0;
+        if (_drawCharts && _pendingChartUuid) {
+            _drawCharts(_pendingChartUuid);
+        }
+        _pendingChartUuid = null;
+    });
 }
 
 /**
@@ -88,7 +135,7 @@ export function handleRpcResult(result) {
                 }
 
                 if (state.selectedNodeUuid === uuid && state.historyTimeRange === 'realtime') {
-                    if (_drawCharts) _drawCharts(uuid);
+                    scheduleChartRedraw(uuid);
                 }
             }
         }
@@ -96,5 +143,5 @@ export function handleRpcResult(result) {
 
     state.onlineNodes = onlineNodes;
     state.realtimeData = realtimeData;
-    if (_renderAll) _renderAll();
+    scheduleRender();
 }
