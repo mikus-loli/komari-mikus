@@ -1,271 +1,271 @@
 {
-    "name": "Komari Mikus",
-    "short": "Mikus",
-    "description": "A modern, elegant Komari monitoring theme with light/dark theme switching, grid/table dual views, WebSocket real-time monitoring, and responsive design",
-    "version": "2.0.4",
-    "author": "Miku",
-    "url": "https://github.com/mikus-loli/komari-mikus",
-    "preview": "mikus.jpg",
-    "configuration": {
-        "type": "managed",
+  "name": "Komari Mikus",
+  "short": "Mikus",
+  "description": "A modern, elegant Komari monitoring theme with light/dark theme switching, grid/table dual views, WebSocket real-time monitoring, and responsive design",
+  "version": "2.0.5",
+  "author": "Miku",
+  "url": "https://github.com/mikus-loli/komari-mikus",
+  "preview": "mikus.jpg",
+  "configuration": {
+    "type": "managed",
+    "name": {
+      "en": "Mikus Settings",
+      "zh-CN": "Mikus 设置",
+      "ja": "Mikus 設定"
+    },
+    "data": [
+      {
         "name": {
-            "en": "Mikus Settings",
-            "zh-CN": "Mikus 设置",
-            "ja": "Mikus 設定"
+          "en": "Appearance",
+          "zh-CN": "外观设置",
+          "ja": "外観設定"
         },
-        "data": [
-            {
-                "name": {
-                    "en": "Appearance",
-                    "zh-CN": "外观设置",
-                    "ja": "外観設定"
-                },
-                "type": "title"
-            },
-            {
-                "key": "default_theme",
-                "name": {
-                    "en": "Default Theme",
-                    "zh-CN": "默认主题",
-                    "ja": "デフォルトテーマ"
-                },
-                "type": "select",
-                "options": "light,dark,system",
-                "default": "system",
-                "help": {
-                    "en": "Default color theme for first-time visitors",
-                    "zh-CN": "首次访问者的默认颜色主题",
-                    "ja": "初回訪問者のデフォルトカラーテーマ"
-                }
-            },
-            {
-                "key": "default_view",
-                "name": {
-                    "en": "Default View",
-                    "zh-CN": "默认视图",
-                    "ja": "デフォルトビュー"
-                },
-                "type": "select",
-                "options": "grid,table",
-                "default": "grid",
-                "help": {
-                    "en": "Default node display mode",
-                    "zh-CN": "默认的节点展示模式",
-                    "ja": "デフォルトのノード表示モード"
-                }
-            },
-            {
-                "name": {
-                    "en": "Display",
-                    "zh-CN": "显示设置",
-                    "ja": "表示設定"
-                },
-                "type": "title"
-            },
-            {
-                "key": "show_uptime",
-                "name": {
-                    "en": "Show Uptime",
-                    "zh-CN": "显示运行时间",
-                    "ja": "稼働時間を表示"
-                },
-                "type": "switch",
-                "default": true,
-                "help": {
-                    "en": "Display server uptime on node cards",
-                    "zh-CN": "在节点卡片上显示服务器运行时间",
-                    "ja": "ノードカードにサーバーの稼働時間を表示"
-                }
-            },
-            {
-                "key": "show_network_speed",
-                "name": {
-                    "en": "Show Network Speed",
-                    "zh-CN": "显示网络速度",
-                    "ja": "ネットワーク速度を表示"
-                },
-                "type": "switch",
-                "default": true,
-                "help": {
-                    "en": "Display real-time network upload/download speed",
-                    "zh-CN": "显示实时网络上传/下载速度",
-                    "ja": "リアルタイムのネットワークアップロード/ダウンロード速度を表示"
-                }
-            },
-            {
-                "key": "show_traffic_tags",
-                "name": {
-                    "en": "Show Traffic Tags",
-                    "zh-CN": "显示流量标签",
-                    "ja": "トラフィックタグを表示"
-                },
-                "type": "switch",
-                "default": false,
-                "help": {
-                    "en": "Display total upload/download traffic tags on node cards",
-                    "zh-CN": "在节点卡片上显示总上传/下载流量标签",
-                    "ja": "ノードカードに総アップロード/ダウンロードトラフィックタグを表示"
-                }
-            },
-            {
-                "key": "icon_bounce",
-                "name": {
-                    "en": "Icon Bounce Animation",
-                    "zh-CN": "图标跳动动画",
-                    "ja": "アイコンバウンスアニメーション"
-                },
-                "type": "switch",
-                "default": true,
-                "help": {
-                    "en": "Bounce animation effect for the greeting icon",
-                    "zh-CN": "欢迎区域的图标跳动动画效果",
-                    "ja": "挨拶アイコンのバウンスアニメーション効果"
-                }
-            },
-            {
-                "key": "sakura_enabled",
-                "name": {
-                    "en": "Sakura Petals Effect",
-                    "zh-CN": "樱花飘落效果",
-                    "ja": "桜吹雪エフェクト"
-                },
-                "type": "switch",
-                "default": true,
-                "help": {
-                    "en": "Display animated cherry blossom petals falling across the page",
-                    "zh-CN": "在页面上显示樱花飘落动画效果",
-                    "ja": "ページに桜の花びらが舞い落ちるアニメーションを表示"
-                }
-            },
-            {
-                "key": "preloader_enabled",
-                "name": {
-                    "en": "Show Preloader",
-                    "zh-CN": "显示加载页面",
-                    "ja": "プリローダーを表示"
-                },
-                "type": "switch",
-                "default": true,
-                "help": {
-                    "en": "Display the loading animation page on startup",
-                    "zh-CN": "启动时显示加载动画页面",
-                    "ja": "起動時にローディングアニメーションページを表示"
-                }
-            },
-            {
-                "key": "mascot_enabled",
-                "name": {
-                    "en": "Show Mascot",
-                    "zh-CN": "显示欢迎小人",
-                    "ja": "マスコットを表示"
-                },
-                "type": "switch",
-                "default": true,
-                "help": {
-                    "en": "Display the mascot character in the greeting area",
-                    "zh-CN": "在欢迎区域显示小人角色",
-                    "ja": "挨拶エリアにマスコットキャラクターを表示"
-                }
-            },
-            {
-                "key": "mascot_url",
-                "name": {
-                    "en": "Mascot Image URL",
-                    "zh-CN": "小人自定义图片",
-                    "ja": "マスコット画像URL"
-                },
-                "type": "string",
-                "default": "",
-                "help": {
-                    "en": "Custom mascot image URL (leave empty for default)",
-                    "zh-CN": "自定义小人图片URL（留空使用默认图片）",
-                    "ja": "カスタムマスコット画像URL（空欄でデフォルト画像）"
-                }
-            },
-            {
-                "name": {
-                    "en": "PC Background",
-                    "zh-CN": "PC端背景",
-                    "ja": "PC背景"
-                },
-                "type": "title"
-            },
-            {
-                "key": "pc_background_url",
-                "name": {
-                    "en": "PC Custom Background URL",
-                    "zh-CN": "PC端自定义背景URL",
-                    "ja": "PCカスタム背景URL"
-                },
-                "type": "string",
-                "default": "",
-                "help": {
-                    "en": "Supports images (jpg/png/gif/webp) and videos (webm/mp4)",
-                    "zh-CN": "支持图片(jpg/png/gif/webp)和视频(webm/mp4)",
-                    "ja": "画像（jpg/png/gif/webp）および動画（webm/mp4）をサポート"
-                }
-            },
-            {
-                "name": {
-                    "en": "Mobile Background",
-                    "zh-CN": "手机端背景",
-                    "ja": "モバイル背景"
-                },
-                "type": "title"
-            },
-            {
-                "key": "mobile_background_url",
-                "name": {
-                    "en": "Mobile Custom Background URL",
-                    "zh-CN": "手机端自定义背景URL",
-                    "ja": "モバイルカスタム背景URL"
-                },
-                "type": "string",
-                "default": "",
-                "help": {
-                    "en": "Supports images (jpg/png/gif/webp) and videos (webm/mp4)",
-                    "zh-CN": "支持图片(jpg/png/gif/webp)和视频(webm/mp4)",
-                    "ja": "画像（jpg/png/gif/webp）および動画（webm/mp4）をサポート"
-                }
-            },
-            {
-                "key": "refresh_interval",
-                "name": {
-                    "en": "Refresh Interval (seconds)",
-                    "zh-CN": "刷新间隔（秒）",
-                    "ja": "更新間隔（秒）"
-                },
-                "type": "number",
-                "default": 2,
-                "help": {
-                    "en": "WebSocket data refresh interval",
-                    "zh-CN": "WebSocket 数据刷新间隔",
-                    "ja": "WebSocketデータの更新間隔"
-                }
-            },
-            {
-                "name": {
-                    "en": "Footer",
-                    "zh-CN": "页脚设置",
-                    "ja": "フッター設定"
-                },
-                "type": "title"
-            },
-            {
-                "key": "custom_footer",
-                "name": {
-                    "en": "Custom Footer Text",
-                    "zh-CN": "自定义页脚文本",
-                    "ja": "カスタムフッターテキスト"
-                },
-                "type": "string",
-                "default": "",
-                "help": {
-                    "en": "Additional text displayed in the footer",
-                    "zh-CN": "在页脚显示的附加文本",
-                    "ja": "フッターに表示する追加テキスト"
-                }
-            }
-        ]
-    }
+        "type": "title"
+      },
+      {
+        "key": "default_theme",
+        "name": {
+          "en": "Default Theme",
+          "zh-CN": "默认主题",
+          "ja": "デフォルトテーマ"
+        },
+        "type": "select",
+        "options": "light,dark,system",
+        "default": "system",
+        "help": {
+          "en": "Default color theme for first-time visitors",
+          "zh-CN": "首次访问者的默认颜色主题",
+          "ja": "初回訪問者のデフォルトカラーテーマ"
+        }
+      },
+      {
+        "key": "default_view",
+        "name": {
+          "en": "Default View",
+          "zh-CN": "默认视图",
+          "ja": "デフォルトビュー"
+        },
+        "type": "select",
+        "options": "grid,table",
+        "default": "grid",
+        "help": {
+          "en": "Default node display mode",
+          "zh-CN": "默认的节点展示模式",
+          "ja": "デフォルトのノード表示モード"
+        }
+      },
+      {
+        "name": {
+          "en": "Display",
+          "zh-CN": "显示设置",
+          "ja": "表示設定"
+        },
+        "type": "title"
+      },
+      {
+        "key": "show_uptime",
+        "name": {
+          "en": "Show Uptime",
+          "zh-CN": "显示运行时间",
+          "ja": "稼働時間を表示"
+        },
+        "type": "switch",
+        "default": true,
+        "help": {
+          "en": "Display server uptime on node cards",
+          "zh-CN": "在节点卡片上显示服务器运行时间",
+          "ja": "ノードカードにサーバーの稼働時間を表示"
+        }
+      },
+      {
+        "key": "show_network_speed",
+        "name": {
+          "en": "Show Network Speed",
+          "zh-CN": "显示网络速度",
+          "ja": "ネットワーク速度を表示"
+        },
+        "type": "switch",
+        "default": true,
+        "help": {
+          "en": "Display real-time network upload/download speed",
+          "zh-CN": "显示实时网络上传/下载速度",
+          "ja": "リアルタイムのネットワークアップロード/ダウンロード速度を表示"
+        }
+      },
+      {
+        "key": "show_traffic_tags",
+        "name": {
+          "en": "Show Traffic Tags",
+          "zh-CN": "显示流量标签",
+          "ja": "トラフィックタグを表示"
+        },
+        "type": "switch",
+        "default": false,
+        "help": {
+          "en": "Display total upload/download traffic tags on node cards",
+          "zh-CN": "在节点卡片上显示总上传/下载流量标签",
+          "ja": "ノードカードに総アップロード/ダウンロードトラフィックタグを表示"
+        }
+      },
+      {
+        "key": "icon_bounce",
+        "name": {
+          "en": "Icon Bounce Animation",
+          "zh-CN": "图标跳动动画",
+          "ja": "アイコンバウンスアニメーション"
+        },
+        "type": "switch",
+        "default": true,
+        "help": {
+          "en": "Bounce animation effect for the greeting icon",
+          "zh-CN": "欢迎区域的图标跳动动画效果",
+          "ja": "挨拶アイコンのバウンスアニメーション効果"
+        }
+      },
+      {
+        "key": "sakura_enabled",
+        "name": {
+          "en": "Sakura Petals Effect",
+          "zh-CN": "樱花飘落效果",
+          "ja": "桜吹雪エフェクト"
+        },
+        "type": "switch",
+        "default": true,
+        "help": {
+          "en": "Display animated cherry blossom petals falling across the page",
+          "zh-CN": "在页面上显示樱花飘落动画效果",
+          "ja": "ページに桜の花びらが舞い落ちるアニメーションを表示"
+        }
+      },
+      {
+        "key": "preloader_enabled",
+        "name": {
+          "en": "Show Preloader",
+          "zh-CN": "显示加载页面",
+          "ja": "プリローダーを表示"
+        },
+        "type": "switch",
+        "default": true,
+        "help": {
+          "en": "Display the loading animation page on startup",
+          "zh-CN": "启动时显示加载动画页面",
+          "ja": "起動時にローディングアニメーションページを表示"
+        }
+      },
+      {
+        "key": "mascot_enabled",
+        "name": {
+          "en": "Show Mascot",
+          "zh-CN": "显示欢迎小人",
+          "ja": "マスコットを表示"
+        },
+        "type": "switch",
+        "default": true,
+        "help": {
+          "en": "Display the mascot character in the greeting area",
+          "zh-CN": "在欢迎区域显示小人角色",
+          "ja": "挨拶エリアにマスコットキャラクターを表示"
+        }
+      },
+      {
+        "key": "mascot_url",
+        "name": {
+          "en": "Mascot Image URL",
+          "zh-CN": "小人自定义图片",
+          "ja": "マスコット画像URL"
+        },
+        "type": "string",
+        "default": "",
+        "help": {
+          "en": "Custom mascot image URL (leave empty for default)",
+          "zh-CN": "自定义小人图片URL（留空使用默认图片）",
+          "ja": "カスタムマスコット画像URL（空欄でデフォルト画像）"
+        }
+      },
+      {
+        "name": {
+          "en": "PC Background",
+          "zh-CN": "PC端背景",
+          "ja": "PC背景"
+        },
+        "type": "title"
+      },
+      {
+        "key": "pc_background_url",
+        "name": {
+          "en": "PC Custom Background URL",
+          "zh-CN": "PC端自定义背景URL",
+          "ja": "PCカスタム背景URL"
+        },
+        "type": "string",
+        "default": "",
+        "help": {
+          "en": "Supports images (jpg/png/gif/webp) and videos (webm/mp4)",
+          "zh-CN": "支持图片(jpg/png/gif/webp)和视频(webm/mp4)",
+          "ja": "画像（jpg/png/gif/webp）および動画（webm/mp4）をサポート"
+        }
+      },
+      {
+        "name": {
+          "en": "Mobile Background",
+          "zh-CN": "手机端背景",
+          "ja": "モバイル背景"
+        },
+        "type": "title"
+      },
+      {
+        "key": "mobile_background_url",
+        "name": {
+          "en": "Mobile Custom Background URL",
+          "zh-CN": "手机端自定义背景URL",
+          "ja": "モバイルカスタム背景URL"
+        },
+        "type": "string",
+        "default": "",
+        "help": {
+          "en": "Supports images (jpg/png/gif/webp) and videos (webm/mp4)",
+          "zh-CN": "支持图片(jpg/png/gif/webp)和视频(webm/mp4)",
+          "ja": "画像（jpg/png/gif/webp）および動画（webm/mp4）をサポート"
+        }
+      },
+      {
+        "key": "refresh_interval",
+        "name": {
+          "en": "Refresh Interval (seconds)",
+          "zh-CN": "刷新间隔（秒）",
+          "ja": "更新間隔（秒）"
+        },
+        "type": "number",
+        "default": 2,
+        "help": {
+          "en": "WebSocket data refresh interval",
+          "zh-CN": "WebSocket 数据刷新间隔",
+          "ja": "WebSocketデータの更新間隔"
+        }
+      },
+      {
+        "name": {
+          "en": "Footer",
+          "zh-CN": "页脚设置",
+          "ja": "フッター設定"
+        },
+        "type": "title"
+      },
+      {
+        "key": "custom_footer",
+        "name": {
+          "en": "Custom Footer Text",
+          "zh-CN": "自定义页脚文本",
+          "ja": "カスタムフッターテキスト"
+        },
+        "type": "string",
+        "default": "",
+        "help": {
+          "en": "Additional text displayed in the footer",
+          "zh-CN": "在页脚显示的附加文本",
+          "ja": "フッターに表示する追加テキスト"
+        }
+      }
+    ]
+  }
 }
