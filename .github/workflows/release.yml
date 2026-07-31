@@ -113,6 +113,20 @@ jobs:
           fi
           echo "Updated version to $VERSION in komari-theme.json and package.json"
 
+      - name: Commit version bump
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet komari-theme.json package.json; then
+            git add komari-theme.json package.json
+            git commit -m "chore(release): bump version to v${VERSION}"
+            git push origin HEAD:${{ github.ref_name }}
+            echo "Version bump committed and pushed"
+          else
+            echo "No version changes to commit"
+          fi
+
       - name: Create release package
         id: package
         run: |

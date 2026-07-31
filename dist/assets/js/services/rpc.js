@@ -6,6 +6,7 @@
  */
 
 import { state } from '../core/state.js';
+import { RPC_TIMEOUT_MS, RPC_POLL_INTERVAL_MS } from '../core/constants.js';
 
 /**
  * RPC2Client 类 - WebSocket/HTTP RPC 客户端
@@ -73,7 +74,7 @@ export class RPC2Client {
         const self = this;
         if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
 
-        const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), this.maxReconnectDelay);
+        const delay = Math.min(RPC_POLL_INTERVAL_MS * Math.pow(2, this.reconnectAttempts), this.maxReconnectDelay);
         this.reconnectAttempts++;
 
         this.reconnectTimer = setTimeout(function() {
@@ -118,7 +119,7 @@ export class RPC2Client {
                 } else {
                     reject(new Error('RPC timeout'));
                 }
-            }, 15000);
+            }, RPC_TIMEOUT_MS);
 
             self.pendingCalls[id] = { resolve: resolve, reject: reject, timer: timer };
 
@@ -169,7 +170,7 @@ export class RPC2Client {
                     if (self.pollCallback) self.pollCallback(result);
                 }).catch(function() {});
             }
-        }, 1000);
+        }, RPC_POLL_INTERVAL_MS);
     }
 
     stopPolling() {

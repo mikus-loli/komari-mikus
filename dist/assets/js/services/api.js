@@ -6,7 +6,7 @@
  */
 
 import { state, historyCache, pingCache, getCachedData, setCachedData } from '../core/state.js';
-import { RPC_METHODS } from '../core/constants.js';
+import { RPC_METHODS, MAX_HISTORY_POINTS, BATCH_CONCURRENCY } from '../core/constants.js';
 import { showErrorToast } from '../core/error-boundary.js';
 import { trimRecords, getApiBase } from '../utils/helpers.js';
 import { t } from '../i18n/index.js';
@@ -70,7 +70,7 @@ function mergeIntoRealtimeHistory(uuid, records) {
     const existing = state.realtimeHistory[uuid] || [];
     let merged = mergeAndDedupRecords(existing, records);
     forwardFillTotals(merged);
-    if (merged.length > 600) merged = merged.slice(merged.length - 600);
+    if (merged.length > MAX_HISTORY_POINTS) merged = merged.slice(merged.length - MAX_HISTORY_POINTS);
     state.realtimeHistory[uuid] = merged;
     state.historyDataHours[uuid] = 0;
 }
@@ -114,7 +114,7 @@ export function loadRecentRecordsFallback(uuid, cacheKey, fallbackHours) {
             .then(function(result) {
                 const records = Array.isArray(result) ? result : (result && result.records ? result.records : null);
                 if (records && records.length > 0) {
-                    const trimmedRecords = trimRecords(records, 600);
+                    const trimmedRecords = trimRecords(records, MAX_HISTORY_POINTS);
                     if (cacheKey) {
                         state.historyData[uuid] = trimmedRecords;
                         if (fallbackHours !== undefined) state.historyDataHours[uuid] = fallbackHours;
@@ -131,7 +131,7 @@ export function loadRecentRecordsFallback(uuid, cacheKey, fallbackHours) {
             .then(function(fallback) {
                 const records = fallback && fallback.records ? fallback.records : [];
                 if (records.length > 0) {
-                    const trimmedRecords = trimRecords(records, 600);
+                    const trimmedRecords = trimRecords(records, MAX_HISTORY_POINTS);
                     if (cacheKey) {
                         state.historyData[uuid] = trimmedRecords;
                         if (fallbackHours !== undefined) state.historyDataHours[uuid] = fallbackHours;
@@ -191,7 +191,7 @@ export function loadNodeHistory(uuid, hours) {
         entity_id: uuid,
         hours: hours,
         downsample: true,
-        max_points: 600,
+        max_points: MAX_HISTORY_POINTS,
         aggregation: 'avg',
         fill_empty: false
     }, true).then(function(result) {
@@ -290,7 +290,7 @@ export function loadPingHistory(uuid, hours) {
         entity_id: uuid,
         hours: hours,
         downsample: true,
-        max_points: 600,
+        max_points: MAX_HISTORY_POINTS,
         aggregation: 'avg',
         fill_empty: false
     }, true);
@@ -300,7 +300,7 @@ export function loadPingHistory(uuid, hours) {
     const statsRequest = state.rpc.call(RPC_METHODS.getPingMetricStats, {
         entity_id: uuid,
         hours: hours,
-        max_points: 600
+        max_points: MAX_HISTORY_POINTS
     }, true).catch(function() { return null; });
 
     return Promise.all([metricRequest, taskRequest, statsRequest])
@@ -380,14 +380,30 @@ export function loadPingHistory(uuid, hours) {
 }
 
 /**
+ * 分批加载 Promise 数组（控制并发）
+ * @param {Array} items - 待处理项
+ * @param {Function} fn - 每项执行的异步函数
+ * @param {number} batchSize - 每批并发数
+ * @returns {Promise<Array>} 收集所有结果
+ */
+async function batchProcess(items, fn, batchSize) {
+    const results = [];
+    for (let i = 0; i < items.length; i += batchSize) {
+        const batch = items.slice(i, i + batchSize);
+        const batchResults = await Promise.all(batch.map(fn));
+        results.push(...batchResults);
+    }
+    return results;
+}
+
+/**
  * 加载所有节点的 Ping 数据
  * @returns {Promise}
  */
 export function loadAllPingData() {
-    const promises = state.nodes.map(function(node) {
+    return batchProcess(state.nodes, function(node) {
         return loadPingHistory(node.uuid, 1);
-    });
-    return Promise.all(promises);
+    }, BATCH_CONCURRENCY);
 }
 
 /**

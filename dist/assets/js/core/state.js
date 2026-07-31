@@ -1,9 +1,11 @@
 /**
  * @module core/state
- * @description 全局状态单例 + 缓存管理
- * @dependencies 无
+  * @description 全局状态单例 + 缓存管理
+ * @dependencies core/constants.js
  * @exports state, historyCache, pingCache, getCachedData, setCachedData, CACHE_EXPIRY_MS
  */
+
+import { EWMA_ALPHA_DEFAULT } from './constants.js';
 
 /** 缓存有效期：60秒 */
 export const CACHE_EXPIRY_MS = 60000;
@@ -68,7 +70,7 @@ export const state = {
     chartsDrawn: {},
     chartObserver: null,
     latencyChartSmooth: true,
-    ewmaAlpha: 0.3,
+    ewmaAlpha: EWMA_ALPHA_DEFAULT,
     historyTimeRange: '1h',
     pingTimeRange: '1h'
 };
