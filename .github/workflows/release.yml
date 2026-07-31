@@ -121,7 +121,7 @@ jobs:
           if ! git diff --quiet komari-theme.json package.json; then
             git add komari-theme.json package.json
             git commit -m "chore(release): bump version to v${VERSION}"
-            git push origin HEAD:${{ github.ref_name }}
+            git push origin HEAD:${{ github.event.repository.default_branch }}
             echo "Version bump committed and pushed"
           else
             echo "No version changes to commit"

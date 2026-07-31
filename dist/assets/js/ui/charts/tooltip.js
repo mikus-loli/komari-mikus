@@ -220,7 +220,7 @@ export function showChartTooltip(e, canvas, chartData) {
     positionTooltip(tooltip, e);
 }
 
-function positionTooltip(tooltip, e) {
+export function positionTooltip(tooltip, e) {
     const tooltipRect = tooltip.getBoundingClientRect();
     const tooltipWidth = tooltipRect.width || 140;
     const tooltipHeight = tooltipRect.height || 60;
@@ -239,7 +239,7 @@ function positionTooltip(tooltip, e) {
 /**
  * 智能时间格式化 - 用于 Tooltip
  */
-function formatTooltipTime(time, hours) {
+export function formatTooltipTime(time, hours) {
     if (hours <= 4) {
         // 1h、4h：显示"小时:分钟:秒"
         return time.getHours().toString().padStart(2, '0') + ':' +

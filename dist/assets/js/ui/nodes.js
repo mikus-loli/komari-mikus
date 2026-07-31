@@ -141,13 +141,13 @@ export function calculateNodeMetrics(node) {
 
     const cpuUsage = rt.cpu ? rt.cpu.usage : null;
     const ramUsed = rt.ram ? rt.ram.used : null;
-    const ramTotal = rt.ram ? rt.ram.total : node.mem_total || 0;
+    const ramTotal = (rt.ram && rt.ram.total != null) ? rt.ram.total : (node.mem_total || 0);
     const ramPercent = (ramUsed !== null && ramTotal > 0) ? (ramUsed / ramTotal * 100) : null;
     const diskUsed = rt.disk ? rt.disk.used : null;
-    const diskTotal = rt.disk ? rt.disk.total : node.disk_total || 0;
+    const diskTotal = (rt.disk && rt.disk.total != null) ? rt.disk.total : (node.disk_total || 0);
     const diskPercent = (diskUsed !== null && diskTotal > 0) ? (diskUsed / diskTotal * 100) : null;
     const swapUsed = rt.swap ? rt.swap.used : 0;
-    const swapTotal = rt.swap ? rt.swap.total : node.swap_total || 0;
+    const swapTotal = (rt.swap && rt.swap.total != null) ? rt.swap.total : (node.swap_total || 0);
     const swapPercent = swapTotal > 0 ? (swapUsed / swapTotal * 100) : 0;
     const netUp = rt.network ? rt.network.up : 0;
     const netDown = rt.network ? rt.network.down : 0;
