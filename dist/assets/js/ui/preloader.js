@@ -113,6 +113,7 @@ export function hidePreloader() {
  * 启动预加载器进度模拟
  */
 export function startPreloaderSimulation() {
+    clearPreloaderTimer();
     const stages = [
         { target: 20, text: state.currentLang === 'zh-CN' ? '正在加载样式...' : 'Loading styles...' },
         { target: 40, text: state.currentLang === 'zh-CN' ? '正在获取配置...' : 'Fetching config...' },
