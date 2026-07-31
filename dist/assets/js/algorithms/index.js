@@ -306,7 +306,7 @@ export function cutPeakValues(data, keys, alpha, windowSize, spikeThreshold) {
 
                 if (neighborValues.length >= 2) {
                     const neighborSum = neighborValues.reduce(function(sum, val) { return sum + val; }, 0);
-                    const neighborMean = neighborValues.length > 0 ? neighborSum / neighborValues.length : 0;
+                    const neighborMean = neighborSum / neighborValues.length;
 
                     if (neighborMean > 0) {
                         const relativeChange = Math.abs(currentValue - neighborMean) / neighborMean;
