@@ -1,7 +1,7 @@
 /**
  * @module services/api
  * @description 所有数据加载 API
- * @dependencies core/state.js, core/constants.js, core/error-boundary.js, services/rpc.js, utils/helpers.js, i18n/index.js
+ * @dependencies core/state.js, core/constants.js, core/error-boundary.js, services/rpc.js, utils/helpers.js, i18n/index.js, algorithms/record-transforms.js
  * @exports loadPublicSettings, loadNodes, loadNodeHistory, loadRecentRecordsFallback, loadPingHistory, loadAllPingData, enrichPingTasksFromRPC, fetchPingTaskNames, flattenRecentRecords
  */
 
@@ -10,6 +10,7 @@ import { RPC_METHODS } from '../core/constants.js';
 import { showErrorToast } from '../core/error-boundary.js';
 import { trimRecords, getApiBase } from '../utils/helpers.js';
 import { t } from '../i18n/index.js';
+import { mergeAndDedupRecords, forwardFillTotals } from '../algorithms/record-transforms.js';
 
 /**
  * 加载公共设置
@@ -57,76 +58,18 @@ export function loadNodes() {
 
 /**
  * 将 /api/recent/ 返回的嵌套 Record 转为扁平格式
- * /api/recent/ 返回: { cpu: {usage}, ram: {used}, updated_at, ... }
- * realtimeHistory 需要: { time, cpu, ram, ram_total, disk, disk_total, ... }
+ * 纯函数实现已移至 algorithms/record-transforms.js，此处 re-export
  */
-export function flattenRecentRecords(rawRecords) {
-    return rawRecords.map(function(r) {
-        return {
-            time: r.updated_at || r.time || '',
-            cpu: r.cpu && r.cpu.usage !== undefined ? r.cpu.usage : (r.cpu || null),
-            ram: r.ram && typeof r.ram === 'object' ? r.ram.used : (r.ram || null),
-            ram_total: r.ram && typeof r.ram === 'object' && r.ram.total !== undefined ? r.ram.total : (r.ram_total || null),
-            swap: r.swap && typeof r.swap === 'object' ? r.swap.used : (r.swap || null),
-            swap_total: r.swap && typeof r.swap === 'object' && r.swap.total !== undefined ? r.swap.total : (r.swap_total || null),
-            disk: r.disk && typeof r.disk === 'object' ? r.disk.used : (r.disk || null),
-            disk_total: r.disk && typeof r.disk === 'object' && r.disk.total !== undefined ? r.disk.total : (r.disk_total || null),
-            load: r.load && typeof r.load === 'object' ? r.load.load1 : (r.load || null),
-            load5: r.load && typeof r.load === 'object' ? r.load.load5 : (r.load5 || null),
-            load15: r.load && typeof r.load === 'object' ? r.load.load15 : (r.load15 || null),
-            net_in: r.network && typeof r.network === 'object' ? r.network.down : (r.net_in || null),
-            net_out: r.network && typeof r.network === 'object' ? r.network.up : (r.net_out || null),
-            net_total_up: r.network && typeof r.network === 'object' ? r.network.totalUp : (r.net_total_up || null),
-            net_total_down: r.network && typeof r.network === 'object' ? r.network.totalDown : (r.net_total_down || null),
-            process: r.process || null,
-            connections: r.connections && typeof r.connections === 'object' ? r.connections.tcp : (r.connections || null),
-            connections_udp: r.connections && typeof r.connections === 'object' ? r.connections.udp : (r.connections_udp || null),
-            gpu: r.gpu || null
-        };
-    });
-}
+export { flattenRecentRecords } from '../algorithms/record-transforms.js';
 
 /**
  * 合并近期记录到 realtimeHistory（去重、排序、限600条）
+ * 数据整形逻辑已下沉到 algorithms/record-transforms.js
  */
 function mergeIntoRealtimeHistory(uuid, records) {
     const existing = state.realtimeHistory[uuid] || [];
-    const timeSet = {};
-    existing.forEach(function(r) { if (r.time) timeSet[r.time] = true; });
-    let merged = existing.slice();
-    records.forEach(function(r) {
-        if (r.time && !timeSet[r.time]) {
-            merged.push(r);
-            timeSet[r.time] = true;
-        }
-    });
-    merged.sort(function(a, b) { return new Date(a.time).getTime() - new Date(b.time).getTime(); });
-
-    // 前向填充 disk_total / ram_total
-    // /api/recent/ 返回的记录不含 total，WebSocket 的记录含 total，
-    // 合并后部分记录 disk_total=null → valueFn 返回原始字节值 → 图表失真
-    let lastDiskTotal = 0;
-    let lastRamTotal = 0;
-    let lastSwapTotal = 0;
-    for (let ri = 0; ri < merged.length; ri++) {
-        const rec = merged[ri];
-        if (rec.disk_total && rec.disk_total > 0) {
-            lastDiskTotal = rec.disk_total;
-        } else if (lastDiskTotal > 0) {
-            rec.disk_total = lastDiskTotal;
-        }
-        if (rec.ram_total && rec.ram_total > 0) {
-            lastRamTotal = rec.ram_total;
-        } else if (lastRamTotal > 0) {
-            rec.ram_total = lastRamTotal;
-        }
-        if (rec.swap_total && rec.swap_total > 0) {
-            lastSwapTotal = rec.swap_total;
-        } else if (lastSwapTotal > 0) {
-            rec.swap_total = lastSwapTotal;
-        }
-    }
-
+    let merged = mergeAndDedupRecords(existing, records);
+    forwardFillTotals(merged);
     if (merged.length > 600) merged = merged.slice(merged.length - 600);
     state.realtimeHistory[uuid] = merged;
     state.historyDataHours[uuid] = 0;

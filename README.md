@@ -33,8 +33,14 @@ komari-mikus/
 │   │   │   ├── stats.css     # 统计
 │   │   │   ├── welcome.css   # 欢迎区域
 │   │   │   ├── preloader.css # 预加载器
-│   │   │   ├── nodes.css     # 节点列表
-│   │   │   ├── modal.css     # 模态框
+│   │   │   ├── nodes-grid.css  # 节点网格视图
+│   │   │   ├── nodes-table.css # 节点表格视图
+│   │   │   ├── nodes.css       # 节点动画+响应式
+│   │   │   ├── modal-base.css  # 模态框基础结构
+│   │   │   ├── modal-info.css  # 模态框信息面板
+│   │   │   ├── modal-charts.css # 模态框图表
+│   │   │   ├── modal-latency.css # 模态框延迟分析
+│   │   │   ├── modal.css       # 模态框动画+响应式
 │   │   │   └── footer.css    # 页脚
 │   │   ├── flags/            # 国旗 SVG 图标（按需加载）
 │   │   ├── img/              # 图片资源
@@ -88,7 +94,7 @@ komari-mikus/
 │   └── api-rpc.test.mjs       # API/RPC 测试（17 用例）
 ├── komari-theme.json          # 主题配置
 ├── package.json               # 项目配置
-├── .eslintrc.json             # ESLint 配置
+├── eslint.config.js          # ESLint v9+ flat config
 └── README.md
 ```
 

@@ -10,6 +10,7 @@
     "lint:check": "eslint dist/assets/js/ --max-warnings 0"
   },
   "devDependencies": {
-    "eslint": "^9.0.0"
+    "eslint": "^9.0.0",
+    "globals": "^14.0.0"
   }
 }

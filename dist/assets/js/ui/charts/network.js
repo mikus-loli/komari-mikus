@@ -2,7 +2,7 @@ import { state } from '../../core/state.js';
 import { getCachedFontFamily } from '../../utils/color.js';
 import { formatSpeed } from '../../utils/format.js';
 import { formatTimeLabel, timeRangeToHours } from '../../utils/time.js';
-import { showChartTooltip, createHideHandler } from './utils.js';
+import { showChartTooltip, createHideHandler } from './tooltip.js';
 
 export function drawNetworkChart(canvasId, records, hours) {
     const canvas = document.getElementById(canvasId);

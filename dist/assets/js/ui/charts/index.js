@@ -3,7 +3,8 @@ import { t } from '../../i18n/index.js';
 import { getCachedFontFamily } from '../../utils/color.js';
 import { lttbDownsampleRecords } from '../../algorithms/index.js';
 import { formatTimeLabel, timeRangeToHours } from '../../utils/time.js';
-import { drawSmoothAreaLine, drawEmptyChart, createMouseMoveHandler, createHideHandler, createTouchMoveHandler } from './utils.js';
+import { drawSmoothAreaLine, drawEmptyChart } from './utils.js';
+import { createMouseMoveHandler, createHideHandler, createTouchMoveHandler } from './tooltip.js';
 import { getChartConfigs, updateNetworkLegend } from './config.js';
 import { drawMultiTaskPingChart } from './latency.js';
 
@@ -283,4 +284,4 @@ export { getChartConfigs, updateNetworkLegend } from './config.js';
 export { drawLineChart } from './line.js';
 export { drawNetworkChart } from './network.js';
 export { drawMultiTaskPingChart } from './latency.js';
-export { createMouseMoveHandler, createTouchMoveHandler } from './utils.js';
+export { createMouseMoveHandler, createTouchMoveHandler } from './tooltip.js';

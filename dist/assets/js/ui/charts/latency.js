@@ -3,7 +3,7 @@ import { t } from '../../i18n/index.js';
 import { generateOKLCHColor, getCachedFontFamily } from '../../utils/color.js';
 import { applyEWMA, lttbDownsampleRecords } from '../../algorithms/index.js';
 import { timeRangeToHours, formatTimeLabel } from '../../utils/time.js';
-import { createMouseMoveHandler, createHideHandler, createTouchMoveHandler } from './utils.js';
+import { createMouseMoveHandler, createHideHandler, createTouchMoveHandler } from './tooltip.js';
 
 export function drawMultiTaskPingChart(canvas, records, tasks, options) {
     if (!canvas) return;
