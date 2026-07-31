@@ -2,7 +2,7 @@
  * @module services/api
  * @description 所有数据加载 API
  * @dependencies core/state.js, core/constants.js, core/error-boundary.js, services/rpc.js, utils/helpers.js, i18n/index.js, algorithms/record-transforms.js
- * @exports loadPublicSettings, loadNodes, loadNodeHistory, loadRecentRecordsFallback, loadPingHistory, loadAllPingData, enrichPingTasksFromRPC, fetchPingTaskNames, flattenRecentRecords
+ * @exports loadPublicSettings, loadNodes, loadNodeHistory, loadRecentRecordsFallback, loadPingHistory, loadAllPingData, enrichPingTasksFromRPC, fetchPingTaskNames
  */
 
 import { state, historyCache, pingCache, getCachedData, setCachedData } from '../core/state.js';
@@ -10,7 +10,7 @@ import { RPC_METHODS } from '../core/constants.js';
 import { showErrorToast } from '../core/error-boundary.js';
 import { trimRecords, getApiBase } from '../utils/helpers.js';
 import { t } from '../i18n/index.js';
-import { mergeAndDedupRecords, forwardFillTotals } from '../algorithms/record-transforms.js';
+import { flattenRecentRecords, mergeAndDedupRecords, forwardFillTotals } from '../algorithms/record-transforms.js';
 
 /**
  * 加载公共设置
@@ -58,7 +58,7 @@ export function loadNodes() {
 
 /**
  * 将 /api/recent/ 返回的嵌套 Record 转为扁平格式
- * 纯函数实现已移至 algorithms/record-transforms.js，此处 re-export
+ * 纯函数实现已移至 algorithms/record-transforms.js，此处 re-export 保持向后兼容
  */
 export { flattenRecentRecords } from '../algorithms/record-transforms.js';
 

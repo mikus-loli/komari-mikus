@@ -63,15 +63,22 @@ function init() {
     }).catch(function (err) {
         console.error('Init failed:', err);
         clearPreloaderTimer();
-        const statusEl = document.getElementById('preloaderStatus');
-        if (statusEl) {
-            statusEl.textContent = '加载失败，正在重试...';
-            statusEl.classList.add('error');
+        const MAX_RETRIES = 3;
+        const retryCount = (window.__initRetryCount || 0) + 1;
+        window.__initRetryCount = retryCount;
+
+        if (retryCount <= MAX_RETRIES) {
+            updatePreloader(getPreloaderProgress(), '加载失败，正在重试 (' + retryCount + '/' + MAX_RETRIES + ')...');
+            setTimeout(init, 3000);
+        } else {
+            const statusEl = document.getElementById('preloaderStatus');
+            if (statusEl) {
+                statusEl.textContent = '加载失败，请刷新页面';
+                statusEl.classList.add('error');
+            }
+            updatePreloader(getPreloaderProgress(), '加载失败，请刷新页面');
+            setTimeout(hidePreloader, 3000);
         }
-        updatePreloader(getPreloaderProgress(), '加载失败，正在重试...');
-        setTimeout(function () {
-            hidePreloader();
-        }, 3000);
     });
 }
 

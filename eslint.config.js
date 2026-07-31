@@ -16,7 +16,7 @@ export default [
       'prefer-const': 'warn',
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
       'eqeqeq': ['warn', 'smart'],
-      'no-undef': 'off',
+      'no-undef': 'warn',
       'curly': ['warn', 'multi-line'],
       'no-dupe-keys': 'error',
       'no-duplicate-case': 'error',

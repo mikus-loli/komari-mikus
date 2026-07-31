@@ -125,7 +125,12 @@ komari-mikus/
 
 ### 本地预览
 
-直接在浏览器中打开 `dist/index.html` 即可预览主题。
+使用本地 HTTP 服务器预览（ESM 不支持 `file://` 协议）：
+```bash
+npx serve dist
+# 或
+python3 -m http.server 8080 -d dist
+```
 
 ### 修改主题
 
