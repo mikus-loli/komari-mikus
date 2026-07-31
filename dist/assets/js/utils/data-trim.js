@@ -21,7 +21,6 @@ export function trimRecords(records, maxCount) {
  * @returns {number} 最大数据点数
  */
 export function getMaxDataPoints(hours) {
-    if (hours <= 4) return 600;
     if (hours <= 24) return 600;
     return 800;
 }

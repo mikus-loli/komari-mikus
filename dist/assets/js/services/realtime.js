@@ -1,11 +1,12 @@
 /**
  * @module services/realtime
  * @description 实时 RPC 数据处理
- * @dependencies core/state.js, ui/nodes.js, ui/charts.js
+ * @dependencies core/state.js, core/constants.js, ui/nodes.js, ui/charts.js
  * @exports handleRpcResult
  */
 
 import { state } from '../core/state.js';
+import { MAX_HISTORY_POINTS } from '../core/constants.js';
 
 // 延迟导入，避免循环依赖
 let _drawCharts = null;
@@ -82,8 +83,8 @@ export function handleRpcResult(result) {
 
                 history.push(record);
 
-                if (history.length > 600) {
-                    state.realtimeHistory[uuid] = history.slice(history.length - 600);
+                if (history.length > MAX_HISTORY_POINTS) {
+                    state.realtimeHistory[uuid] = history.slice(history.length - MAX_HISTORY_POINTS);
                 }
 
                 if (state.selectedNodeUuid === uuid && state.historyTimeRange === 'realtime') {
