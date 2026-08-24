@@ -18,7 +18,7 @@ import {
 } from './ui/preloader.js';
 import { initTheme, initView, applyThemeSettings } from './ui/theme.js';
 import { initLang } from './i18n/index.js';
-import { renderGroupFilter, renderAll } from './ui/nodes.js';
+import { renderGroupFilter, renderAll, updateRealtime } from './ui/nodes.js';
 import { bindEvents } from './ui/events.js';
 import { drawCharts } from './ui/charts/index.js';
 import { state } from './core/state.js';
@@ -59,7 +59,7 @@ function init() {
     if (groupFilter) groupFilter.classList.add('animate-in');
 
     initRPC2Client(handleRpcResult);
-    setRenderFunctions(drawCharts, renderAll);
+    setRenderFunctions(drawCharts, renderAll, updateRealtime);
 
     loadPublicSettings().then(function () {
         updatePreloader(30, '正在获取配置...');

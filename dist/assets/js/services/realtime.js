@@ -11,11 +11,13 @@ import { MAX_HISTORY_POINTS } from '../core/constants.js';
 // 延迟导入，避免循环依赖
 let _drawCharts = null;
 let _renderAll = null;
+let _updateRealtime = null;
 
 // RAF 节流：多帧数据合并为一次渲染
 let _renderRAF = 0;
 let _chartRAF = 0;
 let _pendingChartUuid = null;
+let _pendingRenderType = null;
 
 // Page Visibility：不可见时暂停渲染，恢复时一次性刷新
 let _pageHidden = false;
@@ -26,6 +28,7 @@ if (typeof document !== 'undefined') {
         _pageHidden = document.hidden;
         if (!_pageHidden && _renderAll) {
             // 页面重新可见，立即刷新一次
+            _pendingRenderType = null;
             _renderAll();
         }
     });
@@ -34,22 +37,53 @@ if (typeof document !== 'undefined') {
 /**
  * 设置渲染函数（由 app.js 在初始化时调用）
  * @param {Function} drawCharts - 绘制图表函数
- * @param {Function} renderAll - 渲染所有函数
+ * @param {Function} renderAll - 完整渲染函数
+ * @param {Function} updateRealtime - 仅更新实时数据的函数
  */
-export function setRenderFunctions(drawCharts, renderAll) {
+export function setRenderFunctions(drawCharts, renderAll, updateRealtime) {
     _drawCharts = drawCharts;
     _renderAll = renderAll;
+    _updateRealtime = updateRealtime;
 }
 
 /**
- * 调度渲染（RAF 节流，同一帧内多次数据推送只触发一次 renderAll）
+ * 判断两个节点 UUID 数组是否包含相同集合
+ * @param {string[]} first - 第一个 UUID 数组
+ * @param {string[]} second - 第二个 UUID 数组
+ * @returns {boolean} 是否相同
  */
-function scheduleRender() {
+function sameNodeSet(first, second) {
+    if (first.length !== second.length) return false;
+    return first.every(function(uuid) {
+        return second.indexOf(uuid) !== -1;
+    });
+}
+
+/**
+ * 调度渲染（RAF 节流，同一帧内多次数据推送只触发一次）
+ * @param {boolean} fullRender - 是否需要完整重建列表
+ */
+function scheduleRender(fullRender) {
     if (_pageHidden) return;
+
+    if (fullRender) {
+        _pendingRenderType = 'full';
+    } else if (!_pendingRenderType) {
+        _pendingRenderType = 'realtime';
+    }
+
     if (_renderRAF) return; // 已调度，跳过
     _renderRAF = requestAnimationFrame(function() {
         _renderRAF = 0;
-        if (_renderAll) _renderAll();
+        const renderType = _pendingRenderType;
+        _pendingRenderType = null;
+
+        if (renderType === 'realtime' && _updateRealtime) {
+            _updateRealtime();
+        } else if (_renderAll) {
+            // 没有增量更新函数时保持完整渲染兼容行为
+            _renderAll();
+        }
     });
 }
 
@@ -76,6 +110,7 @@ function scheduleChartRedraw(uuid) {
 export function handleRpcResult(result) {
     if (!result) return;
 
+    const previousOnlineNodes = state.onlineNodes;
     const onlineNodes = [];
     const realtimeData = {};
 
@@ -143,5 +178,5 @@ export function handleRpcResult(result) {
 
     state.onlineNodes = onlineNodes;
     state.realtimeData = realtimeData;
-    scheduleRender();
+    scheduleRender(!sameNodeSet(previousOnlineNodes, onlineNodes));
 }

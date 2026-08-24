@@ -7,6 +7,8 @@
 import assert from 'node:assert/strict';
 import { formatTooltipTime, positionTooltip } from '../dist/assets/js/ui/charts/tooltip.js';
 import { calculateNodeMetrics } from '../dist/assets/js/ui/nodes.js';
+import { renderGrid, updateGridRealtime } from '../dist/assets/js/ui/nodes-grid.js';
+import { renderTable, updateTableRealtime } from '../dist/assets/js/ui/nodes-table.js';
 import { state } from '../dist/assets/js/core/state.js';
 
 let passed = 0;
@@ -290,6 +292,196 @@ test('traffic_limit=0 时不计算流量', function() {
     const m = calculateNodeMetrics(makeNode({ traffic_limit: 0 }));
     assert.strictEqual(m.usedTraffic, 0);
     assert.strictEqual(m.remainingTraffic, 0);
+});
+
+// ── 网格/表格实时增量更新 DOM 回归 ─────────────────────────────────
+
+function stripTags(html) {
+    return String(html).replace(/<[^>]*>/g, '');
+}
+
+class MockElement {
+    constructor(className, attributes) {
+        this.className = className || '';
+        this.classes = new Set(this.className.split(/\s+/).filter(Boolean));
+        this.attributes = attributes || {};
+        this.children = [];
+        this._innerHTML = '';
+        this.textContent = '';
+        this.classList = {
+            toggle: (classNameToToggle, force) => {
+                if (force) {
+                    this.classes.add(classNameToToggle);
+                } else {
+                    this.classes.delete(classNameToToggle);
+                }
+            }
+        };
+    }
+
+    set innerHTML(value) {
+        this._innerHTML = String(value);
+
+        if (this.classes.has('nodes-grid') || this.classes.has('table-body')) {
+            const cardClass = this.classes.has('nodes-grid') ? 'node-card' : 'table-card';
+            const metricsClass = this.classes.has('nodes-grid') ? 'node-card-metrics' : 'table-card-metrics';
+            const statusClass = this.classes.has('nodes-grid') ? 'node-status-dot' : 'table-card-status';
+            const cardPattern = new RegExp('<div class="([^" ]*(?:' + cardClass + ')[^"]*)" data-uuid="([^"]+)">', 'g');
+
+            this.children = Array.from(this._innerHTML.matchAll(cardPattern), (match) => {
+                const card = new MockElement(match[1], { 'data-uuid': match[2] });
+                const metrics = new MockElement(metricsClass);
+                metrics.innerHTML = this._innerHTML;
+                const status = new MockElement(statusClass);
+                card.children = [metrics, status];
+
+                if (cardClass === 'node-card') {
+                    card.children.splice(1, 0, new MockElement('node-card-footer'));
+                }
+
+                return card;
+            });
+            return;
+        }
+
+        this.textContent = stripTags(this._innerHTML);
+
+        if (this.classes.has('node-card-footer')) {
+            this.children = this._innerHTML.indexOf('<div class="node-card-footer">') !== -1
+                ? [new MockElement('node-card-footer')]
+                : [];
+        }
+    }
+
+    get innerHTML() {
+        return this._innerHTML;
+    }
+
+    getAttribute(name) {
+        return Object.prototype.hasOwnProperty.call(this.attributes, name)
+            ? this.attributes[name]
+            : null;
+    }
+
+    addEventListener() {}
+
+    matches(selector) {
+        const classes = Array.from(selector.matchAll(/\.([\w-]+)/g), (match) => match[1]);
+        if (!classes.every((className) => this.classes.has(className))) return false;
+        return !selector.includes('[data-uuid]') || this.getAttribute('data-uuid') !== null;
+    }
+
+    querySelectorAll(selector) {
+        const matches = [];
+        const visit = (element) => {
+            if (element.matches(selector)) matches.push(element);
+            element.children.forEach(visit);
+        };
+        visit(this);
+        return matches;
+    }
+
+    querySelector(selector) {
+        return this.querySelectorAll(selector)[0] || null;
+    }
+}
+
+test('初次渲染和一次增量更新保持卡片结构并更新网格/表格指标', function() {
+    const previousDocument = globalThis.document;
+    const previousState = {
+        nodes: state.nodes,
+        realtimeData: state.realtimeData,
+        onlineNodes: state.onlineNodes,
+        themeSettings: state.themeSettings,
+        currentGroup: state.currentGroup,
+        searchQuery: state.searchQuery,
+        initialRender: state.initialRender
+    };
+
+    const nodeA = 'dom-regression-node-a';
+    const nodeB = 'dom-regression-node-b';
+    const nodes = [
+        makeNode({ uuid: nodeA, name: 'DOM Node A', weight: 1 }),
+        makeNode({ uuid: nodeB, name: 'DOM Node B', weight: 2 })
+    ];
+    const grid = new MockElement('nodes-grid');
+    const table = new MockElement('table-body');
+
+    globalThis.document = {
+        getElementById: function(id) {
+            if (id === 'nodesGrid') return grid;
+            if (id === 'nodesTableBody') return table;
+            return null;
+        }
+    };
+
+    try {
+        state.nodes = nodes;
+        state.onlineNodes = [nodeA, nodeB];
+        state.currentGroup = 'all';
+        state.searchQuery = '';
+        state.themeSettings = {};
+        state.initialRender = true;
+        state.realtimeData = {
+            [nodeA]: { cpu: { usage: 20 }, ram: { used: 512, total: 2048 }, disk: { used: 1024, total: 10240 } },
+            [nodeB]: { cpu: { usage: 40 }, ram: { used: 512, total: 2048 }, disk: { used: 1024, total: 10240 } }
+        };
+
+        renderGrid();
+        renderTable();
+
+        const gridBefore = new Map(grid.querySelectorAll('.node-card').map(function(card) {
+            return [card.getAttribute('data-uuid'), card];
+        }));
+        const tableBefore = new Map(table.querySelectorAll('.table-card').map(function(card) {
+            return [card.getAttribute('data-uuid'), card];
+        }));
+
+        assert.strictEqual(gridBefore.size, 2);
+        gridBefore.forEach(function(card) {
+            assert.strictEqual(card.querySelectorAll('.node-card-footer').length, 1);
+        });
+        assert.strictEqual(tableBefore.size, 2);
+        tableBefore.forEach(function(card) {
+            assert.strictEqual(card.querySelectorAll('.table-card-metrics').length, 1);
+        });
+
+        state.realtimeData = {
+            [nodeA]: { cpu: { usage: 80 }, ram: { used: 1024, total: 2048 }, disk: { used: 2048, total: 10240 } },
+            [nodeB]: { cpu: { usage: 60 }, ram: { used: 1024, total: 2048 }, disk: { used: 2048, total: 10240 } }
+        };
+
+        updateGridRealtime();
+        updateTableRealtime();
+
+        const expectedCpu = { [nodeA]: '80', [nodeB]: '60' };
+        grid.querySelectorAll('.node-card').forEach(function(card) {
+            const uuid = card.getAttribute('data-uuid');
+            assert.strictEqual(card, gridBefore.get(uuid));
+            assert.strictEqual(card.querySelectorAll('.node-card-footer').length, 1);
+            assert.match(card.querySelector('.node-card-metrics').textContent, new RegExp(expectedCpu[uuid]));
+        });
+        table.querySelectorAll('.table-card').forEach(function(card) {
+            const uuid = card.getAttribute('data-uuid');
+            assert.strictEqual(card, tableBefore.get(uuid));
+            assert.strictEqual(card.querySelectorAll('.table-card-metrics').length, 1);
+            assert.match(card.querySelector('.table-card-metrics').textContent, new RegExp(expectedCpu[uuid]));
+        });
+    } finally {
+        state.nodes = previousState.nodes;
+        state.realtimeData = previousState.realtimeData;
+        state.onlineNodes = previousState.onlineNodes;
+        state.themeSettings = previousState.themeSettings;
+        state.currentGroup = previousState.currentGroup;
+        state.searchQuery = previousState.searchQuery;
+        state.initialRender = previousState.initialRender;
+
+        if (previousDocument === undefined) {
+            delete globalThis.document;
+        } else {
+            globalThis.document = previousDocument;
+        }
+    }
 });
 
 // ── Summary ───────────────────────────────────────────────────────
