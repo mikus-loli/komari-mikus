@@ -42,11 +42,27 @@
 
 .group-filter {
     display: flex;
+    flex-wrap: nowrap;
     gap: 4px;
     padding: 4px;
     background: var(--bg-tertiary);
     border-radius: var(--radius-md);
     margin-left: auto;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+}
+
+.group-filter::-webkit-scrollbar {
+    display: none;
+}
+
+.group-filter .filter-btn {
+    flex: 0 0 auto;
 }
 
 .filter-btn {
