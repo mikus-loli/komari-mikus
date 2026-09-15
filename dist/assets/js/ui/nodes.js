@@ -2,7 +2,7 @@
  * @module ui/nodes
  * @description 节点列表核心逻辑（分组过滤 + 统计栏 + 指标计算 + 渲染编排）
  * @dependencies core/state.js, i18n/index.js, utils/format.js, utils/helpers.js, ui/preloader.js, ui/nodes-grid.js, ui/nodes-table.js
- * @exports renderAll, renderGrid, renderTable, renderStatsBar, renderGroupFilter, getFilteredNodes, getGroups, calculateNodeMetrics
+ * @exports renderAll, updateRealtime, renderGrid, renderTable, renderStatsBar, renderGroupFilter, getFilteredNodes, getGroups, calculateNodeMetrics
  */
 
 import { state } from '../core/state.js';
@@ -10,8 +10,8 @@ import { t } from '../i18n/index.js';
 import { formatBytes, formatOS } from '../utils/format.js';
 import { escapeHtml, getLatestPing, getPingLevel, getCountryFlag, getShortOs, getUsageLevel } from '../utils/helpers.js';
 import { updateGreetingSubtitle } from './preloader.js';
-import { renderGrid } from './nodes-grid.js';
-import { renderTable } from './nodes-table.js';
+import { renderGrid, updateGridRealtime } from './nodes-grid.js';
+import { renderTable, updateTableRealtime } from './nodes-table.js';
 
 /**
  * 获取所有分组及计数
@@ -222,4 +222,13 @@ export function renderAll() {
     if (state.initialRender) {
         state.initialRender = false;
     }
+}
+
+/**
+ * 只更新实时数据，保留节点卡片 DOM 和 hover 状态
+ */
+export function updateRealtime() {
+    renderStatsBar();
+    updateGridRealtime();
+    updateTableRealtime();
 }

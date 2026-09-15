@@ -214,6 +214,38 @@ function bindTableCardEvents(container) {
 }
 
 /**
+ * 更新已存在的表格卡片中的实时数据，避免替换卡片根节点
+ */
+export function updateTableRealtime() {
+    const container = document.getElementById('nodesTableBody');
+    if (!container) return;
+
+    const showNetwork = state.themeSettings.show_network_speed !== false;
+    const showTrafficTags = state.themeSettings.show_traffic_tags !== false;
+    const nodesByUuid = new Map(state.nodes.map(function(node) {
+        return [node.uuid, node];
+    }));
+
+    container.querySelectorAll('.table-card[data-uuid]').forEach(function(card) {
+        const uuid = card.getAttribute('data-uuid');
+        const node = uuid ? nodesByUuid.get(uuid) : null;
+        if (!node) return;
+
+        const metrics = calculateNodeMetrics(node);
+        const metricsEl = card.querySelector('.table-card-metrics');
+        const statusDot = card.querySelector('.table-card-status');
+
+        if (metricsEl) {
+            metricsEl.innerHTML = renderTableCardMetrics(node, metrics, showNetwork) +
+                renderTableCardTags(node, metrics, showTrafficTags);
+        }
+
+        card.classList.toggle('offline', !metrics.isOnline);
+        if (statusDot) statusDot.classList.toggle('offline', !metrics.isOnline);
+    });
+}
+
+/**
  * 渲染表格视图
  */
 export function renderTable() {

@@ -105,7 +105,22 @@ function renderNodeMetrics(metrics) {
  * @returns {string} HTML
  */
 function renderNodeCardFooter(node, metrics, showUptime, showNetwork, showTrafficTags) {
-    let html = '<div class="node-card-footer">';
+    return '<div class="node-card-footer">' +
+        renderNodeCardFooterContent(node, metrics, showUptime, showNetwork, showTrafficTags) +
+        '</div>';
+}
+
+/**
+ * 渲染节点卡片底部内容（不包含外层 footer）
+ * @param {Object} node - 节点对象
+ * @param {Object} metrics - 指标数据
+ * @param {boolean} showUptime - 是否显示运行时间
+ * @param {boolean} showNetwork - 是否显示网速
+ * @param {boolean} showTrafficTags - 是否显示流量标签
+ * @returns {string} HTML
+ */
+function renderNodeCardFooterContent(node, metrics, showUptime, showNetwork, showTrafficTags) {
+    let html = '';
 
     const priceText = formatPrice(node.price, node.currency, node.billing_cycle);
     const uptimeText = formatUptime(metrics.uptime);
@@ -149,8 +164,6 @@ function renderNodeCardFooter(node, metrics, showUptime, showNetwork, showTraffi
         html += '</span>';
     }
 
-    html += '</div>';
-
     return html;
 }
 
@@ -187,6 +200,38 @@ function bindNodeCardEvents(container) {
             const uuid = this.getAttribute('data-uuid');
             openNodeModal(uuid);
         });
+    });
+}
+
+/**
+ * 更新已存在的网格卡片中的实时数据，避免替换卡片根节点
+ */
+export function updateGridRealtime() {
+    const container = document.getElementById('nodesGrid');
+    if (!container) return;
+
+    const showUptime = state.themeSettings.show_uptime !== false;
+    const showNetwork = state.themeSettings.show_network_speed !== false;
+    const showTrafficTags = state.themeSettings.show_traffic_tags !== false;
+    const nodesByUuid = new Map(state.nodes.map(function(node) {
+        return [node.uuid, node];
+    }));
+
+    container.querySelectorAll('.node-card[data-uuid]').forEach(function(card) {
+        const uuid = card.getAttribute('data-uuid');
+        const node = uuid ? nodesByUuid.get(uuid) : null;
+        if (!node) return;
+
+        const metrics = calculateNodeMetrics(node);
+        const metricsEl = card.querySelector('.node-card-metrics');
+        const footerEl = card.querySelector('.node-card-footer');
+        const statusDot = card.querySelector('.node-status-dot');
+
+        if (metricsEl) metricsEl.innerHTML = renderNodeMetrics(metrics);
+        if (footerEl) footerEl.innerHTML = renderNodeCardFooterContent(node, metrics, showUptime, showNetwork, showTrafficTags);
+
+        card.classList.toggle('offline', !metrics.isOnline);
+        if (statusDot) statusDot.classList.toggle('offline', !metrics.isOnline);
     });
 }
 

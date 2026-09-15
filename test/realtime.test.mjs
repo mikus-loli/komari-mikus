@@ -40,8 +40,13 @@ function status(time, online) {
 }
 
 const renderCalls = [];
+const realtimeUpdateCalls = [];
 const drawCalls = [];
-setRenderFunctions(function(uuid) { drawCalls.push(uuid); }, function() { renderCalls.push(true); });
+setRenderFunctions(
+    function(uuid) { drawCalls.push(uuid); },
+    function() { renderCalls.push(true); },
+    function() { realtimeUpdateCalls.push(true); }
+);
 
 function resetState() {
     state.onlineNodes = [];
@@ -50,6 +55,7 @@ function resetState() {
     state.selectedNodeUuid = null;
     state.historyTimeRange = 'realtime';
     renderCalls.length = 0;
+    realtimeUpdateCalls.length = 0;
     drawCalls.length = 0;
 }
 
@@ -121,12 +127,22 @@ test('非实时范围不触发图表重绘', function() {
     assert.strictEqual(drawCalls.length, 0);
 });
 
-test('每次数据推送都会调度一次 renderAll', function() {
+test('首次数据推送和在线状态变化会触发完整渲染', function() {
     resetState();
     handleRpcResult({ [UUID]: status('2026-07-31T00:00:00Z') });
     assert.strictEqual(renderCalls.length, 1);
-    handleRpcResult({ [UUID]: status('2026-07-31T00:00:01Z') });
+    assert.strictEqual(realtimeUpdateCalls.length, 0);
+    handleRpcResult({ [UUID]: status('2026-07-31T00:00:01Z', false) });
     assert.strictEqual(renderCalls.length, 2);
+    assert.strictEqual(realtimeUpdateCalls.length, 0);
+});
+
+test('在线状态未变化时只调度实时卡片更新，不重建卡片', function() {
+    resetState();
+    handleRpcResult({ [UUID]: status('2026-07-31T00:00:00Z') });
+    handleRpcResult({ [UUID]: status('2026-07-31T00:00:01Z') });
+    assert.strictEqual(renderCalls.length, 1);
+    assert.strictEqual(realtimeUpdateCalls.length, 1);
 });
 
 // ── Summary ───────────────────────────────────────────────────────
